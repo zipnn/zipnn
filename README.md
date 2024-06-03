@@ -48,7 +48,7 @@ pip install torch
 Import zipnn
 
 ```python
-from zipnn import zipnn
+import zipnn
 ```
 
 Instance class:

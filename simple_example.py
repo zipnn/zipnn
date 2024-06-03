@@ -1,4 +1,4 @@
-from zipnn import zipnn
+import zipnn
 
 example_string = b"Example string for compression"
 
