@@ -1,0 +1,6 @@
+lz4==4.3.3
+numpy==1.26.4
+python-snappy==0.7.1
+torch==2.3.0
+typing_extensions==4.12.1
+zstandard==0.22.0
