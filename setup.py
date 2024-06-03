@@ -5,11 +5,7 @@ setup(
     version='0.1.0',
     author='Moshik Hershcovitch',
     author_email='moshik1@gmail.com',
-    description='A compression technique for AI model compression',
-    install_requires=[
-        'numpy',               
-        'zstandard',         
-    ],
+    description='A lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/zipnn/zipnn',  
@@ -20,6 +16,10 @@ setup(
         'Operating System :: OS Independent',
     ],
     python_requires='>=3.6',
-    install_requires=[],  # Add any dependencies your package needs
+    install_requires=[
+        'numpy',               
+        'zstandard',         
+    ],
+
 )
 
