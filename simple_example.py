@@ -1,10 +1,10 @@
-import zipnn
+from zipnn import ZipNN
 
 example_string = b"Example string for compression"
 
 # Initializing the ZipNN class with the default configuration
 # for Byte->Byte compression and Byte->Byte decompression
-zipnn = zipnn.ZipNN(method='zstd')
+zipnn = ZipNN(method='zstd')
     
 # Compress the byte string
 compressed_data = zipnn.compress(example_string)

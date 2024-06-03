@@ -1,5 +1,5 @@
 import unittest
-from zipnn.zipnn import ZipNN
+from zipnn import ZipNN
 import random
 import torch
 import zstd

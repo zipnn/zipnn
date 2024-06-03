@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='zipnn',
-    version='0.1.0',
+    version='0.1.1',
     author='Moshik Hershcovitch',
     author_email='moshik1@gmail.com',
     description='A lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment',

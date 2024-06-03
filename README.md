@@ -45,16 +45,14 @@ pip install torch
 
 ## Usage
 
-Import zipnn
-
 ```python
-import zipnn
+from zipnn import ZipNN
 ```
 
 Instance class:
 
 ```python
-zipnn = zipnn.ZipNN(method='zstd')
+zipnn = ZipNN(method='zstd')
 ```
 
 Compression:
@@ -72,13 +70,13 @@ decompressed_data = zipnn.decompress(compressed_data)
 ## Example
 
 ```python
-from zipnn import zipnn
+from zipnn import ZipNN
 
 example_string = b"Example string for compression"
 
 # Initializing the ZipNN class with the default configuration
 # for Byte->Byte compression and Byte->Byte decompression
-zipnn = zipnn.ZipNN(method='zstd')
+zipnn = ZipNN(method='zstd')
 
 # Compress the byte string
 compressed_data = zipnn.compress(example_string)
