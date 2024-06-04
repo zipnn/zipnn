@@ -1,5 +1,6 @@
 import sys
 import struct
+from enum import Enum
 import torch
 
 
@@ -155,134 +156,49 @@ def zipnn_unpack_shape(packed_data):
         dimensions.append(dim)
     return tuple(dimensions), total_bytes_read
 
+class ZipNNTorchDtypeEnum(Enum):
+    NONE = (None, 0)
+    FLOAT32 = (torch.float32, 1)  # 32 bits
+    FLOAT = (torch.float, 2)  # 32 bits (same as FLOAT32)
+    FLOAT64 = (torch.float64, 3)  # 64 bits
+    DOUBLE = (torch.double, 4)  # 64 bits (same as FLOAT64)
+    FLOAT16 = (torch.float16, 5)  # 16 bits
+    HALF = (torch.half, 6)  # 16 bits (same as FLOAT16)
+    BFLOAT16 = (torch.bfloat16, 7)  # 16 bits
+    UINT8 = (torch.uint8, 8)  # 8 bits
+    INT8 = (torch.int8, 9)  # 8 bits
+    INT16 = (torch.int16, 10)  # 16 bits
+    SHORT = (torch.short, 11)  # 16 bits (same as INT16)
+    INT32 = (torch.int32, 12)  # 32 bits
+    INT = (torch.int, 13)  # 32 bits (same as INT32)
+    INT64 = (torch.int64, 14)  # 64 bits
+    LONG = (torch.long, 15)  # 64 bits (same as INT64)
+    BOOL = (torch.bool, 16)  # 8 bits
+    COMPLEX64 = (torch.complex64, 17)  # 64 bits
+    CFLOAT = (torch.cfloat, 18)  # 64 bits (same as COMPLEX64)
+    COMPLEX128 = (torch.complex128, 19)  # 128 bits
+    CDOUBLE = (torch.cdouble, 20)  # 128 bits (same as COMPLEX128)
 
-class ZipnnEnumTorchDtype:
-    NONE: 0
-    FLOAT32 = 1  # 32 bits
-    FLOAT = 2  # 32 bits
-    FLOAT64 = 3  # 64 bits
-    DOUBLE = 4  # 64 bits
-    FLOAT16 = 5  # 16 bits
-    HALF = 6  # 16 bits
-    BFLOAT16 = 7  # 16 bits
-    UINT8 = 8  # 8 bits
-    INT8 = 9  # 8 bits
-    INT16 = 10  # 16 bits
-    SHORT = 11  # 16 bits
-    INT32 = 12  # 32 bits
-    INT = 13  # 32 bits
-    INT64 = 14  # 32 bits
-    LONG = 15  # 32 bits
-    BOOL = 16  # 32 bits
-    COMPLEX64 = 17  # 64 bits
-    CFLOAT = 18  # 64 bits
-    COMPLEX128 = 19  # 128 bits
-    CDOUBLE = 20  # 128 bits
+    def __init__(self, dtype, code):
+        self.dtype = dtype
+        self.code = code
 
-    def dtype_to_enum(dtype):
-        """
-        Converts Tensor.dtype to ZipnnEnumTorchDtype enum value.
+    @classmethod
+    def from_torch_dtype(cls, dtype):
+        if dtype is None:
+            return cls.NONE
+        for member in cls:
+            if member.dtype is dtype:
+                return member
+        raise ValueError(f"No matching TorchDtypeEnum for {dtype}")
 
-        Parameters
-        -------------------------------------
-        dtype: Tensor.dtype
-                The dtype of the tensor.
+    @classmethod
+    def from_code(cls, code):
+        for member in cls:
+            if member.code == code:
+                return member
+        raise ValueError(f"No matching TorchDtypeEnum for code {code}")
 
-        Returns
-        -------------------------------------
-        The ZipnnEnumTorchDtype enum value corresponding to the Tensor.dtype input.
-        """
-        if dtype == torch.float32:
-            return ZipnnEnumTorchDtype.FLOAT32
-        if dtype == torch.float:
-            return ZipnnEnumTorchDtype.FLOAT
-        if dtype == torch.float64:
-            return ZipnnEnumTorchDtype.FLOAT64
-        if dtype == torch.double:
-            return ZipnnEnumTorchDtype.DOUBLE
-        if dtype == torch.float16:
-            return ZipnnEnumTorchDtype.FLOAT16
-        if dtype == torch.half:
-            return ZipnnEnumTorchDtype.HALF
-        if dtype == torch.bfloat16:
-            return ZipnnEnumTorchDtype.BFLOAT16
-        if dtype == torch.uint8:
-            return ZipnnEnumTorchDtype.UINT8
-        if dtype == torch.int8:
-            return ZipnnEnumTorchDtype.INT8
-        if dtype == torch.int16:
-            return ZipnnEnumTorchDtype.INT16
-        if dtype == torch.short:
-            return ZipnnEnumTorchDtype.SHORT
-        if dtype == torch.int32:
-            return ZipnnEnumTorchDtype.INT32
-        if dtype == torch.int:
-            return ZipnnEnumTorchDtype.INT
-        if dtype == torch.int64:
-            return ZipnnEnumTorchDtype.INT64
-        if dtype == torch.long:
-            return ZipnnEnumTorchDtype.LONG
-        if dtype == torch.bool:
-            return ZipnnEnumTorchDtype.BOOL
-        if dtype == torch.complex64:
-            return ZipnnEnumTorchDtype.COMPLEX64
-        if dtype == torch.cfloat:
-            return ZipnnEnumTorchDtype.CFLOAT
-        if dtype == torch.complex128:
-            return ZipnnEnumTorchDtype.COMPLEX128
-        if dtype == torch.cdouble:
-            return ZipnnEnumTorchDtype.CDOUBLE
+    def __str__(self):
+        return f"{self.name} (dtype: {self.dtype}, code: {self.code})"
 
-    def enum_to_dtype(enum: int):
-        """
-        Converts ZipnnEnumTorchDtype enum value to Tensor.dtype.
-
-        Parameters
-        -------------------------------------
-        enum: int
-                The ZipnnEnumTorchDtype enum value.
-
-        Returns
-        -------------------------------------
-        The Tensor.dtype corresponding to the ZipnnEnumTorchDtype enum value input.
-        """
-        if enum == ZipnnEnumTorchDtype.FLOAT32:
-            return torch.float32
-        if enum == ZipnnEnumTorchDtype.FLOAT:
-            return torch.float
-        if enum == ZipnnEnumTorchDtype.FLOAT64:
-            return torch.float64
-        if enum == ZipnnEnumTorchDtype.DOUBLE:
-            return torch.double
-        if enum == ZipnnEnumTorchDtype.FLOAT16:
-            return torch.float16
-        if enum == ZipnnEnumTorchDtype.HALF:
-            return torch.half
-        if enum == ZipnnEnumTorchDtype.BFLOAT16:
-            return torch.bfloat16
-        if enum == ZipnnEnumTorchDtype.UINT8:
-            return torch.uint8
-        if enum == ZipnnEnumTorchDtype.INT8:
-            return torch.int8
-        if enum == ZipnnEnumTorchDtype.INT16:
-            return torch.int16
-        if enum == ZipnnEnumTorchDtype.SHORT:
-            return torch.short
-        if enum == ZipnnEnumTorchDtype.INT32:
-            return torch.int32
-        if enum == ZipnnEnumTorchDtype.INT:
-            return torch.int
-        if enum == ZipnnEnumTorchDtype.INT64:
-            return torch.int64
-        if enum == ZipnnEnumTorchDtype.LONG:
-            return torch.long
-        if enum == ZipnnEnumTorchDtype.BOOL:
-            return torch.bool
-        if enum == ZipnnEnumTorchDtype.COMPLEX64:
-            return torch.complex64
-        if enum == ZipnnEnumTorchDtype.CFLOAT:
-            return torch.cfloat
-        if enum == ZipnnEnumTorchDtype.COMPLEX128:
-            return torch.complex128
-        if enum == ZipnnEnumTorchDtype.CDOUBLE:
-            return torch.cdouble

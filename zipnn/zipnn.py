@@ -6,7 +6,6 @@ import numpy as np
 import zstandard as zstd
 from zipnn.util_header import EnumMethod, EnumLossy
 
-
 class ZipNN:
 
     def __init__(
@@ -149,12 +148,12 @@ class ZipNN:
         ZipNN class instance supporting a specific compression and decompression based on the input given.
         """
 
-        self.method = EnumMethod.method_to_enum(method)
+        self.method = EnumMethod(method).value
         self.delta_compressed_type = delta_compressed_type
         self.bg_partitions = bg_partitions
         self.bg_compression_threshold = bg_compression_threshold
         self.signbit_to_lsb = signbit_to_lsb
-        self.lossy_compressed_type = EnumLossy.lossy_to_enum(lossy_compressed_type)
+        self.lossy_compressed_type = EnumLossy.NONE if lossy_compressed_type is None else EnumLossy(lossy_compressed_type)
         self.lossy_compressed_factor = lossy_compressed_factor
 
         self.is_streaming = is_streaming
@@ -198,18 +197,18 @@ class ZipNN:
         -------------------------------------
         None.
         """
-        if self.method == EnumMethod.ZSTD:
+        if self.method == EnumMethod.ZSTD.value:
             self._zstd_compress = zstd.ZstdCompressor(level=zstd_level, threads=zstd_threads)
             self._zstd_decompress = zstd.ZstdDecompressor()
 
-        elif self.method == EnumMethod.LZ4:
+        elif self.method == EnumMethod.LZ4.value:
             try:
                 global lz4
                 import lz4.frame
             except ImportError:
                 raise ImportError("LZ4 library is not installed. Please install it to use LZ4 compression.")
 
-        elif self.method == EnumMethod.SNAPPY:
+        elif self.method == EnumMethod.SNAPPY.value:
             try:
                 global snappy
                 import snappy
@@ -223,9 +222,9 @@ class ZipNN:
             global torch
             import torch
 
-            global ZipnnEnumTorchDtype, zipnn_get_dtype_bits, zipnn_multiply_if_max_below, zipnn_divide_int, zipnn_pack_shape, zipnn_unpack_shape
+            global ZipNNTorchDtypeEnum, zipnn_get_dtype_bits, zipnn_multiply_if_max_below, zipnn_divide_int, zipnn_pack_shape, zipnn_unpack_shape
             from zipnn.util_torch import (
-                ZipnnEnumTorchDtype,
+                ZipNNTorchDtypeEnum,
                 zipnn_multiply_if_max_below,
                 zipnn_get_dtype_bits,
                 zipnn_divide_int,
@@ -289,7 +288,7 @@ class ZipNN:
         -------------------------------------
         None.
         """
-        self._header[10] = lossy_type
+        self._header[10] = lossy_type.value
         self._header[11] = lossy_factor
         self._header[12] = is_int
 
@@ -311,7 +310,7 @@ class ZipNN:
         if torch_dtype is None:
             self._header[9] = 0
         else:
-            self._header[9] = ZipnnEnumTorchDtype.dtype_to_enum(torch_dtype)
+            self._header[9] = ZipNNTorchDtypeEnum.from_torch_dtype(torch_dtype).code
 
     def _update_header(self, lossy_compressed_type=None, lossy_compressed_factor=None):
         """
@@ -362,7 +361,7 @@ class ZipNN:
         """
         if num == 0:
             return None
-        return ZipnnEnumTorchDtype.enum_to_dtype(num)
+        return ZipNNTorchDtypeEnum.from_code(num).dtype
 
     def _retrieve_header(self, ba_compress):
         """
@@ -461,13 +460,13 @@ class ZipNN:
         -------------------------------------
         Compression of the data in the chosen method.
         """
-        if self.method == EnumMethod.ZSTD:
+        if self.method == EnumMethod.ZSTD.value:
             return self._zstd_compress.compress(data)
 
-        elif self.method == EnumMethod.LZ4:
+        elif self.method == EnumMethod.LZ4.value:
             return lz4.frame.compress(data)
 
-        elif self.method == EnumMethod.SNAPPY:
+        elif self.method == EnumMethod.SNAPPY.value:
             return snappy.compress(data)
         raise ValueError("Unsupported compression method")
 
@@ -716,11 +715,11 @@ class ZipNN:
         -------------------------------------
         Decompression of the data in the chosen method.
         """
-        if self.method == EnumMethod.ZSTD:
+        if self.method == EnumMethod.ZSTD.value:
             return self._zstd_decompress.decompress(data)
-        elif self.method == EnumMethod.LZ4:
+        elif self.method == EnumMethod.LZ4.value:
             return lz4.frame.decompress(data)
-        elif self.method == EnumMethod.SNAPPY:
+        elif self.method == EnumMethod.SNAPPY.value:
             return snappy.decompress(data)
         raise ValueError("Unsupported compression method")
 

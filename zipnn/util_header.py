@@ -1,63 +1,37 @@
 # util for ZipNN Header
+from enum import Enum
 
 
-class EnumMethod:
+class EnumMethod(Enum):
     ZSTD = 1
     LZ4 = 2
     SNAPPY = 3
 
-    def method_to_enum(method: str) -> int:
-        """
-        Takes the method compression name input, and returns the respective enum int value.
-
-        Parameters
-        -------------------------------------
-        method: string
-                Compression method.
-
-        Returns
-        -------------------------------------
-        Enum int value of the chosen compression method.
-        """
-        if method in ("zstd", "ZSTD"):
-            return EnumMethod.ZSTD
-        if method in ("lz4", "LZ4"):
-            return EnumMethod.LZ4
-        if method in ("snappy", "SNAPPY"):
-            return EnumMethod.SNAPPY
-        raise ValueError("method ZSTD/LZ4/SNAPPY")
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            value = value.upper()
+            if value in cls.__members__:
+                return cls.__members__[value]
 
 
-class EnumLossy:
+class EnumLossy(Enum):
     NONE = 0
     INTEGER = 1
     UNSIGN = 2
 
-    def lossy_to_enum(lossy_type: str) -> int:
-        """
-        Takes the lossy compression type input, and returns the respective enum int value.
-
-        Parameters
-        -------------------------------------
-        lossy_type: string
-                Lossy compression type.
-
-        Returns
-        -------------------------------------
-        Enum int value of the chosen compression lossy compression type.
-        """
-        if lossy_type is None:
-            return EnumLossy.NONE
-        if lossy_type in ("integer", "INTEGER"):
-            return EnumLossy.INTEGER
-        if lossy_type in ("unsign", "UNSIGN"):
-            return EnumLossy.UNSIGN
-        raise ValueError("Lossy compression None/integer/unsign")
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            value = value.upper()
+            if value in cls.__members__:
+                return cls.__members__[value]
 
 
 def bools_to_bitmask(bools) -> bytes:
     """
-    Constructs a bitmask by setting bits corresponding to the indices of True values in a list of booleans, then converts the bitmask to bytes.
+    Constructs a bitmask by setting bits corresponding to the indices of True values in a list of booleans,
+    then converts the bitmask to bytes.
 
     Parameters
     -------------------------------------
