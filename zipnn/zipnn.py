@@ -173,6 +173,7 @@ class ZipNN:
 
         self._version_major = 0
         self._version_minor = 1
+        self._version_tiny = 1
         self._import_dependencies(torch_dtype, zstd_level, zstd_threads)
         self._header = bytearray(16)
         self._is_int = 0
@@ -257,17 +258,17 @@ class ZipNN:
 
     # Header: 16 Bytes
     # [0:1] 2 Bytes [ZN]
-    # [2:3] 2 Bytes [Versions]
-    # [4] Byte [method]
-    # [5] Byte [delta_compressed] - True/ False
-    # [6] Byte [bg_partitions]
-    # [7] Byte [signbit_to_lsb] -
-    # [8] Byte [torch.dtype] -
-    # [9] Byte [lossy_compress_type]
-    # [10] Byte [lossy_compress_factor]
+    # [2:4] 2 Bytes [Versions]
+    # [5] Byte [method]
+    # [6] Byte [delta_compressed] - True/ False
+    # [7] Byte [bg_partitions]
+    # [8] Byte [signbit_to_lsb] -
+    # [9] Byte [torch.dtype] -
+    # [10] Byte [lossy_compress_type]
+    # [11] Byte [lossy_compress_factor]
     # [12] Byte [is_int]
-    # [12] Byte [is_streming]
-    # [13:14] 2 Bytes [streaming_chunk_kb]
+    # [13] Byte [is_streming]
+    # [14:15] 2 Bytes [streaming_chunk_kb]
     # [15] 1 Bytes [Reserved]
 
     def _update_header_lossy(self, lossy_type, lossy_factor, is_int):
@@ -289,9 +290,9 @@ class ZipNN:
         -------------------------------------
         None.
         """
-        self._header[9] = lossy_type
-        self._header[10] = lossy_factor
-        self._header[11] = is_int
+        self._header[10] = lossy_type
+        self._header[11] = lossy_factor
+        self._header[12] = is_int
 
     def _update_header_dtype(self, torch_dtype=None):
         """
@@ -309,9 +310,9 @@ class ZipNN:
         """
         torch_dtype = self.use_var(torch_dtype, self.torch_dtype)
         if torch_dtype is None:
-            self._header[8] = 0
+            self._header[9] = 0
         else:
-            self._header[8] = ZipnnEnumTorchDtype.dtype_to_enum(torch_dtype)
+            self._header[9] = ZipnnEnumTorchDtype.dtype_to_enum(torch_dtype)
 
     def _update_header(self, lossy_compressed_type=None, lossy_compressed_factor=None):
         """
@@ -334,10 +335,11 @@ class ZipNN:
         self._header[0:2] = "ZN".encode("ascii")  # header ZN
         self._header[2] = self._version_major
         self._header[3] = self._version_minor
-        self._header[4] = self.method
-        self._header[5] = 1 if self.delta_compressed_type is not None else 0
-        self._header[6] = int(math.log2(self.bg_partitions))  # log 2
-        self._header[7] = self.signbit_to_lsb
+        self._header[4] = self._version_tiny
+        self._header[5] = self.method
+        self._header[6] = 1 if self.delta_compressed_type is not None else 0
+        self._header[7] = int(math.log2(self.bg_partitions))  # log 2
+        self._header[8] = self.signbit_to_lsb
         self._update_header_dtype()  # self._header[8]
 
     #        self._header[9] = 0 # lossy_compressed_factor
@@ -383,14 +385,15 @@ class ZipNN:
             sys.exit("Header should start with ZN")
         self.version_major = header[2]
         self.version_minor = header[3]
-        self.method = int(header[4])
-        self.delta_compressed_type = int(header[5])
-        self.bg_partitions = 2 ** int(header[6])
-        self.signbit_to_lsb = int(header[7])
-        self.torch_dtype = self._retrieve_header_dtype(int(header[8]))
-        self.lossy_compressed_type = int(header[9])
-        self.lossy_compressed_factor = int(header[10])
-        self._is_int = int(header[11])
+        self.version_tiny = header[4]
+        self.method = int(header[5])
+        self.delta_compressed_type = int(header[6])
+        self.bg_partitions = 2 ** int(header[7])
+        self.signbit_to_lsb = int(header[8])
+        self.torch_dtype = self._retrieve_header_dtype(int(header[9]))
+        self.lossy_compressed_type = int(header[10])
+        self.lossy_compressed_factor = int(header[11])
+        self._is_int = int(header[12])
         if self.input_type == "torch" or self.decompressed_ret_type == "torch":
             self.shape_bytes, shape_size = zipnn_unpack_shape(mv[len(self._header) :])
             header_length += shape_size
