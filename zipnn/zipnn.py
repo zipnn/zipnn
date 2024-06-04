@@ -269,7 +269,6 @@ class ZipNN:
     # [12] Byte [is_int]
     # [13] Byte [is_streming]
     # [14:15] 2 Bytes [streaming_chunk_kb]
-    # [15] 1 Bytes [Reserved]
 
     def _update_header_lossy(self, lossy_type, lossy_factor, is_int):
         """
@@ -749,7 +748,7 @@ class ZipNN:
         tensor = tensor.view(int_dtype)
         lossy_factor = self.lossy_compressed_factor
         divisor = 2**lossy_factor
-        decompress_tensor = zipnn_divide_int(tensor, self._is_int, divisor)
+        decompress_tensor = zipnn_divide_int(tensor, divisor)
         return decompress_tensor
 
     def write_bin(self, ba_decom):

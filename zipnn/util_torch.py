@@ -36,7 +36,7 @@ def zipnn_multiply_if_max_below(tensor: torch.Tensor, max_val: float, multiplier
 
 
 @torch.jit.script
-def zipnn_divide_int(tensor: torch.Tensor, is_int: bool, divisor: float):
+def zipnn_divide_int(tensor: torch.Tensor, divisor: float):
     """
     TorchScript function to modify tensor back to original, if it was modified in lossy compression.
 
@@ -55,9 +55,8 @@ def zipnn_divide_int(tensor: torch.Tensor, is_int: bool, divisor: float):
     -------------------------------------
     Decompressed tensor data.
     """
-    if is_int:
-        tensor = tensor.to(torch.float32)
-        tensor /= divisor
+    tensor = tensor.to(torch.float32)
+    tensor /= divisor
     return tensor
 
 
