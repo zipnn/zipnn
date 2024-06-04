@@ -518,8 +518,6 @@ class ZipNN:
             print(f"len ba {len(ba)}")
 
         if self.compressed_ret_type == "file":
-            if not os.path.exists(self.compressed_file):
-                raise FileNotFoundError(f"The file at {self.compressed_file} was not found.")
             with open(self.compressed_file, "wb") as out_file_handler:
                 out_file_handler.write(ba_comp)
             return 0
@@ -763,8 +761,6 @@ class ZipNN:
         -------------------------------------
         0 is succeed
         """
-        if not os.path.exists(self.decompressed_file):
-            raise FileNotFoundError(f"The file at {self.decompressed_file} was not found.")
         with open(self.decompressed_file, "wb") as out_file_handler:
             out_file_handler.write(ba_decom)
         return 0

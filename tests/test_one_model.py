@@ -222,7 +222,7 @@ def build_tensors_and_vars():
     # Generate random floats between low_rand and high_rand
 
     # From -0.02 to 0.02
-    size = 1_000_000
+    size = 1024*1024
     original_tensor = torch.rand(size) * 0.04 - 0.02
     write_file(input_file, original_tensor)
 
@@ -234,7 +234,7 @@ def build_tensors_and_vars():
     return vars_dict, original_tensor, original_bin, input_file, compressed_file, decompressed_file
 
 
-def test_compression_decompression_one_model_mothod(self):
+def test_compression_decompression_one_model_method(self):
     # one model different method "zstd","lz4","snappy" with and without byte grouping
     vars_dict, original_tensor, original_bin, input_file, compressed_file, decompressed_file = build_tensors_and_vars()
 
