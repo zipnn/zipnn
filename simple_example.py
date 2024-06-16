@@ -10,7 +10,7 @@ zipnn = ZipNN(method='zstd')
 compressed_data = zipnn.compress(example_string)
     
 # Decompress the byte string back
-decompressed_data = zipnn.decompress(compressed_data)
+#decompressed_data = zipnn.decompress(compressed_data)
 
 # Verify the result
-print("Are the original and decompressed byte strings the same? ", example_string == decompressed_data)
+#print("Are the original and decompressed byte strings the same? ", example_string == decompressed_data)

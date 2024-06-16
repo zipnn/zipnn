@@ -5,31 +5,37 @@ import math
 import numpy as np
 import zstandard as zstd
 from zipnn.util_header import EnumMethod, EnumLossy
-import csrc.reorder as reorder
+import split_dtype
 
 class ZipNN:
 
     def __init__(
         self,
         method: str = "zstd",
+        input_format: str = "byte",
+        bytearray_dtype: str = "float32",
+        is_monotonic: bool = False, 
+        header_lean : bool = False,
+
+        bg: int = 0,
+        max_threads: int = 0,
+        bg_compression_threshold=0.95,
+        reorder_signbit: int = 2,
+
         delta_compressed_type: str = None,
-        bg_partitions: int = 4,
-        bg_compression_threshold=0.99,
-        torch_dtype=None,
-        torch_shape=None,
-        reorder_signbit: int = 0,
+
+
         lossy_compressed_type=None,
         lossy_compressed_factor=27,
+
         is_streaming: bool = False,
         streaming_chunk_kb: int = 64 * 1024,
-        input_type: str = "byte",
+
         input_file: str = "byte",
-        compressed_ret_type: str = "byte",
         compressed_file: str = None,
-        decompressed_ret_type: str = "byte",
         decompressed_file: str = None,
+
         zstd_level: int = 3,
-        zstd_threads: int = 8,
         lz4_compression_level: int = 0,
     ):
         """
@@ -43,34 +49,38 @@ class ZipNN:
                 Chosen compression method. The options are: ‘zstd’/’ZSTD’, ‘lz4’/’LZ4’, ‘snappy’/’SNAPPY’.
                 Default is ‘zstd’.
 
-        delta_compressed_type: string
-                NOT IMPLEMENTED YET.
-                Type for delta compression.
-                Options are 'byte', 'file'.
-                Default is ‘None’.
+        input_format: string
+                The type of the input, the same will be for the output.
+                The options are ‘byte’, ‘torch’, ‘numpy’. -> ‘file’ is not implemented yet
+                Default is ‘byte’.
 
-        bg_partitions: int
+          
+        bytearray_dtype: string,
+                Chosen dtype for bytearray: The options are: ‘float32’, ‘uint32’, ‘uint16', 'bfloat16', 'float16'
+                Default is ‘float32’.
+
+        is_monotonic : bool, 
+                The  dataset is monotonic.
+                Default is ‘False’.
+
+         header_lean : bool,
+                The header is lean, no need to save the dtype and the shape
+                Default is ‘False’.
+
+        bg: int
                 Number of partitions for byte grouping.
-                If set to 1 - no byte grouping, running vanilla compression method.
-                Only relevant for a compression that uses byte grouping.
-                Default is 4 (currently only 4 partitions are impltemented).
+                If set to zero, decide according to the dtype
+                If set to 1 - no byte grouping, 1 group running vanilla compression method.
+                If 2,4 - Byte group to 2 groups or 4 roups respectively
+        
+        max_threads: int 
+                The maximum threads for th ecompression and the byte/bit reorder.
+                If 0, the code decide according to the dataset len
 
         bg_compression_threshold: float
                 Compression threshhold for byte grouping.
                 Only relevant for a compression that uses byte grouping.
-                Default is 0.99.
-
-        torch_dtype: string
-                Chosen torch dtype.
-                For example: 'torch.float32'
-                Only relevant if input type is ‘bytes’ or ‘file’ and if decompression_type is ‘torch’.
-                Default is None.
-
-        torch_shape: string
-                Chosen torch shape.
-                For example: '(1_000_000,)'
-                Only relevant if input type is ‘bytes’ or ‘file’ and if decompression_type is ‘torch’.
-                Default is None.
+                Default is 0.95.
 
         reorder_signbit: int
                 This reorder the bits of the float32 or bfloat16 to better compression.
@@ -78,6 +88,13 @@ class ZipNN:
                 For float32 the value should be 32
                 For bfloat16 the value should be 16
                 Default is 0 (don't reorder)
+
+
+       delta_compressed_type: string
+              NOT IMPLEMENTED YET.
+               Type for delta compression.
+               Options are 'byte', 'file'.
+               Default is ‘None’.
 
 
         lossy_compressed_type: string
@@ -101,30 +118,16 @@ class ZipNN:
                 Only relevant if is_steaming is True.
                 Default is 1MB.
 
-        input_type: string
-                The type of the input.
-                The options are ‘byte’, ‘torch’, ‘file’.
-                Default is ‘byte’.
-
         input_file: string
                 Path to the input file.
                 If ‘file’ is the input type – enter file name.
                 Default is ‘byte’.
 
-        compressed_ret_type: string
-                Compression type.
-                The options are ‘byte’, ‘file’.
-                Default is ‘byte’.
 
         compressed_file: string
                 Path to the compressed file.
                 Only relevant if compressed_ret_type is ‘file’.
                 Default is None.
-
-        decompressed_ret_type: string
-                Decompression type.
-                The options are ‘byte’, ‘file’, ‘torch’.
-                Default is ‘byte’.
 
         decompressed_file: string
                 Path to the decompressed file.
@@ -135,11 +138,6 @@ class ZipNN:
                 Compression level for ‘zstd’ compression.
                 Only relevant if method is ‘zstd’.
                 Default is 3.
-
-        zstd_threads: int
-                Number of threads to be used for ‘zstd’ compression.
-                Only relevant if method is ‘zstd’.
-                Default is 8.
 
         lz4_compression_level: int
                 Compression level for ‘lz4’ compression.
@@ -152,8 +150,14 @@ class ZipNN:
         """
 
         self.method = EnumMethod(method).value
+        self.input_format = input_format
+        self.bytearray_dtype = bytearray_dtype,
+        self.header_lean = header_lean,
+        self.is_monotonic= is_monotonic, 
+
+
         self.delta_compressed_type = delta_compressed_type
-        self.bg_partitions = bg_partitions
+        self.bg = bg
         self.bg_compression_threshold = bg_compression_threshold
         self.reorder_signbit = reorder_signbit
         self.lossy_compressed_type = EnumLossy.NONE if lossy_compressed_type is None else EnumLossy(lossy_compressed_type)
@@ -162,27 +166,22 @@ class ZipNN:
         self.is_streaming = is_streaming
         self.streaming_chunk_kb = streaming_chunk_kb
 
-        self.input_type = input_type
         self.input_file = input_file
-        self.compressed_ret_type = compressed_ret_type
         self.compressed_file = compressed_file
-        self.decompressed_ret_type = decompressed_ret_type
         self.decompressed_file = decompressed_file
 
         self.lz4_compression_level = lz4_compression_level
-        self.torch_dtype = None
-        self.torch_shape = torch_shape
 
         self._version_major = 0
         self._version_minor = 1
         self._version_tiny = 1
-        self._import_dependencies(torch_dtype, zstd_level, zstd_threads)
+        self._import_dependencies(zstd_level, max_threads)
         self._header = bytearray(16)
         self._is_int = 0
         self._update_header()
         return None
 
-    def _import_dependencies(self, torch_dtype, zstd_level, zstd_threads):
+    def _import_dependencies(self, zstd_level, max_threads):
         """
         Importing needed dependencies, based on the ZipNN compression method.
 
@@ -193,7 +192,7 @@ class ZipNN:
          zstd_level: int
                 Compression level for ‘zstd’ compression.
 
-        zstd_threads: int
+        max_threads: int
                 Number of threads to be used for ‘zstd’ compression.
 
         Returns
@@ -201,7 +200,7 @@ class ZipNN:
         None.
         """
         if self.method == EnumMethod.ZSTD.value:
-            self._zstd_compress = zstd.ZstdCompressor(level=zstd_level, threads=zstd_threads)
+            self._zstd_compress = zstd.ZstdCompressor(level=zstd_level, threads=max_threads)
             self._zstd_decompress = zstd.ZstdDecompressor()
 
         elif self.method == EnumMethod.LZ4.value:
@@ -221,7 +220,7 @@ class ZipNN:
         else:
             raise ValueError("Unsupported compression method")
 
-        if self.input_type == "torch" or self.decompressed_ret_type == "torch" or torch_dtype is not None:
+        if self.input_format == "torch":
             global torch
             import torch
 
@@ -235,10 +234,8 @@ class ZipNN:
                 zipnn_unpack_shape,
             )
 
-            self.torch_dtype = torch_dtype
-
         if self.lossy_compressed_type != EnumLossy.NONE:
-            if self.input_type != "torch":
+            if self.input_format != "torch":
                 raise ValueError("When use lossy compression the input have to be torch.tensor")
 
     def use_var(self, data, class_var):
@@ -263,7 +260,7 @@ class ZipNN:
     # [2:4] 2 Bytes [Versions]
     # [5] Byte [method]
     # [6] Byte [delta_compressed] - True/ False
-    # [7] Byte [bg_partitions]
+    # [7] Byte [bg]
     # [8] Byte [reorder_signbit] -
     # [9] Byte [torch.dtype] -
     # [10] Byte [lossy_compress_type]
@@ -295,25 +292,19 @@ class ZipNN:
         self._header[11] = lossy_factor
         self._header[12] = is_int
 
-    def _update_header_dtype(self, torch_dtype=None):
-        """
-        Updates header with dtype if it's torch decompression.
-
-        Parameters
-        -------------------------------------
-        lossy_type: string
-                torch_dtype if any was used.
-                Default is None.
-
-        Returns
-        -------------------------------------
-        None.
-        """
-        torch_dtype = self.use_var(torch_dtype, self.torch_dtype)
-        if torch_dtype is None:
-            self._header[9] = 0
-        else:
-            self._header[9] = ZipNNTorchDtypeEnum.from_torch_dtype(torch_dtype).code
+#    def _update_header_dtype(self):
+#        """
+#        Updates header with dtype if it's torch decompression.
+#
+#        Parameters
+#        -------------------------------------
+#        lossy_type: string
+#                torch_dtype if any was used.
+#                Default is None.
+#
+#        Returns
+#        -------------------------------------
+#        None.
 
     def _update_header(self, lossy_compressed_type=None, lossy_compressed_factor=None):
         """
@@ -339,9 +330,9 @@ class ZipNN:
         self._header[4] = self._version_tiny
         self._header[5] = self.method
         self._header[6] = 1 if self.delta_compressed_type is not None else 0
-        self._header[7] = int(math.log2(self.bg_partitions))  # log 2
+        self._header[7] = 4 #; int(math.log2(self.bg))  # log 2
         self._header[8] = self.reorder_signbit
-        self._update_header_dtype()  # self._header[8]
+    #   self._update_header_dtype()  # self._header[8]
 
     #        self._header[9] = 0 # lossy_compressed_factor
     #        self._header[10] = 0 # is_int
@@ -389,13 +380,13 @@ class ZipNN:
         self.version_tiny = header[4]
         self.method = int(header[5])
         self.delta_compressed_type = int(header[6])
-        self.bg_partitions = 2 ** int(header[7])
+        self.bg = 2 ** int(header[7])
         self.reorder_signbit = int(header[8])
         self.torch_dtype = self._retrieve_header_dtype(int(header[9]))
         self.lossy_compressed_type = int(header[10])
         self.lossy_compressed_factor = int(header[11])
         self._is_int = int(header[12])
-        if self.input_type == "torch" or self.decompressed_ret_type == "torch":
+        if self.input_format == "torch":
             self.shape_bytes, shape_size = zipnn_unpack_shape(mv[len(self._header) :])
             header_length += shape_size
         return header_length
@@ -442,11 +433,11 @@ class ZipNN:
 
         if self.delta_compressed_type is not None:
             return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
-        if self.input_type == "byte":
+        if self.input_format == "byte":
             return self.compress_bin(data)
-        elif self.input_type == "torch":
+        elif self.input_format == "torch":
             return self.compress_torch(data, lossy_compressed_type, lossy_compressed_factor)
-        elif self.input_type == "file":
+        elif self.input_format == "file":
             return self.compress_file(self.use_var(data, self.input_file))
         raise ValueError("Unsupported input type")
 
@@ -488,12 +479,12 @@ class ZipNN:
         """
         is_print = 0
         if (self.reorder_signbit != 0):
-            if(reorder_signbit == 32):
+            if(self.reorder_signbit == 32):
                 reorder.reorder_float32_bytearray(ba)
-            if(reorder_signbit == 16):
+            if(self.reorder_signbit == 16):
                 reorder.reorder_bfloat16_bytearray(ba)
 
-        if self.bg_partitions <= 1:
+        if self.bg <= 1:
             ba_comp = self._header + self.compress_method(ba)
         else:
             bg_ret = []
@@ -502,8 +493,6 @@ class ZipNN:
             for i in range(4):
                 stime = time.time()
                 ba_bg = ba[i::4]
-                print (time.time() - stime)
-                exit(0)
                 bg_comp = self.compress_method(ba_bg)
                 if len(bg_comp) / len(ba_bg) < self.bg_compression_threshold:
                     # Save this byte group compressed
@@ -519,8 +508,7 @@ class ZipNN:
                     bg_is_comp.append((0).to_bytes(1, byteorder="little"))
                     bg_len.append(len(ba_bg).to_bytes(length=8, byteorder="little"))
                     bg_ret.append(ba_bg)
-            if self.input_type == "torch" or self.decompressed_ret_type == "torch":
-                shape_bytes = zipnn_pack_shape(self.torch_shape)
+            if self.input_format == "torch":
                 ba_comp = b"".join([self._header] + [shape_bytes] + bg_is_comp + bg_len + bg_ret)
             else:
                 ba_comp = b"".join([self._header] + bg_is_comp + bg_len + bg_ret)
@@ -528,10 +516,10 @@ class ZipNN:
             print(f"len ba-comp {len(ba_comp)}")
             print(f"len ba {len(ba)}")
 
-        if self.compressed_ret_type == "file":
-            with open(self.compressed_file, "wb") as out_file_handler:
-                out_file_handler.write(ba_comp)
-            return 0
+#        if self.compressed_ret_type == "file":
+#            with open(self.compressed_file, "wb") as out_file_handler:
+#                out_file_handler.write(ba_comp)
+#            return 0
         return ba_comp
 
     def compress_file(self, filename: str):
@@ -548,16 +536,17 @@ class ZipNN:
         Byte array of compressed data.
         """
 
-        if not os.path.exists(filename):
-            raise FileNotFoundError(f"The file at {filename} was not found.")
-        with open(filename, "rb") as in_file_handler:
-            data = in_file_handler.read()
-        ba = self.compress_bin(data)
-        return ba
+        raise ImportError("Not implemented Yet")
 
-        # streaming
-
-    #       if (self.is_streaming): # streaming only for input_type == "file_streaming" and compress_ret_type == "file_streaming"
+    #        if not os.path.exists(filename):
+    #         raise FileNotFoundError(f"The file at {filename} was not found.")
+    #     with open(filename, "rb") as in_file_handler:
+    #         data = in_file_handler.read()
+    #     ba = self.compress_bin(data)
+    #     return ba
+    #
+    #     # streaming
+    #       if (self.is_streaming): # streaming only for input_format == "file_streaming" and compress_ret_type == "file_streaming"
     #          assert (self.compressed_ret_type == "file")
     #          with open(input_path, 'rb') as infile, open(output_path, 'wb') as outfile:
     #              while chunk := infile.read(CHUNK_SIZE):
@@ -591,7 +580,6 @@ class ZipNN:
         Byte array of compressed data.
         """
         self._update_header_dtype(data.dtype)
-        self.torch_shape = data.shape
         lossy_type = self.use_var(lossy_compressed_type, self.lossy_compressed_type)
         lossy_type = EnumLossy.NONE if lossy_type is None else lossy_type
         if lossy_type is not EnumLossy.NONE:
@@ -654,31 +642,7 @@ class ZipNN:
         -------------------------------------
         Data after lossy compression.
         """
-        #        if self.input_type == "byte":
-        #    ba1 = data
-        # elif self.input_type == "file":
-        #    with open(data, "rb"):
-        #        ba1 = bytes(fh2.read())
-        # else:
-        #    sys.exit(f"Unsupported delta type, support only file/byte")
-
-        # if self.delta_compressed_type == "byte":
-        #    ba2 = data
-        # elif self.input_type == "file":
-        #    with open(delta_second_data, "rb"):
-        #        ba2 = bytes(fh2.read())
-        # else:
-        #    sys.exit(f"Unsupported delta type, support only file/byte")
-
-        # if len(ba1) != len(ba2):
-        #    sys.exit(f"Unsupported delta compression of different length")
-
-        # array1 = np.frombuffer(ba1, dtype=np.uint8)
-        # array2 = np.frombuffer(ba2, dtype=np.uint8)
-        # ba = np.bitwise_xor(array1, array2).tobytes()
-
-        # return self.compress_bin(ba)
-        return 0
+        raise ImportError("Not implemented Yet")
 
     #################
     # decompression #
@@ -703,11 +667,7 @@ class ZipNN:
         Returns the output of decompress_bin or decompress_read_file (depends on the type of the data compressed),
         which will be the compressed file, in the format chosen in the ZipNN class instance configuration.
         """
-        if self.compressed_ret_type == "byte":
-            return self.decompress_bin(data)
-        elif self.compressed_ret_type == "file":
-            return self.decompress_read_file(data)
-        raise ValueError("Unsupported compression method")
+        return self.decompress_bin(data)
 
     def decompress_method(self, data):
         """
@@ -798,7 +758,7 @@ class ZipNN:
         header_length = self._retrieve_header(ba_compress)
         start_is_comp = header_length
 
-        if self.bg_partitions <= 1:
+        if self.bg <= 1:
             ba_decom = self.decompress_method(bytes(ba_compress[start_is_comp:]))
             if (self.reorder_signbit != 0):
                 self._revert_reorder_bits(ba_decom)
@@ -808,9 +768,7 @@ class ZipNN:
             if self.decompressed_ret_type == "file":
                 return self.write_bin(ba_decom)
             if self.decompressed_ret_type == "tensor":
-                shape = self.torch_shape
                 numpy_dtype = np.dtype(self.torch_dtype.numpy_dtype)
-                numpy_array = np.frombuffer(ba_decom, dtype=numpy_dtype).reshape(shape)
                 tensor = torch.from_numpy(numpy_array)
                 return torch
         else:

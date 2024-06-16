@@ -1,5 +1,5 @@
 import numpy as np
-import split  # This is your C extension module
+import split_dtype  # This is your C extension module
 import time
 from zipnn import ZipNN
 import torch
@@ -40,7 +40,7 @@ start_time = time.time()
 # byte_mode = 8 [Truncate MSByte]
 # is_review = 0 [no review]
 # thread = 1 [one thread]
-buf1, buf2 = split.split_dtype16(original_bytes, 0, 1, 0 ,1) # bit_mode = 1 [bit_ordering], 
+buf1, buf2 = split_dtype.split_dtype16(original_bytes, 0, 1, 0 ,1) # bit_mode = 1 [bit_ordering], 
 split_time = time.time() - start_time
 
 start_time = time.time()
@@ -70,7 +70,7 @@ print_bit_representation(buf1, "Split Buf1")
 # thread = 1 [one thread]
 start_time = time.time()
 empty_bytearray = bytearray()
-combined_bytes = split.combine_dtype16(buf1, empty_bytearray, 0, 1, 1)
+combined_bytes = split_dtype.combine_dtype16(buf1, empty_bytearray, 0, 1, 1)
 combine_time = time.time() - start_time
 print_bit_representation(original_bytes_saved, "Original Data")
 print_bit_representation(combined_bytes, "Combine")
