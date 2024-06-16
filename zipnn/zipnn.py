@@ -5,6 +5,7 @@ import math
 import numpy as np
 import zstandard as zstd
 from zipnn.util_header import EnumMethod, EnumLossy
+import csrc.reorder as reorder
 
 class ZipNN:
 
@@ -16,7 +17,7 @@ class ZipNN:
         bg_compression_threshold=0.99,
         torch_dtype=None,
         torch_shape=None,
-        signbit_to_lsb: bool = False,
+        reorder_signbit: int = 0,
         lossy_compressed_type=None,
         lossy_compressed_factor=27,
         is_streaming: bool = False,
@@ -71,11 +72,13 @@ class ZipNN:
                 Only relevant if input type is ‘bytes’ or ‘file’ and if decompression_type is ‘torch’.
                 Default is None.
 
-        signbit_to_lsb: bool
-                NOT IMPLEMENTED YET.
-                If true - moving the sign bit to the LSB, to have all the exponent byte teogether in FP32 and BF16.
-                Only supported with lossy compressionin.
-                Default is False.
+        reorder_signbit: int
+                This reorder the bits of the float32 or bfloat16 to better compression.
+                It puts the exponent first than the sign bit and than the mantissa.
+                For float32 the value should be 32
+                For bfloat16 the value should be 16
+                Default is 0 (don't reorder)
+
 
         lossy_compressed_type: string
                 Type for lossy compression.
@@ -152,7 +155,7 @@ class ZipNN:
         self.delta_compressed_type = delta_compressed_type
         self.bg_partitions = bg_partitions
         self.bg_compression_threshold = bg_compression_threshold
-        self.signbit_to_lsb = signbit_to_lsb
+        self.reorder_signbit = reorder_signbit
         self.lossy_compressed_type = EnumLossy.NONE if lossy_compressed_type is None else EnumLossy(lossy_compressed_type)
         self.lossy_compressed_factor = lossy_compressed_factor
 
@@ -261,7 +264,7 @@ class ZipNN:
     # [5] Byte [method]
     # [6] Byte [delta_compressed] - True/ False
     # [7] Byte [bg_partitions]
-    # [8] Byte [signbit_to_lsb] -
+    # [8] Byte [reorder_signbit] -
     # [9] Byte [torch.dtype] -
     # [10] Byte [lossy_compress_type]
     # [11] Byte [lossy_compress_factor]
@@ -337,7 +340,7 @@ class ZipNN:
         self._header[5] = self.method
         self._header[6] = 1 if self.delta_compressed_type is not None else 0
         self._header[7] = int(math.log2(self.bg_partitions))  # log 2
-        self._header[8] = self.signbit_to_lsb
+        self._header[8] = self.reorder_signbit
         self._update_header_dtype()  # self._header[8]
 
     #        self._header[9] = 0 # lossy_compressed_factor
@@ -387,7 +390,7 @@ class ZipNN:
         self.method = int(header[5])
         self.delta_compressed_type = int(header[6])
         self.bg_partitions = 2 ** int(header[7])
-        self.signbit_to_lsb = int(header[8])
+        self.reorder_signbit = int(header[8])
         self.torch_dtype = self._retrieve_header_dtype(int(header[9]))
         self.lossy_compressed_type = int(header[10])
         self.lossy_compressed_factor = int(header[11])
@@ -484,6 +487,12 @@ class ZipNN:
         Returns a byte array of the header, data, and some metadata.
         """
         is_print = 0
+        if (self.reorder_signbit != 0):
+            if(reorder_signbit == 32):
+                reorder.reorder_float32_bytearray(ba)
+            if(reorder_signbit == 16):
+                reorder.reorder_bfloat16_bytearray(ba)
+
         if self.bg_partitions <= 1:
             ba_comp = self._header + self.compress_method(ba)
         else:
@@ -493,6 +502,8 @@ class ZipNN:
             for i in range(4):
                 stime = time.time()
                 ba_bg = ba[i::4]
+                print (time.time() - stime)
+                exit(0)
                 bg_comp = self.compress_method(ba_bg)
                 if len(bg_comp) / len(ba_bg) < self.bg_compression_threshold:
                     # Save this byte group compressed
@@ -622,8 +633,6 @@ class ZipNN:
         else:
             raise ValueError("Unsupported lossy_compressed_type")
 
-        if self.signbit_to_lsb:
-            return data
         return data
 
     def compress_delta(self, delta_second_data, lossy_compressed_type, lossy_compressed_factor):
@@ -765,6 +774,12 @@ class ZipNN:
             out_file_handler.write(ba_decom)
         return 0
 
+    def _revert_reorder_bits(self, ba): 
+        if(self.reorder_signbit == 32):
+            reorder.reorder_float32_bytearray(ba)
+        if(self.reorder_signbit == 16):
+            reorder.reorder_bfloat16_bytearray(ba)
+
     def decompress_bin(self, ba_compress: bytes):
         """
         Decompresses byte data from either a byte array or a tensor.
@@ -785,6 +800,9 @@ class ZipNN:
 
         if self.bg_partitions <= 1:
             ba_decom = self.decompress_method(bytes(ba_compress[start_is_comp:]))
+            if (self.reorder_signbit != 0):
+                self._revert_reorder_bits(ba_decom)
+
             if self.decompressed_ret_type == "byte":
                 return ba_decom
             if self.decompressed_ret_type == "file":
@@ -837,6 +855,8 @@ class ZipNN:
 
         else:  # return type: Byte and File
             ba_decom = memoryview(new_arr)
+            if (self.reorder_signbit != 0):
+                self._revert_reorder_bits(ba_decom)
         if self.decompressed_ret_type == "file":
             return self.write_bin(ba_decom)
         return ba_decom

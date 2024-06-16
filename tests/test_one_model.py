@@ -16,7 +16,7 @@ def build_vars_dict():
         "delta_compressed_type": None,  # None no delta compression / for delta compression use "byte" or "file" - "torch" TBD
         "bg_partitions": 4,  # how namy Byte Goruping partitions -> Currently supported 4 (ideal for int32/ float32) and 1 (no Byte Grouping)
         "bg_compression_threshold": 0.99,  # Compression threshold of Byte Grouping
-        "signbit_to_lsb": False,  # Move the sign bit to the lsb
+        "reorder_signbit": False,  # Move the sign bit to the lsb
         "lossy_compressed_type": None,
         "lossy_compressed_factor": 27,
         "is_streaming": False,  # Only to "file" at the moment
@@ -231,6 +231,7 @@ def build_tensors_and_vars():
 
     # Convert the numpy array to bytes
     original_bin = np_array.tobytes()
+    print (f"original length in bytes {len(original_bin)}")
     return vars_dict, original_tensor, original_bin, input_file, compressed_file, decompressed_file
 
 

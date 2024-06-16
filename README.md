@@ -101,7 +101,7 @@ For more advanced methods, please see the following option:
 * ```bg_compression_threshold```: Compression threshold of Byte Grouping (default value = 0.99).
 * ```torch_dtype```: If a non-torch compressed file is decompressed as torch, it's dtype should be noted (default value = None).
 * ```torch_shape```: If a non-torch compressed file is decompressed as torch, it's shape should be noted (default value = None).
-* ```signbit_to_lsb```: Flag for moving the sign bit to the lsb to have all the exponent byte together in FP32 and BF16, only supported with lossy compression (default value = False).
+* ```reorder_signbit```: Reorder the float32/bloat16 bites for better compression. For float32/bloat16 the value should be 32/16 respectably (default value = 0)
 * ```lossy_compressed_type```: Type for lossy compression if wanted, supporting only integer (default value = None).
 * ```lossy_compressed_factor```: Compression factor for lossy compression (default value = 27).
 * ```is_streaming```: Streaming flag (default value = False, supports only file at the moment).
