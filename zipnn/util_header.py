@@ -15,6 +15,19 @@ class EnumMethod(Enum):
                 return cls.__members__[value]
 
 
+class EnumFormat(Enum):
+    BYTE = 1
+    TORCH = 2
+    NUMPY = 3
+    FILE = 4  # Note: I changed this from 3 to 4 to avoid duplicate values unless that's intended
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            value = value.upper()
+            if value in cls.__members__:
+                return cls.__members__[value]
+
 class EnumLossy(Enum):
     NONE = 0
     INTEGER = 1
