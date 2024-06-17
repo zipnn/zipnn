@@ -87,14 +87,27 @@ There are 4 example files in the examples folder.
 
 ## Configuration
 
-The default configuration is ByteGrouping of 4 with vanilla ZSTD (running with 8 threads), and the input and outputs are "byte"
-For more advanced methods, please see the following option:
+The default configuration is ByteGrouping of 4 with vanilla ZSTD (running with 8 threads), and the input and outputs are "byte".
+For more advanced methods, please see the following options:
 
 * ```method```: Compression method, Supporting zstd, lz4, snappy (default value = 'zstd').
 * ```input_format```: The input data format, can be one of the following: torch, numpy, byte (default value = 'byte').
 * ```bytearray_dtype```: The data type of the byte array, if input_format is 'byte'. If input_format is torch or numpy, the dtype will be derived from the data automatically. (default value = 'float32').
 * ```is_monotonic```: A boolean flag, set to True for a monotonic data. (default value = False).
-* ```header_lean```: A boolean flag, set to True for a lean header. (default value = False).
+
+There are additional, optional arguments available for use, such as:
+
+* ```bg```: Number of partitions for byte grouping.
+  * If set to zero - the number is chosen automatically by the compressor (this is also the default setting).
+  * If set to -1 - no byte grouping - vanilla compression method.
+  * If set to 2 or 4 - Byte group to 2 groups or 4 groups, respectively.
+
+* ```reorder_signbit```: Reorder the signbit for a better compression.
+  * If set to zero - the reordering is done automatically by the compressor (this is also the default setting).
+  * If set to -1 - no signbit reordering.
+  * If set to 16 - tells the compressor the data is of type bfloat16, and it will reorder accordingly.
+  * If set to 32 - tells the compressor the data is of type float32, and it will reorder accordingly.
+
 
 
 ### Validation test
