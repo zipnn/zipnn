@@ -2,24 +2,20 @@
 
 ## Introduction
 
-ZipNN is a lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment. 
-It adds Bit-Manipulation before and after vanilla compression/decompression methods.
+In the realm of data compression, achieving a high compression/decompression ratio often requires careful consideration of the data types and the nature of the datasets being compressed. For instance, different strategies may be optimal for floating-point numbers compared to integers, and datasets in monotonic order may benefit from distinct preparations.
 
- - [Byte Grouping](./docs/BITMANIPULATION.md#byte-grouping) - grouping together similar bytes (group together the first byte from all parameters, then the second byte, etc.) - The default is ByteGroup of 4 (partitions to 4 groups)
- - [Sign Bit](./docs/BITMANIPULATION.md#signbit-handeling) -  (On the way) - Move the sign bit since it hold high entropy. 
- - [Tunable Lossy Compression](./docs/BITMANIPULATION.md#tunable-lossy-compression) -This technique allows for incurring controlled inaccuracies to parameters, under the assumption that a lot of the entropy in model weights is actually redundant, i.e., noise saved to disk.
- - [Delta](./docs/BITMANIPULATION.md#delta-compression) - (On the way) - Compute the difference between the two inputs (for exmple: models)
+ZipNN is a lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment, designed to automatically prepare the data for compression according to its type. By simply calling zipnn.compress(data), users can rely on the package to apply the most effective compression technique under the hood.
+
+[Click here to explore the options we use for different datasets and data types](./UTH.md)
+
+With zipnn, users can focus on their core tasks without worrying about the complexities of data compression, confident that the package will deliver the best possible results for their specific data types and structures.
 
 For more details, please see our paper: [Lossless and Near-Lossless Compression for Foundation Models](https://arxiv.org/pdf/2404.15198)
 
 Currently, ZipNN compression methods are implemented on CPUs, and GPU implementations are on the way. 
 
-## zipnn package
-
-Zipnn is a tool designed to compress and decompress data in byte, file, and Torch tensor formats. This repository includes implementations for compressing data into byte or file formats and decompressing it back to byte, file, or Torch tensor formats. The Zipnn package implements support for several kinds of compression.
-
 <p align="center">
-  <img src="./images/updated_flow.png" alt="Flow Image" width="800" height="400" style="display: block; margin: 0 auto;">
+  <img src="./updated_flow.png" alt="Flow Image" width="800" height="400" style="display: block; margin: 0 auto;">
 </p>
 
 
@@ -45,14 +41,16 @@ pip install torch
 
 ## Usage
 
+Import zipnn
+
 ```python
-from zipnn import ZipNN
+from zipnn import zipnn
 ```
 
 Instance class:
 
 ```python
-zipnn = ZipNN(method='zstd')
+zipnn = zipnn.ZipNN(method='zstd')
 ```
 
 Compression:
@@ -69,52 +67,34 @@ decompressed_data = zipnn.decompress(compressed_data)
 
 ## Example
 
-```python
-from zipnn import ZipNN
+There are 4 example files in the examples folder.
 
-example_string = b"Example string for compression"
+* To run a basic byte->byte compression & decompression:
 
-# Initializing the ZipNN class with the default configuration
-# for Byte->Byte compression and Byte->Byte decompression
-zipnn = ZipNN(method='zstd')
+```>>> python3.11 simple_example.py```
 
-# Compress the byte string
-compressed_data = zipnn.compress(example_string)
+* To run byte->byte compression and 1 torch->torch compression on 3 huggingface models, and see the compression ratio:
 
-# Decompress the byte string back
-decompressed_data = zipnn.decompress(compressed_data)
+```>>> python3.11 models_compression_ratio.py```
 
-# Verify the result
-print("Are the original and decompressed byte strings the same? ", example_string == decompressed_data)
->>> True
+* To compress file->file run:
 
-```
+```>>> python3.11 cmd_comp.py input_file_name compressed_file_name```
+
+* To decompress file->file run:
+
+```>>> python3.11 cmd_decomp.py compressed_file_name decompressed_file_name```
 
 ## Configuration
 
 The default configuration is ByteGrouping of 4 with vanilla ZSTD (running with 8 threads), and the input and outputs are "byte"
 For more advanced methods, please see the following option:
 
-* ```method```: Compression method, Supporting zstd, lz4, snappy (default value = zstd).
-* ```delta_compressed_type```: Type of delta compression if chosen (default value = None, supports byte and file).
-* ```bg_partitions```: Number of partitions for Byte Grouping (default value = 4).
-* ```bg_compression_threshold```: Compression threshold of Byte Grouping (default value = 0.99).
-* ```torch_dtype```: If a non-torch compressed file is decompressed as torch, it's dtype should be noted (default value = None).
-* ```torch_shape```: If a non-torch compressed file is decompressed as torch, it's shape should be noted (default value = None).
-* ```signbit_to_lsb```: Flag for moving the sign bit to the lsb to have all the exponent byte together in FP32 and BF16, only supported with lossy compression (default value = False).
-* ```lossy_compressed_type```: Type for lossy compression if wanted, supporting only integer (default value = None).
-* ```lossy_compressed_factor```: Compression factor for lossy compression (default value = 27).
-* ```is_streaming```: Streaming flag (default value = False, supports only file at the moment).
-* ```streaming_chunk_KB```: Chunk size for streaming if is_streaming is True (default value = 1MB).
-* ```input_type```: Supporting byte, torch, file (default value = byte, and in case of file, enter the file name).
-* ```input_file```: Path to the input file (default value = byte, and in case of file, enter none).
-* ```compressed_ret_type```: The Compression type, Supporting byte, file (default value = byte).
-* ```compressed_file```: Path to the compressed file, if compress_ret_type is file.
-* ```decompressed_ret_type```: The Decompression type, Supporting byte, torch, file (default value = byte).
-* ```decompressed_file```: Path to the decompressed file.
-* ```zstd_level```: Compression level for zstd (default value = 3).
-* ```zstd_threads```: Number of threads to be used for zstd compression (default value = 8).
-* ```lz4_compression_level```: Compression level for lz4 (default value = 0).
+* ```method```: Compression method, Supporting zstd, lz4, snappy (default value = 'zstd').
+* ```input_format```: The input data format, can be one of the following: torch, numpy, byte (default value = 'byte').
+* ```bytearray_dtype```: The data type of the byte array, if input_format is 'byte'. If input_format is torch or numpy, the dtype will be derived from the data automatically. (default value = 'float32').
+* ```is_monotonic```: A boolean flag, set to True for a monotonic data. (default value = False).
+* ```header_lean```: A boolean flag, set to True for a lean header. (default value = False).
 
 
 ### Validation test
