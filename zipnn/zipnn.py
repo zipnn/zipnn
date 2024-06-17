@@ -822,50 +822,52 @@ class ZipNN:
             ba_decom = self.decompress_method(bytes(ba_compress[start_is_comp:]))
             return ba_decom
         else:
-            if (self.dtype == ZipNNDataDtypeEnum.FLOAT32.code): 
-                ba_bg = []
-                start_len = start_is_comp + 4
-                start_ba = [start_len + 32]
-                end_ba = []
-                for i in range(4):
-                    btime = time.time()
-                    mv = memoryview(ba_compress)
-                    is_comp = int.from_bytes(mv[start_is_comp + i : start_is_comp + i + 1], byteorder="little")
-                    end_ba.append(int.from_bytes(mv[start_len + i * 8 : start_len + (i + 1) * 8 - 1], byteorder="little") + start_ba[i])
-                    start_ba.append(end_ba[i])
-                    if is_comp == 1:
-                        ba_bg.append(self.decompress_method(ba_compress[start_ba[i] : end_ba[i]]))
-                    else:
-                        ba_bg.append(mv[start_ba[i] : end_ba[i]])
-                    if is_print:
-                        print(f"the time of this byte is: {time.time()-btime}")
-                start_time = time.time() 
-                ba_decom  = split_dtype.combine_dtype32(ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads)
-                print (type(ba_decom))
+            float32=0; bfloat16=0; float16=0; uint16=0
+            if (self.dtype in (ZipNNDataDtypeEnum.FLOAT32.code, ZipNNDataDtypeEnum.FLOAT.code)):
+                groups = 4
+                float32 = 1
+            elif(self.dtype == ZipNNDataDtypeEnum.BFLOAT16.code):    
+                groups = 2
+                bfloat16 = 1
+            ba_bg = []
+            start_len = start_is_comp + groups
+            start_ba = [start_len + 8*groups]
+            end_ba = []
+            for i in range(groups):
+                btime = time.time()
+                mv = memoryview(ba_compress)
+                is_comp = int.from_bytes(mv[start_is_comp + i : start_is_comp + i + 1], byteorder="little")
+                end_ba.append(int.from_bytes(mv[start_len + i * 8 : start_len + (i + 1) * 8 - 1], byteorder="little") + start_ba[i])
+                start_ba.append(end_ba[i])
+                if is_comp == 1:
+                    ba_bg.append(self.decompress_method(ba_compress[start_ba[i] : end_ba[i]]))
+                else:
+                    ba_bg.append(mv[start_ba[i] : end_ba[i]])
                 if is_print:
-                    print ("combine using c ", time.time()-start_time)
-                if (self.input_format == EnumFormat.TORCH.value):
-                    array = np.frombuffer(ba_decom, dtype=ZipNNDataDtypeEnum.FLOAT32.numpy_dtype)
+                    print(f"the time of this byte is: {time.time()-btime}")
+            start_time = time.time()
+            if (float32):
+                ba_decom  = split_dtype.combine_dtype32(ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads)
+            elif (bfloat16):    
+                ba_decom  = split_dtype.combine_dtype16(ba_bg[0], ba_bg[1], self._bit_reorder, self._byte_reorder, self.threads)
+            if is_print:
+                print ("combine using c ", time.time()-start_time)
+
+            if (self.input_format == EnumFormat.BYTE.value):
+                return ba_decom
+
+            if (self.input_format == EnumFormat.TORCH.value):
+                if (float32):
+                    array = np.frombuffer(ba_decom, dtype=np.float32)
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
+                elif (bfloat16):
+                    array = np.frombuffer(ba_decom, dtype=np.uint16)
+                    array = array.reshape(self.shape_bytes)
+                    tensor = torch.from_numpy(array)
+                    tensor = tensor.view(torch.bfloat16)
                     
-                return tensor
-
-        if self.lossy_compressed_type or self.decompressed_ret_type == "torch":
-            tensor = torch.from_numpy(new_arr).to(torch.uint8)
-            if self.lossy_compressed_type:
-                tensor = self.decompress_lossy(tensor, self.torch_dtype)
-            if self.decompressed_ret_type == "torch":
-                tensor = tensor.view(self.torch_dtype)
             return tensor
-
-        else:  # return type: Byte and File
-            ba_decom = memoryview(new_arr)
-            if (self.reorder_signbit != 0):
-                self._revert_reorder_bits(ba_decom)
-        if self.decompressed_ret_type == "file":
-            return self.write_bin(ba_decom)
-        return ba_decom
 
     def decompress_read_file(self, data):
         """
