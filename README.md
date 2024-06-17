@@ -15,7 +15,7 @@ For more details, please see our paper: [Lossless and Near-Lossless Compression 
 Currently, ZipNN compression methods are implemented on CPUs, and GPU implementations are on the way. 
 
 <p align="center">
-  <img src="./updated_flow.png" alt="Flow Image" width="800" height="400" style="display: block; margin: 0 auto;">
+  <img src="./images/updated_flow.png" alt="Flow Image" width="800" height="400" style="display: block; margin: 0 auto;">
 </p>
 
 
