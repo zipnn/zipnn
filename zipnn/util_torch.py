@@ -2,7 +2,7 @@ import sys
 import struct
 from enum import Enum
 import torch
-
+import numpy as np
 
 @torch.jit.script
 def zipnn_multiply_if_max_below(tensor: torch.Tensor, max_val: float, multiplier: float, dtype: int):
@@ -156,49 +156,31 @@ def zipnn_unpack_shape(packed_data):
         dimensions.append(dim)
     return tuple(dimensions), total_bytes_read
 
-class ZipNNTorchDtypeEnum(Enum):
-    NONE = (None, 0)
-    FLOAT32 = (torch.float32, 1)  # 32 bits
-    FLOAT = (torch.float, 2)  # 32 bits (same as FLOAT32)
-    FLOAT64 = (torch.float64, 3)  # 64 bits
-    DOUBLE = (torch.double, 4)  # 64 bits (same as FLOAT64)
-    FLOAT16 = (torch.float16, 5)  # 16 bits
-    HALF = (torch.half, 6)  # 16 bits (same as FLOAT16)
-    BFLOAT16 = (torch.bfloat16, 7)  # 16 bits
-    UINT8 = (torch.uint8, 8)  # 8 bits
-    INT8 = (torch.int8, 9)  # 8 bits
-    INT16 = (torch.int16, 10)  # 16 bits
-    SHORT = (torch.short, 11)  # 16 bits (same as INT16)
-    INT32 = (torch.int32, 12)  # 32 bits
-    INT = (torch.int, 13)  # 32 bits (same as INT32)
-    INT64 = (torch.int64, 14)  # 64 bits
-    LONG = (torch.long, 15)  # 64 bits (same as INT64)
-    BOOL = (torch.bool, 16)  # 8 bits
-    COMPLEX64 = (torch.complex64, 17)  # 64 bits
-    CFLOAT = (torch.cfloat, 18)  # 64 bits (same as COMPLEX64)
-    COMPLEX128 = (torch.complex128, 19)  # 128 bits
-    CDOUBLE = (torch.cdouble, 20)  # 128 bits (same as COMPLEX128)
+class ZipNNDataDtypeEnum(Enum):
+    NONE = (None, None, 0)
+    FLOAT32 = (torch.float32, np.float32, 1)
+    FLOAT64 = (torch.float64, np.float64, 3)
+    FLOAT16 = (torch.float16, np.float16, 5)
+    BFLOAT16 = (torch.bfloat16, None, 7)  # NumPy does not have bfloat16
+    UINT8 = (torch.uint8, np.uint8, 8)
+    INT8 = (torch.int8, np.int8, 9)
+    INT16 = (torch.int16, np.int16, 10)
+    INT32 = (torch.int32, np.int32, 12)
+    INT64 = (torch.int64, np.int64, 14)
+    BOOL = (torch.bool, np.bool_, 16)
+    COMPLEX64 = (torch.complex64, np.complex64, 17)
+    COMPLEX128 = (torch.complex128, np.complex128, 19)
 
-    def __init__(self, dtype, code):
-        self.dtype = dtype
+    def __init__(self, torch_dtype, numpy_dtype, code):
+        self.torch_dtype = torch_dtype
+        self.numpy_dtype = numpy_dtype
         self.code = code
 
     @classmethod
-    def from_torch_dtype(cls, dtype):
-        if dtype is None:
-            return cls.NONE
+    def from_dtype(cls, dtype):
         for member in cls:
-            if member.dtype is dtype:
+            if dtype == member.torch_dtype or dtype == member.numpy_dtype:
                 return member
-        raise ValueError(f"No matching TorchDtypeEnum for {dtype}")
+        return cls.NONE
 
-    @classmethod
-    def from_code(cls, code):
-        for member in cls:
-            if member.code == code:
-                return member
-        raise ValueError(f"No matching TorchDtypeEnum for code {code}")
-
-    def __str__(self):
-        return f"{self.name} (dtype: {self.dtype}, code: {self.code})"
 

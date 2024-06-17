@@ -247,7 +247,7 @@ PyObject* py_combine_dtype16(PyObject *self, PyObject *args) {
         revert_all_floats(result, view1.len * 2);
     }
 
-    PyObject *py_result = PyBytes_FromStringAndSize(result, view1.len * 2);
+    PyObject *py_result = PyByteArray_FromStringAndSize(result, view1.len * 2);
     PyMem_Free(result);
     PyBuffer_Release(&view1);
     PyBuffer_Release(&view2);
