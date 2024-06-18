@@ -158,54 +158,65 @@ def zipnn_unpack_shape(packed_data):
     return tuple(dimensions), total_bytes_read
 
 
-def zipnn_is_floating_point(data_format_value, data):
+def zipnn_is_floating_point(data_format_value, data, bytearray_dtype):
     if (data_format_value == EnumFormat.TORCH.value):
         return torch.is_floating_point(data)
     if (data_format_value == EnumFormat.NUMPY.value):
         return np.issubdtype(data.dtype, np.floating)
+    if (data_format_value == EnumFormat.BYTE.value):
+        return bytearray_dtype in ("float64", "float32", "float16", "bfloat16") 
 
+
+from enum import Enum
+import torch
+import numpy as np
 
 class ZipNNDtypeEnum(Enum):
-    NONE = (None, None, 0)
-    FLOAT32 = (torch.float32, np.float32, 1)  # 32 bits
-    FLOAT = (torch.float, np.float32, 2)  # 32 bits
-    FLOAT64 = (torch.float64, np.float64, 3)  # 64 bits
-    FLOAT16 = (torch.float16, np.float16, 4)  # 16 bits
-    HALF = (torch.half, np.float16, 5)  # 16 bits
-    BFLOAT16 = (torch.bfloat16, None, 6)  # 16 bits (NumPy does not have bfloat16)
-    COMPLEX32 = (torch.complex32, None, 7)  # 32 bits (NumPy does not have complex32)
-    CHALF = (torch.complex32, None, 8)  # 32 bits (NumPy does not have complex32)
-    COMPLEX64 = (torch.complex64, np.complex64, 9)  # 64 bits
-    CFLOAT = (torch.cfloat, np.complex64, 10)  # 64 bits
-    COMPLEX128 = (torch.complex128, np.complex128, 11)  # 128 bits
-    CDOUBLE = (torch.cdouble, np.complex128, 12)  # 128 bits
-    UINT8 = (torch.uint8, np.uint8, 13)  # 8 bits unsigned
-    UINT16 = (torch.uint16, np.uint16, 14)  # 16 bits unsigned (Limited support in PyTorch)
-    UINT32 = (torch.uint32, np.uint32, 15)  # 32 bits unsigned (Limited support in PyTorch)
-    UINT64 = (torch.uint64, np.uint64, 16)  # 64 bits unsigned (Limited support in PyTorch)
-    INT8 = (torch.int8, np.int8, 17)  # 8 bits signed
-    INT16 = (torch.int16, np.int16, 18)  # 16 bits signed
-    SHORT = (torch.int16, np.int16, 19)  # 16 bits signed
-    INT32 = (torch.int32, np.int32, 20)  # 32 bits signed
-    INT = (torch.int32, np.int32, 21)  # 32 bits signed
-    INT64 = (torch.int64, np.int64, 22)  # 64 bits signed
-    LONG = (torch.int64, np.int64, 23)  # 64 bits signed
-    BOOL = (torch.bool, np.bool_, 24)  # 1 bit
-    QUINT8 = (torch.quint8, None, 25)  # 8 bits unsigned quantized (NumPy does not have quantized dtypes)
-    QINT8 = (torch.qint8, None, 26)  # 8 bits signed quantized
-    QINT32 = (torch.qint32, None, 27)  # 32 bits signed quantized
-    QUINT4X2 = (torch.quint4x2, None, 28)  # 4 bits unsigned quantized
-    FLOAT8_E4M3FN = (torch.float8_e4m3fn, None, 29)  # 8 bits (Limited support in PyTorch)
-    FLOAT8_E5M2 = (torch.float8_e5m2, None, 30)  # 8 bits (Limited support in PyTorch)
+    NONE = (None, None, None, 'none', 0)
+    FLOAT32 = (torch.float32, np.float32, float, 'float32', 1)
+    FLOAT = (torch.float, np.float32, float, 'float', 2)
+    FLOAT64 = (torch.float64, np.float64, float, 'float64', 3)
+    FLOAT16 = (torch.float16, np.float16, None, 'float16', 4)
+    HALF = (torch.half, np.float16, None, 'half', 5)
+    BFLOAT16 = (torch.bfloat16, None, None, 'bfloat16', 6)
+    COMPLEX32 = (torch.complex32, None, None, 'complex32', 7)
+    CHALF = (torch.complex32, None, None, 'chalf', 8)
+    COMPLEX64 = (torch.complex64, np.complex64, complex, 'complex64', 9)
+    CFLOAT = (torch.cfloat, np.complex64, complex, 'cfloat', 10)
+    COMPLEX128 = (torch.complex128, np.complex128, complex, 'complex128', 11)
+    CDOUBLE = (torch.cdouble, np.complex128, complex, 'cdouble', 12)
+    UINT8 = (torch.uint8, np.uint8, None, 'uint8', 13)
+    UINT16 = (torch.uint16, np.uint16, None, 'uint16', 14)
+    UINT32 = (torch.uint32, np.uint32, None, 'uint32', 15)
+    UINT64 = (torch.uint64, np.uint64, None, 'uint64', 16)
+    INT8 = (torch.int8, np.int8, None, 'int8', 17)
+    INT16 = (torch.int16, np.int16, None, 'int16', 18)
+    SHORT = (torch.int16, np.int16, None, 'short', 19)
+    INT32 = (torch.int32, np.int32, int, 'int32', 20)
+    INT = (torch.int32, np.int32, int, 'int', 21)
+    INT64 = (torch.int64, np.int64, int, 'int64', 22)
+    LONG = (torch.int64, np.int64, int, 'long', 23)
+    BOOL = (torch.bool, np.bool_, bool, 'bool', 24)
+    QUINT8 = (torch.quint8, None, None, 'quint8', 25)
+    QINT8 = (torch.qint8, None, None, 'qint8', 26)
+    QINT32 = (torch.qint32, None, None, 'qint32', 27)
+    QUINT4X2 = (torch.quint4x2, None, None, 'quint4x2', 28)
+    FLOAT8_E4M3FN = (torch.float8_e4m3fn, None, None, 'float8_e4m3fn', 29)
+    FLOAT8_E5M2 = (torch.float8_e5m2, None, None, 'float8_e5m2', 30)
 
-    def __init__(self, torch_dtype, numpy_dtype, code):
+    def __init__(self, torch_dtype, numpy_dtype, python_dtype, dtype_str, code):
         self.torch_dtype = torch_dtype
         self.numpy_dtype = numpy_dtype
+        self.python_dtype = python_dtype
+        self.dtype_str = dtype_str
         self.code = code
 
     @classmethod
     def from_dtype(cls, dtype):
+        if isinstance(dtype, str):
+            dtype = dtype.lower()
         for member in cls:
-            if dtype == member.torch_dtype or dtype == member.numpy_dtype:
+            if dtype == member.torch_dtype or dtype == member.numpy_dtype or dtype == member.python_dtype or dtype == member.dtype_str:
                 return member
         return cls.NONE
+
