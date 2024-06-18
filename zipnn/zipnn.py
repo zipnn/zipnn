@@ -7,7 +7,7 @@ import torch
 import zstandard as zstd
 from zipnn.util_header import EnumMethod, EnumFormat, EnumLossy
 import split_dtype
-from zipnn.util_torch import ZipNNDataDtypeEnum, zipnn_multiply_if_max_below
+from zipnn.util_torch import ZipNNDtypeEnum, zipnn_multiply_if_max_below
 from zipnn.util_torch import zipnn_get_dtype_bits, zipnn_divide_int
 from zipnn.util_torch import zipnn_pack_shape, zipnn_unpack_shape
 
@@ -293,7 +293,7 @@ class ZipNN:
                 is_bit_reorder - True/False
          
         dtype_value: dtype according to the format
-                for Torch/Numpy/Bytearray - from ZipNNDataDtypeEnum() 
+                for Torch/Numpy/Bytearray - from ZipNNDtypeEnum() 
         '''
 
         self._header[5] = byte_reorder
@@ -616,19 +616,19 @@ class ZipNN:
             lossy_factor = self.use_var(lossy_compressed_factor, self.lossy_compressed_factor)
             lossy_compress = self.lossy_compress(data, lossy_type, lossy_factor)
         
-        dtype_enum = ZipNNDataDtypeEnum.from_dtype(data.dtype).code
+        dtype_enum = ZipNNDtypeEnum.from_dtype(data.dtype).code
         
         if torch.is_floating_point(data):
             is_float = 1
             bit_reorder = 1;
-            if (dtype_enum == ZipNNDataDtypeEnum.FLOAT32.code):
+            if (dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code)):
                 byte_reorder = 220 # 8b1_10_11_100
                 dtype_size = 32
-            elif (dtype_enum == ZipNNDataDtypeEnum.BFLOAT16.code):    
+            elif (dtype_enum == ZipNNDtypeEnum.BFLOAT16.code):    
                 byte_reorder = 6 # 8b01_10
                 dtype_size = 16
                 data = data.view(torch.uint16)
-            elif (data.dtype == ZipNNDataDtypeEnum.FLOAT16.code):
+            elif (dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code)):
                 bit_reorder = 0
                 byte_reorder = 6 # 8b01_10
                 dtype_size = 16
@@ -823,12 +823,16 @@ class ZipNN:
             return ba_decom
         else:
             float32=0; bfloat16=0; float16=0; uint16=0
-            if (self.dtype in (ZipNNDataDtypeEnum.FLOAT32.code, ZipNNDataDtypeEnum.FLOAT.code)):
+            if (self.dtype in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code)):
                 groups = 4
                 float32 = 1
-            elif(self.dtype == ZipNNDataDtypeEnum.BFLOAT16.code):    
+            elif(self.dtype == ZipNNDtypeEnum.BFLOAT16.code):    
                 groups = 2
                 bfloat16 = 1
+            elif (self.dtype in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code)):
+                groups = 2
+                float16 = 1
+
             ba_bg = []
             start_len = start_is_comp + groups
             start_ba = [start_len + 8*groups]
@@ -848,7 +852,7 @@ class ZipNN:
             start_time = time.time()
             if (float32):
                 ba_decom  = split_dtype.combine_dtype32(ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads)
-            elif (bfloat16):    
+            elif (bfloat16 or float16):    
                 ba_decom  = split_dtype.combine_dtype16(ba_bg[0], ba_bg[1], self._bit_reorder, self._byte_reorder, self.threads)
             if is_print:
                 print ("combine using c ", time.time()-start_time)
@@ -866,6 +870,10 @@ class ZipNN:
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
                     tensor = tensor.view(torch.bfloat16)
+                elif (float16):
+                    array = np.frombuffer(ba_decom, dtype=np.float16)
+                    array = array.reshape(self.shape_bytes)
+                    tensor = torch.from_numpy(array)
                     
             return tensor
 

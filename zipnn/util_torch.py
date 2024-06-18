@@ -156,7 +156,7 @@ def zipnn_unpack_shape(packed_data):
         dimensions.append(dim)
     return tuple(dimensions), total_bytes_read
 
-class ZipNNDataDtypeEnum(Enum):
+class ZipNNDtypeEnum(Enum):
     NONE = (None, None, 0)
     FLOAT32 = (torch.float32, np.float32, 1)  # 32 bits
     FLOAT = (torch.float, np.float32, 2)  # 32 bits
