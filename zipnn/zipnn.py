@@ -10,6 +10,7 @@ import split_dtype
 from zipnn.util_torch import ZipNNDtypeEnum, zipnn_multiply_if_max_below
 from zipnn.util_torch import zipnn_get_dtype_bits, zipnn_divide_int
 from zipnn.util_torch import zipnn_pack_shape, zipnn_unpack_shape
+from zipnn.util_torch import zipnn_is_floating_point
 
 class ZipNN:
 
@@ -426,11 +427,9 @@ class ZipNN:
 #        if self.delta_compressed_type is not None:
 #            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
         if self.input_format == EnumFormat.BYTE.value:
-            return self.compress_prep_bin(data)
-        elif self.input_format == EnumFormat.TORCH.value:
-            return self.compress_torch(data, lossy_compressed_type, lossy_compressed_factor)
-        elif self.input_format == EnumFormat.NUMPY.value:
-            return self.compress_prep_numpy(self.use_var(data, self.input_file))
+            return self.compress_byte(data)
+        elif self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
+            return self.compress_torch_numpy(data, lossy_compressed_type, lossy_compressed_factor)
         raise ValueError("Unsupported input type at this stage")
 
     def compress_method(self, data: bytes):
@@ -539,7 +538,7 @@ class ZipNN:
                         bg_len.append(len(b).to_bytes(length=8, byteorder="little"))
                         bg_ret.append(b)
 
-            if self.input_format == EnumFormat.TORCH.value:
+            if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                 shape_bytes = zipnn_pack_shape(shape)
                 ba_comp = b"".join([self._header] + [shape_bytes] + bg_is_comp + bg_len + bg_ret)
             else:
@@ -587,7 +586,7 @@ class ZipNN:
 
     #        return (ba_comp)
 
-    def compress_torch (self, data, lossy_compressed_type=None, lossy_compressed_factor=None):
+    def compress_torch_numpy (self, data, lossy_compressed_type=None, lossy_compressed_factor=None):
         """
         Compresses torch.
 
@@ -617,8 +616,8 @@ class ZipNN:
             lossy_compress = self.lossy_compress(data, lossy_type, lossy_factor)
         
         dtype_enum = ZipNNDtypeEnum.from_dtype(data.dtype).code
-        
-        if torch.is_floating_point(data):
+
+        if zipnn_is_floating_point(self.input_format, data):
             is_float = 1
             bit_reorder = 1;
             if (dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code)):
@@ -642,9 +641,16 @@ class ZipNN:
         is_review = 0
 
         start_time = time.time()
-        ba = data.numpy().tobytes()
+
+        if (self.input_format == EnumFormat.TORCH.value):
+            ba = data.numpy().tobytes()
+        elif (self.input_format == EnumFormat.NUMPY.value):
+            ba = data.tobytes()
+        elif (self.input_format == EnumFormat.BYTE.value): 
+            ba = data
         if is_print: 
             print ("torch_func", time.time()-start_time)
+
         return self.compress_bin(ba = ba, byte_reorder = byte_reorder, bit_reorder = bit_reorder, is_review = 0, is_float = is_float, dtype_size = dtype_size, shape = data.shape)
 
     def lossy_compress(self, data, lossy_type, lossy_factor):
@@ -874,8 +880,14 @@ class ZipNN:
                     array = np.frombuffer(ba_decom, dtype=np.float16)
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
-                    
-            return tensor
+                return tensor
+
+            if (self.input_format == EnumFormat.NUMPY.value):
+                if (float32):
+                    array = np.frombuffer(ba_decom, dtype=np.float32)
+                elif (float16):
+                    array = np.frombuffer(ba_decom, dtype=np.float16)
+                return array
 
     def decompress_read_file(self, data):
         """

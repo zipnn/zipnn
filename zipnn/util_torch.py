@@ -3,6 +3,7 @@ import struct
 from enum import Enum
 import torch
 import numpy as np
+from zipnn.util_header import EnumFormat
 
 @torch.jit.script
 def zipnn_multiply_if_max_below(tensor: torch.Tensor, max_val: float, multiplier: float, dtype: int):
@@ -155,6 +156,14 @@ def zipnn_unpack_shape(packed_data):
             i += 8
         dimensions.append(dim)
     return tuple(dimensions), total_bytes_read
+
+
+def zipnn_is_floating_point(data_format_value, data):
+    if (data_format_value == EnumFormat.TORCH.value):
+        return torch.is_floating_point(data)
+    if (data_format_value == EnumFormat.NUMPY.value):
+        return np.issubdtype(data.dtype, np.floating)
+
 
 class ZipNNDtypeEnum(Enum):
     NONE = (None, None, 0)
