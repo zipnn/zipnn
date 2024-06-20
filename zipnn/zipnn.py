@@ -589,11 +589,11 @@ class ZipNN:
         is_review = 0
         bit_reorder = 0
         skip_split = 0
-        lossy_type = self.use_var(lossy_compressed_type, self.lossy_compressed_type)
-        lossy_type = EnumLossy.NONE if lossy_type is None else lossy_type
-        if lossy_type is not EnumLossy.NONE:
-            lossy_factor = self.use_var(lossy_compressed_factor, self.lossy_compressed_factor)
-            lossy_compress = self.lossy_compress(data, lossy_type, lossy_factor)
+        #lossy_type = self.use_var(lossy_compressed_type, self.lossy_compressed_type)
+        #lossy_type = EnumLossy.NONE if lossy_type is None else lossy_type
+        #if lossy_type is not EnumLossy.NONE:
+        #    lossy_factor = self.use_var(lossy_compressed_factor, self.lossy_compressed_factor)
+        #    lossy_compress = self.lossy_compress(data, lossy_type, lossy_factor)
 
         if self.input_format == EnumFormat.BYTE.value:
             dtype_enum = ZipNNDtypeEnum.from_dtype(self.bytearray_dtype).code
