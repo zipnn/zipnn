@@ -586,7 +586,7 @@ class ZipNN:
         -------------------------------------
         Byte array of compressed data.
         """
-        is_print = 1
+        is_print = 0
         is_review = 0
         bit_reorder = 0
         skip_split = 0
