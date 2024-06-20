@@ -22,7 +22,7 @@ is_torch_numpy_byte = 0 # torch 2 / numpy 1/ byte = 0
 #dtype = torch.float32
 dtype = torch.bfloat16
 #dtype = torch.float16
-threads = 8
+threads = 1
 
 if (dtype == torch.float32):
     bytearray_dtype = "float32"

@@ -31,6 +31,7 @@ setup(
     install_requires=[
         'numpy',
         'zstandard',
+        'torch',
     ],
     ext_modules=[split_dtype_extension]  # Add the C extension module here
 )

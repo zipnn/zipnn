@@ -1,16 +1,20 @@
 import time
-import sys
 import os
-import math
 import numpy as np
 import torch
 import zstandard as zstd
 from zipnn.util_header import EnumMethod, EnumFormat, EnumLossy
 import split_dtype
-from zipnn.util_torch import ZipNNDtypeEnum, zipnn_multiply_if_max_below
-from zipnn.util_torch import zipnn_get_dtype_bits, zipnn_divide_int
-from zipnn.util_torch import zipnn_pack_shape, zipnn_unpack_shape
-from zipnn.util_torch import zipnn_is_floating_point
+from zipnn.util_torch import (
+    ZipNNDtypeEnum,
+    zipnn_multiply_if_max_below,
+    zipnn_get_dtype_bits,
+    zipnn_divide_int,
+    zipnn_pack_shape,
+    zipnn_unpack_shape,
+    zipnn_is_floating_point,
+)
+
 
 class ZipNN:
 
@@ -19,153 +23,145 @@ class ZipNN:
         method: str = "zstd",
         input_format: str = "byte",
         bytearray_dtype: str = "float32",
-        is_monotonic: int= 0, 
-
+        is_monotonic: int = 0,
         threads: int = 1,
         bg_compression_threshold=0.95,
-        
         bg: int = 0,
         reorder_signbit: int = 0,
-
         delta_compressed_type: str = None,
-
         lossy_compressed_type=None,
         lossy_compressed_factor=27,
-
         is_streaming: bool = False,
         streaming_chunk_kb: int = 64 * 1024,
-
         input_file: str = "byte",
         compressed_file: str = None,
         decompressed_file: str = None,
-
         zstd_level: int = 3,
         lz4_compression_level: int = 0,
     ):
         """
-        Zipnn class is used to compress and decompress data in byte, file, and Torch tensor formats.
-        Additionally, there is support for byte grouping, lossy compression, and delta compression,
-            allowing you to use some, all, or none of these techniques.
+         Zipnn class is used to compress and decompress data in byte, file, and Torch tensor formats.
+         Additionally, there is support for byte grouping, lossy compression, and delta compression,
+             allowing you to use some, all, or none of these techniques.
 
-        Parameters
-        -------------------------------------
-        method: string
-                Chosen compression method. The options are: ‘zstd’/’ZSTD’, ‘lz4’/’LZ4’, ‘snappy’/’SNAPPY’.
-                Default is ‘zstd’.
+         Parameters
+         -------------------------------------
+         method: string
+                 Chosen compression method. The options are: ‘zstd’/’ZSTD’, ‘lz4’/’LZ4’, ‘snappy’/’SNAPPY’.
+                 Default is ‘zstd’.
 
-        input_format: string
-                The type of the input, the same will be for the output.
-                The options are ‘byte’, ‘torch’, ‘numpy’. -> ‘file’ is not implemented yet
-                Default is ‘byte’.
-
-          
-        bytearray_dtype: string,
-                Chosen dtype for bytearray: The options are: ‘float32’, ‘uint32’, ‘uint16', 'bfloat16', 'float16'
-                Default is ‘float32’.
-
-        is_monotonic : bool, 
-                The  dataset is monotonic.
-                Default is ‘False’.
-
-        threads: int 
-                The maximum threads for th ecompression and the byte/bit reorder.
-                If 0, the code decide according to the dataset len
-
-        bg_compression_threshold: float
-                Compression threshhold for byte grouping.
-                Only relevant for a compression that uses byte grouping.
-                Default is 0.95.
-
-        bg: int
-                Number of partitions for byte grouping.
-                If set to zero [defualt], auto decision according to the dtype
-                If set to 255 - no byte grouping, running vanilla compression method.
-                If 2,4 - Byte group to 2 groups or 4 roups respectively
- 
+         input_format: string
+                 The type of the input, the same will be for the output.
+                 The options are ‘byte’, ‘torch’, ‘numpy’. -> ‘file’ is not implemented yet
+                 Default is ‘byte’.
 
 
-        reorder_signbit: int
-                This reorder the bits of the float32 or bfloat16 to better compression.
-                If set to zero [defualt], auto decision according to the dtype
-                If set to 255 - no reorder_signbit.
-                If 16,32 - reorder_signbit for bfloat16 or float32 respectively
+         bytearray_dtype: string,
+                 Chosen dtype for bytearray: The options are: ‘float32’, ‘uint32’, ‘uint16', 'bfloat16', 'float16'
+                 Default is ‘float32’.
+
+         is_monotonic : bool,
+                 The  dataset is monotonic.
+                 Default is ‘False’.
+
+         threads: int
+                 The maximum threads for th ecompression and the byte/bit reorder.
+                 If 0, the code decide according to the dataset len.
+                 Default is 1
+
+         bg_compression_threshold: float
+                 Compression threshhold for byte grouping.
+                 Only relevant for a compression that uses byte grouping.
+                 Default is 0.95.
+
+         bg: int
+                 Number of partitions for byte grouping.
+                 If set to zero [defualt], auto decision according to the dtype
+                 If set to 255 - no byte grouping, running vanilla compression method.
+                 If 2,4 - Byte group to 2 groups or 4 roups respectively
+
+         reorder_signbit: int
+                 This reorder the bits of the float32 or bfloat16 to better compression.
+                 If set to zero [defualt], auto decision according to the dtype
+                 If set to 255 - no reorder_signbit.
+                 If 16,32 - reorder_signbit for bfloat16 or float32 respectively
+                 Defualt is 0 [Auto decision]
+
+        delta_compressed_type: string
+               NOT IMPLEMENTED YET.
+                Type for delta compression.
+                Options are 'byte', 'file'.
+                Default is ‘None’.
 
 
-       delta_compressed_type: string
-              NOT IMPLEMENTED YET.
-               Type for delta compression.
-               Options are 'byte', 'file'.
-               Default is ‘None’.
+         lossy_compressed_type: string
+                 Type for lossy compression.
+                 Supporting only 'integer' ('unsigned' in the future).
+                 Only relevant if compression is lossy.
+                 Defaul is None.
+
+         lossy_compressed_factor: int
+                 Compression factor for lossy compression.
+                 O nly relevant if compression is lossy.
+                 Default is 27.
+
+         is_streaming: bool
+                 NOT IMPLEMENTED YET.
+                 If true – signals compression is for a stream of data.
+                 Deafult is False.
+
+         streaming_chunk_kb: int
+                 Chunk size for streaming.
+                 Only relevant if is_steaming is True.
+                 Default is 1MB.
+
+         input_file: string
+                 Path to the input file.
+                 If ‘file’ is the input type – enter file name.
+                 Default is ‘byte’.
 
 
-        lossy_compressed_type: string
-                Type for lossy compression.
-                Supporting only 'integer' ('unsigned' in the future).
-                Only relevant if compression is lossy.
-                Defaul is None.
+         compressed_file: string
+                 Path to the compressed file.
+                 Only relevant if compressed_ret_type is ‘file’.
+                 Default is None.
 
-        lossy_compressed_factor: int
-                Compression factor for lossy compression.
-                O nly relevant if compression is lossy.
-                Default is 27.
+         decompressed_file: string
+                 Path to the decompressed file.
+                 Only relevant if compressed_ret_type is ‘file’.
+                 Defaul is None.
 
-        is_streaming: bool
-                NOT IMPLEMENTED YET.
-                If true – signals compression is for a stream of data.
-                Deafult is False.
+         zstd_level: int
+                 Compression level for ‘zstd’ compression.
+                 Only relevant if method is ‘zstd’.
+                 Default is 3.
 
-        streaming_chunk_kb: int
-                Chunk size for streaming.
-                Only relevant if is_steaming is True.
-                Default is 1MB.
+         lz4_compression_level: int
+                 Compression level for ‘lz4’ compression.
+                 Only relevant if method is ‘lz4’.
+                 Deafult is 0.
 
-        input_file: string
-                Path to the input file.
-                If ‘file’ is the input type – enter file name.
-                Default is ‘byte’.
-
-
-        compressed_file: string
-                Path to the compressed file.
-                Only relevant if compressed_ret_type is ‘file’.
-                Default is None.
-
-        decompressed_file: string
-                Path to the decompressed file.
-                Only relevant if compressed_ret_type is ‘file’.
-                Defaul is None.
-
-        zstd_level: int
-                Compression level for ‘zstd’ compression.
-                Only relevant if method is ‘zstd’.
-                Default is 3.
-
-        lz4_compression_level: int
-                Compression level for ‘lz4’ compression.
-                Only relevant if method is ‘lz4’.
-                Deafult is 0.
-
-        Returns
-        -------------------------------------
-        ZipNN class instance supporting a specific compression and decompression based on the input given.
+         Returns
+         -------------------------------------
+         ZipNN class instance supporting a specific compression and decompression based on the input given.
         """
 
         self.method = EnumMethod(method).value
         self.input_format = EnumFormat(input_format).value
         self.bytearray_dtype = bytearray_dtype
-        self.is_monotonic= is_monotonic 
+        self.is_monotonic = is_monotonic
 
         self.threads = threads
         self.bg_compression_threshold = bg_compression_threshold
         self.bg = bg
         self.reorder_signbit = reorder_signbit
-        
+
         self.delta_compressed_type = delta_compressed_type
         self.lossy_compressed_type = EnumLossy.NONE if lossy_compressed_type is None else EnumLossy(lossy_compressed_type)
         self.lossy_compressed_factor = lossy_compressed_factor
 
         self.is_streaming = is_streaming
-        if (is_streaming == 0):
+        if is_streaming == 0:
             self.streaming_chunk_kb = 0
 
         self.input_file = input_file
@@ -180,7 +176,6 @@ class ZipNN:
         self._import_dependencies(zstd_level)
         self._header = bytearray(16)
         self._update_header()
-        return None
 
     def _import_dependencies(self, zstd_level):
         """
@@ -208,21 +203,21 @@ class ZipNN:
             try:
                 global lz4
                 import lz4.frame
-            except ImportError:
-                raise ImportError("LZ4 library is not installed. Please install it to use LZ4 compression.")
+            except ImportError as exc:
+                raise ImportError("LZ4 library is not installed. Please install it to use LZ4 compression.") from exc
 
         elif self.method == EnumMethod.SNAPPY.value:
             try:
                 global snappy
                 import snappy
-            except ImportError:
-                raise ImportError("Snappy library is not installed. Please install it to use Snappy compression.")
+            except ImportError as exc:
+                raise ImportError("Snappy library is not installed. Please install it to use Snappy compression.") from exc
 
         else:
-            raise ValueError("Unsupported compression method")
+            raise ValueError(f"Unsupported method {self.method}")
 
         if self.lossy_compressed_type != EnumLossy.NONE:
-            if self.input_format != EnumFormat.Torch.value:
+            if self.input_format != EnumFormat.TORCH.value:
                 raise ValueError("When use lossy compression the input have to be torch.tensor")
 
     def use_var(self, data, class_var):
@@ -245,9 +240,9 @@ class ZipNN:
     # Header: at least 8 Bytes
     # [0:1] 2 Bytes [ZN]
     # [2:4] 3 Bytes [Versions]
-    # [5] 1 Byte [byte_order]  
+    # [5] 1 Byte [byte_order]
     # [6] 1 Byte [bit_order]
-    # [9] 1 Byte [delta compression]  
+    # [9] 1 Byte [delta compression]
     # [8] 1 Byte [method]
     # [9] 1 Byte [format]
     # [10] 1 Byte [lossy_compress_type]
@@ -272,24 +267,24 @@ class ZipNN:
         self._header[12] = lossy_is_int
 
     def _update_header_dtype(self, byte_reorder: int, bit_reorder: int, dtype_code: int):
-        '''
+        """
         Updates header with byte_reorder, bit_reorder, dtype_value
-        '''
+        """
 
         self._header[5] = byte_reorder
         self._header[6] = bit_reorder
-        self._header[15] = dtype_code 
+        self._header[15] = dtype_code
 
-#
-#        Parameters
-#        -------------------------------------
-#        : string
-#                torch_dtype or numpy_dtype or bytearray_dtype
-#                Default is None.
-#
-#        Returns
-#        -------------------------------------
-#        None.
+    #
+    #        Parameters
+    #        -------------------------------------
+    #        : string
+    #                torch_dtype or numpy_dtype or bytearray_dtype
+    #                Default is None.
+    #
+    #        Returns
+    #        -------------------------------------
+    #        None.
 
     def _update_header(self, lossy_compressed_type=None, lossy_compressed_factor=None):
         """
@@ -313,17 +308,18 @@ class ZipNN:
         self._header[2] = self._version_major
         self._header[3] = self._version_minor
         self._header[4] = self._version_tiny
-#        self._header[5] = byte_reorder 
-#        self._header[6] = bit_reorder
-        self._header[7] = self.method 
+        #        self._header[5] = byte_reorder
+        #        self._header[6] = bit_reorder
+        self._header[7] = self.method
         self._header[8] = self.input_format
         self._header[9] = 0 if self.delta_compressed_type is None else self.delta_compressed_type
-#        self._header[10] = self.lossy_compressed_type
-#        self._header[11] = self.lossy_compressed_factor
-#        self._header[12] = self._lossy_is_int
-#        self._header[13] = self.is_streaming + self.streaming_chunk_kb
-        self._header[14] = self.bg 
-#        self._header[15] = dtype
+        #        self._header[10] = self.lossy_compressed_type
+        #        self._header[11] = self.lossy_compressed_factor
+        #        self._header[12] = self._lossy_is_int
+        #        self._header[13] = self.is_streaming + self.streaming_chunk_kb
+        self._header[14] = self.bg
+
+    #        self._header[15] = dtype
 
     def _retrieve_header(self, ba_compress):
         """
@@ -350,15 +346,15 @@ class ZipNN:
         self._bit_reorder = int(header[6])
         self.method = int(header[7])
         self.input_format = int(header[8])
-        self.delta_compressed_type = int(header[9]) 
-        self.lossy_compressed_type = int(header[10]) 
-        self.lossy_compressed_factor = int(header[11]) 
-        self._lossy_is_int = int(header[12]) 
-#        self.is_streaming = int(header[13] 
+        self.delta_compressed_type = int(header[9])
+        self.lossy_compressed_type = int(header[10])
+        self.lossy_compressed_factor = int(header[11])
+        self._lossy_is_int = int(header[12])
+        #        self.is_streaming = int(header[13]
         self.bg = int(header[14])
         self.dtype = int(header[15])
 
-        if (self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value)):
+        if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
             self.shape_bytes, shape_size = zipnn_unpack_shape(mv[len(self._header) :])
             header_length += shape_size
         return header_length
@@ -403,8 +399,8 @@ class ZipNN:
         in the format chosen in the ZipNN class instance configuration.
         """
 
-#        if self.delta_compressed_type is not None:
-#            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
+        #        if self.delta_compressed_type is not None:
+        #            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
         return self.compress_torch_numpy_byte(data, lossy_compressed_type, lossy_compressed_factor)
 
     def compress_method(self, data: bytes):
@@ -423,14 +419,16 @@ class ZipNN:
         if self.method == EnumMethod.ZSTD.value:
             return self._zstd_compress.compress(data)
 
-        elif self.method == EnumMethod.LZ4.value:
+        if self.method == EnumMethod.LZ4.value:
             return lz4.frame.compress(data)
 
-        elif self.method == EnumMethod.SNAPPY.value:
+        if self.method == EnumMethod.SNAPPY.value:
             return snappy.compress(data)
-        raise ValueError("Unsupported compression method")
+        raise ValueError(f"Unsupported method {self.method}")
 
-    def compress_bin(self, ba: bytes, bit_reorder : int, byte_reorder : int, is_review : int, is_float : int, dtype_size : int, shape, skip_split : bool):
+    def compress_bin(
+        self, ba: bytes, bit_reorder: int, byte_reorder: int, is_review: int, is_float: int, dtype_size: int, shape, skip_split: bool
+    ):
         """
         Compresses byte data.
 
@@ -449,39 +447,41 @@ class ZipNN:
         if self.bg == 1:
             stime = time.time()
             ba_comp = self._header + self.compress_method(ba)
-            if (self.input_format == EnumFormat.BYTE.value): 
+            if self.input_format == EnumFormat.BYTE.value:
                 return b"".join([self._header] + [ba_comp])
         else:
             stime = time.time()
             bg_ret = []
             bg_len = []
             bg_is_comp = []
-           
-            if (dtype_size == 32):
+
+            if dtype_size == 32:
                 start_time = time.time()
 
-                if (skip_split == 0):
+                if skip_split == 0:
                     buf1, buf2, buf3, buf4 = split_dtype.split_dtype32(ba, bit_reorder, byte_reorder, is_review, self.threads)
                 else:
                     buf1 = ba
-                    buf2 = None; buf3 = None; buf4 = None;
+                    buf2 = None
+                    buf3 = None
+                    buf4 = None
 
                 if is_print:
-                    print ("reorder ", time.time() - start_time) 
+                    print("reorder ", time.time() - start_time)
                 stime = time.time()
                 for b in buf1, buf2, buf3, buf4:
-                    if (b == None):
+                    if b is None:
                         continue
                     start_time = time.time()
                     bg_comp = self.compress_method(b)
 
                     if len(bg_comp) / (len(b)) < self.bg_compression_threshold:
-                    # Save this byte group compressed
+                        # Save this byte group compressed
                         bg_is_comp.append((1).to_bytes(1, byteorder="little"))
                         bg_len.append(len(bg_comp).to_bytes(length=8, byteorder="little"))
                         bg_ret.append(bg_comp)
                         if is_print:
-                           print(f"We compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
+                            print(f"We compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
                     else:
                         if is_print:
                             print(f"We did't compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
@@ -489,25 +489,25 @@ class ZipNN:
                         bg_is_comp.append((0).to_bytes(1, byteorder="little"))
                         bg_len.append(len(b).to_bytes(length=8, byteorder="little"))
                         bg_ret.append(b)
-     
-            if (dtype_size == 16):
+
+            if dtype_size == 16:
                 start_time = time.time()
                 buf1, buf2 = split_dtype.split_dtype16(ba, bit_reorder, byte_reorder, is_review, self.threads)
-                if is_print: 
-                    print ("reorder ", time.time() - start_time) 
+                if is_print:
+                    print("reorder ", time.time() - start_time)
                 stime = time.time()
                 for b in buf1, buf2:
-                    if (len(b) == 0):
+                    if len(b) == 0:
                         continue
                     start_time = time.time()
                     bg_comp = self.compress_method(b)
                     if len(bg_comp) / (len(b)) < self.bg_compression_threshold:
-                    # Save this byte group compressed
+                        # Save this byte group compressed
                         bg_is_comp.append((1).to_bytes(1, byteorder="little"))
                         bg_len.append(len(bg_comp).to_bytes(length=8, byteorder="little"))
                         bg_ret.append(bg_comp)
                         if is_print:
-                           print(f"We compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
+                            print(f"We compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
                     else:
                         if is_print:
                             print(f"We don't compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
@@ -515,7 +515,7 @@ class ZipNN:
                         bg_is_comp.append((0).to_bytes(1, byteorder="little"))
                         bg_len.append(len(b).to_bytes(length=8, byteorder="little"))
                         bg_ret.append(b)
-    
+
         if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
             shape_bytes = zipnn_pack_shape(shape)
             ba_comp = b"".join([self._header] + [shape_bytes] + bg_is_comp + bg_len + bg_ret)
@@ -523,27 +523,27 @@ class ZipNN:
             ba_comp = b"".join([self._header] + bg_is_comp + bg_len + bg_ret)
 
         if is_print:
-           print ("total compression ", time.time()-stime)    
-           print(f"len ba-comp {len(ba_comp)}")
-           print(f"len ba {len(ba)}")
-           print ("compress_bin_time " , time.time() - compress_bin_time)
+            print("total compression ", time.time() - stime)
+            print(f"len ba-comp {len(ba_comp)}")
+            print(f"len ba {len(ba)}")
+            print("compress_bin_time ", time.time() - compress_bin_time)
         return ba_comp
 
-#    def prepare_file(self, filename: str):
-#        """
-#        Prepare file.
-#
-#        Parameters
-#        -------------------------------------
-#        filename: string
-#                File name to compress.
-#
-#        Returns
-#        -------------------------------------
-#        Byte array of compressed data.
-#        """
-#
-#        raise ImportError("Not implemented Yet")
+    #    def prepare_file(self, filename: str):
+    #        """
+    #        Prepare file.
+    #
+    #        Parameters
+    #        -------------------------------------
+    #        filename: string
+    #                File name to compress.
+    #
+    #        Returns
+    #        -------------------------------------
+    #        Byte array of compressed data.
+    #        """
+    #
+    #        raise ImportError("Not implemented Yet")
 
     #        if not os.path.exists(filename):
     #         raise FileNotFoundError(f"The file at {filename} was not found.")
@@ -590,73 +590,84 @@ class ZipNN:
         is_review = 0
         bit_reorder = 0
         skip_split = 0
-        torch_time = time.time()
         lossy_type = self.use_var(lossy_compressed_type, self.lossy_compressed_type)
         lossy_type = EnumLossy.NONE if lossy_type is None else lossy_type
         if lossy_type is not EnumLossy.NONE:
             lossy_factor = self.use_var(lossy_compressed_factor, self.lossy_compressed_factor)
             lossy_compress = self.lossy_compress(data, lossy_type, lossy_factor)
-        
-        if (self.input_format == EnumFormat.BYTE.value):
+
+        if self.input_format == EnumFormat.BYTE.value:
             dtype_enum = ZipNNDtypeEnum.from_dtype(self.bytearray_dtype).code
             shape = None
-        else:    
+        else:
             dtype_enum = ZipNNDtypeEnum.from_dtype(data.dtype).code
             shape = data.shape
-       
-        is_float = zipnn_is_floating_point(self.input_format, data, self.bytearray_dtype) 
+
+        is_float = zipnn_is_floating_point(self.input_format, data, self.bytearray_dtype)
         if is_float:
-            bit_reorder = 1;
-            if (dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code)):
-                byte_reorder = 220 # 8b1_10_11_100
+            bit_reorder = 1
+            if dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
+                byte_reorder = 220  # 8b1_10_11_100
                 dtype_size = 32
-#            elif (dtype_enum == ZipNNDtypeEnum.BFLOAT16.code):    
-            elif (dtype_enum == ZipNNDtypeEnum.BFLOAT16.code):    
-                byte_reorder = 6 # 8b01_10
+            #            elif (dtype_enum == ZipNNDtypeEnum.BFLOAT16.code):
+            elif dtype_enum == ZipNNDtypeEnum.BFLOAT16.code:
+                byte_reorder = 6  # 8b01_10
                 dtype_size = 16
-                if (self.input_format == EnumFormat.TORCH.value):
+                if self.input_format == EnumFormat.TORCH.value:
                     data = data.view(torch.uint16)
-            elif (dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code)):
+            elif dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code):
                 bit_reorder = 0
-                byte_reorder = 6 # 8b01_10
+                byte_reorder = 6  # 8b01_10
                 dtype_size = 16
             else:
-                raise ValueError('Support only torch.dtype float32/bfloat16/float16')
+                raise ValueError("Support only torch.dtype float32/bfloat16/float16")
         else:
-            if (dtype_enum == ZipNNDtypeEnum.UINT32.code and self.input_format == EnumFormat.NUMPY.value):
+            if dtype_enum == ZipNNDtypeEnum.UINT32.code and self.input_format == EnumFormat.NUMPY.value:
                 max_val = np.max(data)
                 dtype_size = 32
-                if (max_val < 256): # truncate 3 bytes
-                   byte_reorder = 1 # 8b0_00_00_001 
-                elif (max_val < 65536): # truncate 2 bytes
-                   # It is faster to work with change the format to uint16 then to truncate out c implememtation
-                   data = data.astype(np.uint16)
-                   skip_split = 1 # use vanilla compression method
-                   byte_reorder = 9 # 8b0_00_01_001 
-                elif (max_val < 16777216): # truncate 1 bytes
-                   byte_reorder = 41 # 8b0_01_01_001 
-                else: # not truncate anything use vanilla compression method 
-                   skip_split = 1 # use vanilla compression method
-                   byte_reorder = 255 # all one
-            else:     
-                raise ValueError('Support only uint32 with NumPy format')
-        
-        self._update_header_dtype(byte_reorder = byte_reorder, bit_reorder = bit_reorder, dtype_code = dtype_enum)
+                if max_val < 256:  # truncate 3 bytes
+                    byte_reorder = 1  # 8b0_00_00_001
+                elif max_val < 65536:  # truncate 2 bytes
+                    # It is faster to work with change the format to uint16 then to truncate out c implememtation
+                    data = data.astype(np.uint16)
+                    skip_split = 1  # use vanilla compression method
+                    byte_reorder = 9  # 8b0_00_01_001
+                elif max_val < 16777216:  # truncate 1 bytes
+                    byte_reorder = 41  # 8b0_01_01_001
+                else:  # not truncate anything use vanilla compression method
+                    skip_split = 1  # use vanilla compression method
+                    byte_reorder = 255  # all one
+            else:
+                raise ValueError("Support only uint32 with NumPy format")
+
+        self._update_header_dtype(byte_reorder=byte_reorder, bit_reorder=bit_reorder, dtype_code=dtype_enum)
 
         is_review = 0
 
         start_time = time.time()
 
-        if (self.input_format == EnumFormat.TORCH.value):
+        if self.input_format == EnumFormat.TORCH.value:
             ba = data.numpy().tobytes()
-        elif (self.input_format == EnumFormat.NUMPY.value):
+        elif self.input_format == EnumFormat.NUMPY.value:
             ba = data.tobytes()
-        elif (self.input_format == EnumFormat.BYTE.value): 
+        elif self.input_format == EnumFormat.BYTE.value:
             ba = data
-        if is_print: 
-            print ("torch_func", time.time()-start_time)
-        
-        return self.compress_bin(ba = ba, byte_reorder = byte_reorder, bit_reorder = bit_reorder, is_review = is_review, is_float = is_float, dtype_size = dtype_size, shape = shape, skip_split = skip_split)
+        else:
+            raise ValueError("Unsupported input_format")
+
+        if is_print:
+            print("torch_func", time.time() - start_time)
+
+        return self.compress_bin(
+            ba=ba,
+            byte_reorder=byte_reorder,
+            bit_reorder=bit_reorder,
+            is_review=is_review,
+            is_float=is_float,
+            dtype_size=dtype_size,
+            shape=shape,
+            skip_split=skip_split,
+        )
 
     def lossy_compress(self, data, lossy_type, lossy_factor):
         """
@@ -686,9 +697,9 @@ class ZipNN:
             self._update_header_lossy(lossy_type, lossy_factor, lossy_is_int)
 
         elif lossy_type == EnumLossy.UNSIGN:
-            raise ValueError('lossy_compressed_type is "unsign" is not implemented yet')
+            raise ValueError('lossy_compressed_type is "unsign" -> not implemented yet')
         else:
-            raise ValueError("Unsupported lossy_compressed_type")
+            raise ValueError(f"Unsupported lossy_compressed_type {lossy_type}")
 
         return data
 
@@ -753,11 +764,11 @@ class ZipNN:
         """
         if self.method == EnumMethod.ZSTD.value:
             return self._zstd_decompress.decompress(data)
-        elif self.method == EnumMethod.LZ4.value:
+        if self.method == EnumMethod.LZ4.value:
             return lz4.frame.decompress(data)
-        elif self.method == EnumMethod.SNAPPY.value:
+        if self.method == EnumMethod.SNAPPY.value:
             return snappy.decompress(data)
-        raise ValueError("Unsupported compression method")
+        raise ValueError(f"Unsupported method {self.method}")
 
     def decompress_lossy(self, tensor, original_dtype):
         """
@@ -817,38 +828,42 @@ class ZipNN:
         Returns a byte array of the decompressed data.
         """
         is_print = 0
-        stime = time.time()
         header_length = self._retrieve_header(ba_compress)
         start_is_comp = header_length
-
 
         if self.bg == 1:
             mv = memoryview(ba_compress[start_is_comp:])
             ba_decom = self.decompress_method(mv[start_is_comp:])
-            if (self.input_format == EnumFormat.BYTE.value): 
+            if self.input_format == EnumFormat.BYTE.value:
                 return ba_decom
         else:
-            float32=0; bfloat16=0; float16=0; uint16=0; uint32 =0;
-            if (self.dtype in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code)):
+            float32 = 0
+            bfloat16 = 0
+            float16 = 0
+            uint16 = 0
+            uint32 = 0
+            if self.dtype in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
                 groups = 4
                 float32 = 1
-            elif(self.dtype == ZipNNDtypeEnum.BFLOAT16.code):    
+            elif self.dtype == ZipNNDtypeEnum.BFLOAT16.code:
                 groups = 2
                 bfloat16 = 1
-            elif (self.dtype in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code)):
+            elif self.dtype in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code):
                 groups = 2
                 float16 = 1
-            elif (self.dtype == ZipNNDtypeEnum.UINT32.code):
+            elif self.dtype == ZipNNDtypeEnum.UINT32.code:
                 groups = 1
                 uint32 = 1
+            else:
+                raise ValueError(f"Unsupported Dtype {self.dtype}")
 
             skip_combine = 0
-            if (self.input_format ==  EnumFormat.NUMPY.value and (self._byte_reorder in (9, 255))):
+            if self.input_format == EnumFormat.NUMPY.value and (self._byte_reorder in (9, 255)):
                 skip_combine = 1
 
             ba_bg = []
             start_len = start_is_comp + groups
-            start_ba = [start_len + 8*groups]
+            start_ba = [start_len + 8 * groups]
             end_ba = []
             for i in range(groups):
                 btime = time.time()
@@ -863,51 +878,57 @@ class ZipNN:
                 if is_print:
                     print(f"the time of this byte is: {time.time()-btime}")
             start_time = time.time()
-            
-            if (skip_combine == 0):
-               if (float32):
-                   ba_decom  = split_dtype.combine_dtype32(ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads)
-               elif (bfloat16 or float16):    
-                   ba_decom  = split_dtype.combine_dtype16(ba_bg[0], ba_bg[1], self._bit_reorder, self._byte_reorder, self.threads)
-               elif (uint32):    
-                   ba_decom  = split_dtype.combine_dtype32(ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads)
-               if is_print:
-                   print ("combine using c ", time.time()-start_time)
+
+            if skip_combine == 0:
+                if float32:
+                    ba_decom = split_dtype.combine_dtype32(
+                        ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads
+                    )
+                elif bfloat16 or float16:
+                    ba_decom = split_dtype.combine_dtype16(ba_bg[0], ba_bg[1], self._bit_reorder, self._byte_reorder, self.threads)
+                elif uint32:
+                    ba_decom = split_dtype.combine_dtype32(
+                        ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
+                    )
+                if is_print:
+                    print("combine using c ", time.time() - start_time)
             else:
                 ba_decom = ba_bg[0]
-            
-            if (self.input_format == EnumFormat.BYTE.value):
+
+            if self.input_format == EnumFormat.BYTE.value:
                 return ba_decom
 
-            if (self.input_format == EnumFormat.TORCH.value):
-                if (float32):
+            if self.input_format == EnumFormat.TORCH.value:
+                if float32:
                     array = np.frombuffer(ba_decom, dtype=np.float32)
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
-                elif (bfloat16):
+                elif bfloat16:
                     array = np.frombuffer(ba_decom, dtype=np.uint16)
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
                     tensor = tensor.view(torch.bfloat16)
-                elif (float16):
+                elif float16:
                     array = np.frombuffer(ba_decom, dtype=np.float16)
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
                 return tensor
 
-            if (self.input_format == EnumFormat.NUMPY.value):
-                if (float32):
+            if self.input_format == EnumFormat.NUMPY.value:
+                if float32:
                     array = np.frombuffer(ba_decom, dtype=np.float32)
-                elif (float16):
+                elif float16:
                     array = np.frombuffer(ba_decom, dtype=np.float16)
-                elif(uint32):
-                    if(self._byte_reorder == 9): # Truncate MSB, mid-high
+                elif uint32:
+                    if self._byte_reorder == 9:  # Truncate MSB, mid-high
                         array_uint16 = np.frombuffer(ba_decom, dtype=np.uint16)
                         array = array_uint16.astype(np.uint32)
                     else:
                         array = np.frombuffer(ba_decom, dtype=np.uint32)
                 array = array.reshape(self.shape_bytes)
                 return array
+
+            raise ValueError(f"Unsupported input_format {self.input_format}")
 
     def decompress_read_file(self, data):
         """
