@@ -28,8 +28,8 @@ class ZipNN:
         bg_compression_threshold=0.95,
         bg: int = 0,
         reorder_signbit: int = 0,
-        delta_compressed_type: str = None,
-        lossy_compressed_type=None,
+        delta_compressed_type: str = "0",
+        lossy_compressed_type= "0",
         lossy_compressed_factor=27,
         is_streaming: bool = False,
         streaming_chunk_kb: int = 64 * 1024,
@@ -89,20 +89,19 @@ class ZipNN:
 
         delta_compressed_type: string
                NOT IMPLEMENTED YET.
-                Type for delta compression.
-                Options are 'byte', 'file'.
-                Default is ‘None’.
-
+               Type for delta compression.
+               Options are 'byte', 'file'.
+               Default is "0" (NOT IMPLEMENTED YET).
 
          lossy_compressed_type: string
                  Type for lossy compression.
                  Supporting only 'integer' ('unsigned' in the future).
                  Only relevant if compression is lossy.
-                 Defaul is None.
+                 Default is "0" (NOT IMPLEMENTED YET).
 
          lossy_compressed_factor: int
                  Compression factor for lossy compression.
-                 O nly relevant if compression is lossy.
+                 Only relevant if compression is lossy.
                  Default is 27.
 
          is_streaming: bool
