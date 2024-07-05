@@ -6,7 +6,12 @@ split_dtype_extension = Extension(
     sources=[
         'csrc/split_dtype_module.c',
         'csrc/split_dtype32.c',
-        'csrc/split_dtype16.c'
+        'csrc/split_dtype16.c',
+        'csrc/huf_api.c'
+    ],
+    include_dirs=[
+        'csrc/FiniteStateEntropy/lib/',  
+        'csrc/'  
     ],
     extra_compile_args=['-O3'],
     extra_link_args=['-O3']

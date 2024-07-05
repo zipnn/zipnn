@@ -3,6 +3,8 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
+#include "huf_api.h"
+#include "huf.h"
 
 ///////////////////////////////////
 /// Split Helper Functions ///////
@@ -22,7 +24,7 @@ static uint32_t reorder_float_bits(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void reorder_all_floats(char *src, Py_ssize_t len) {
+static void reorder_all_floats(uint8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
@@ -31,7 +33,7 @@ static void reorder_all_floats(char *src, Py_ssize_t len) {
 }
 
 // Helper function to split a bytearray into four buffers
-static int split_bytearray(char *src, Py_ssize_t len, char **buf1, char **buf2,
+static int split_bytearray(uint8_t *src, Py_ssize_t len, uint8_t **buffers,
                            int bits_mode, int bytes_mode, int is_review,
                            int threads) {
 
@@ -42,21 +44,21 @@ static int split_bytearray(char *src, Py_ssize_t len, char **buf1, char **buf2,
   Py_ssize_t half_len = len / 2;
   switch (bytes_mode) {
   case 6: // 2b0110 - Byte Group to two different groups
-    *buf1 = PyMem_Malloc(half_len);
-    *buf2 = PyMem_Malloc(half_len);
+    buffers[0] = PyMem_Malloc(half_len);
+    buffers[1] = PyMem_Malloc(half_len);
 
-    if (*buf1 == NULL || *buf2 == NULL) {
-      PyMem_Free(*buf1);
-      PyMem_Free(*buf2);
+    if (buffers[0] == NULL || buffers[1] == NULL) {
+      PyMem_Free(buffers[0]);
+      PyMem_Free(buffers[1]);
       return -1;
     }
 
-    char *dst1 = *buf1;
-    char *dst2 = *buf2;
+    uint8_t *dst0 = buffers[0];
+    uint8_t *dst1 = buffers[1];
 
     for (Py_ssize_t i = 0; i < len; i += 2) {
-      *dst1++ = src[i];
-      *dst2++ = src[i + 1];
+      *dst0++ = src[i];
+      *dst1++ = src[i + 1];
     }
     break;
 
@@ -64,23 +66,23 @@ static int split_bytearray(char *src, Py_ssize_t len, char **buf1, char **buf2,
           // We are refering to the MSBbyte as little endian, thus we omit buf2
   case 1: // 4b1000 - Truncate LSByte
     // We are refering to the LSByte  as a little endian, thus we omit buf1
-    *buf1 = PyMem_Malloc(half_len);
-    *buf2 = NULL;
+    buffers[0] = PyMem_Malloc(half_len);
+    buffers[1] = NULL;
 
-    if (*buf1 == NULL) {
-      PyMem_Free(*buf1);
+    if (buffers[0] == NULL) {
+      PyMem_Free(buffers[0]);
       return -1;
     }
 
-    dst1 = *buf1;
+    dst0 = buffers[0];
 
     if (bytes_mode == 1) {
       for (Py_ssize_t i = 0; i < len; i += 2) {
-        *dst1++ = src[i];
+        *dst0++ = src[i];
       }
     } else {
       for (Py_ssize_t i = 0; i < len; i += 2) {
-        *dst1++ = src[i + 1];
+        *dst0++ = src[i + 1];
       }
     }
     break;
@@ -110,7 +112,7 @@ static uint32_t revert_float_bits(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void revert_all_floats(char *src, Py_ssize_t len) {
+static void revert_all_floats(uint8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
@@ -119,11 +121,11 @@ static void revert_all_floats(char *src, Py_ssize_t len) {
 }
 
 // Helper function to combine four buffers into a single bytearray
-static char *combine_buffers(char *buf1, char *buf2, Py_ssize_t half_len,
+static uint8_t *combine_buffers(uint8_t *buf1, uint8_t *buf2, Py_ssize_t half_len,
                              int bytes_mode, int threads) {
   Py_ssize_t total_len = half_len * 2;
-  char *result = NULL; // Declare result at the beginning of the function
-  char *dst;
+  uint8_t *result = NULL; // Declare result at the beginning of the function
+  uint8_t *dst;
   result = PyMem_Malloc(total_len);
   dst = result;
   if (result == NULL) {
@@ -188,33 +190,127 @@ static char *combine_buffers(char *buf1, char *buf2, Py_ssize_t half_len,
 //     1 - the finction can change the Bytes_mode
 
 PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
+
+
+  const uint32_t numBuf = 2;
   Py_buffer view;
   int bits_mode, bytes_mode, is_review, threads;
+  uint8_t isPrint = 1;
+  clock_t startTime, endTime, startBGTime, endBGTime, startCompBufTime[numBuf], endCompBufTime[numBuf];
+  double bgTime, compBufTime[numBuf];
+
+  if (isPrint) {
+      startTime = clock();
+  }
 
   if (!PyArg_ParseTuple(args, "y*iiii", &view, &bits_mode, &bytes_mode,
                         &is_review, &threads)) {
     return NULL;
   }
 
-  char *buf1 = NULL, *buf2 = NULL;
-  if (split_bytearray(view.buf, view.len, &buf1, &buf2, bits_mode, bytes_mode,
+  uint8_t *buffers[] = {
+    NULL, NULL
+  };
+
+  if (isPrint) {
+      startBGTime = clock();
+  }
+
+  if (split_bytearray(view.buf, view.len, buffers, bits_mode, bytes_mode,
                       is_review, threads) != 0) {
     PyBuffer_Release(&view);
     PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
     return NULL;
   }
+  if (isPrint) {
+      endBGTime = clock();
+      bgTime = (double)(endBGTime - startBGTime) / CLOCKS_PER_SEC;
+  }
+ 
+  ///// Compression using huffman /////////
 
-  PyObject *result;
-  if (buf2 != NULL) {
-    result = Py_BuildValue("y#y#", buf1, view.len / 2, buf2, view.len / 2);
-  } else {
-    result = Py_BuildValue("y#O", buf1, view.len / 2, Py_None);
+  if (isPrint) {
+      clock_t startCompTime = clock();
+//      clock_t CompBufTime[numBuf];
   }
 
-  PyMem_Free(buf1);
-  PyMem_Free(buf2);
+  size_t bufSize = view.len / numBuf;
+  size_t maxCompressedSize = HUF_compressBound(bufSize);
+
+  uint8_t *compressedData[] = {
+    NULL, NULL
+  };
+
+  for (uint32_t i = 0; i < numBuf; i++) {
+      compressedData[i] = PyMem_Malloc(maxCompressedSize);
+      if (!compressedData[i]) {
+	  for (uint32_t j = 0; j < i; j++) {
+              free(compressedData[j]);  // Free each successfully allocated buffer.
+          }    
+          PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
+          return NULL;
+      }
+  }
+
+  size_t chunkSize = 128 * 1024; // TBD
+  float compThreshold = 0.95; // TBD
+  size_t checkThreshold = 10; // TBD
+  size_t numChunks = (bufSize + chunkSize -1)/ chunkSize;
+  size_t* compressedChunksSize = PyMem_Malloc(numChunks*sizeof(size_t));
+  if (!compressedChunksSize) {
+      PyMem_Free(compressedChunksSize);
+      PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
+      return NULL;
+  }
+
+  uint8_t bufComp[numBuf];
+  size_t totalCompressedSize[numBuf];
+  
+  for (uint32_t i = 0; i < numBuf; i++) {
+      bufComp[i] = 0;
+      if (isPrint) {
+          startCompBufTime[i] = clock();
+      }
+      if (buffers[i] != NULL) {	 
+          totalCompressedSize[i] = hufCompressData(buffers[i], bufSize, maxCompressedSize, compressedData[i], compressedChunksSize, chunkSize, compThreshold, checkThreshold);
+	  if (totalCompressedSize[i] > 0) { // This buffer was compressed
+              bufComp[i] = 1;
+	  }
+      }
+      if (isPrint)
+          endCompBufTime[i] = clock();
+          compBufTime[i] = (double)(endCompBufTime[i] - startCompBufTime[i]) / CLOCKS_PER_SEC;
+      }
+  }
+  
+  PyObject *result;
+  if (buffers[1] != NULL) {
+    // option A compress + compress 
+    // option B compress + buffer 
+    // option C buffer + compress 	  
+    result = Py_BuildValue("y#y#", buffers[0], bufSize, buffers[1], bufSize);
+  } else {
+    result = Py_BuildValue("y#O", buffers[0], view.len / numBuf, Py_None);
+  }
+
+  for (uint32_t i = 0; i < numBuf; i++) {
+    PyMem_Free(compressedData[i]);
+    PyMem_Free(buffers[i]);
+  }
+  PyMem_Free(compressedChunksSize);
   PyBuffer_Release(&view);
 
+  if (isPrint) {
+      endTime = clock();
+      double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+      printf("original_size %zu \n", view.len);
+      printf("BG compression time: %f seconds\n", bgTime);
+      for (uint32_t i = 0; i < numBuf; i++) {
+          printf("compression Buf time [%d]: %f seconds\n", i, compBufTime[i]);
+          printf("totalCompressedSize[%d] %zu [%f%]\n", i, totalCompressedSize[i], totalCompressedSize[i]*1.0/bufSize);
+      }
+      printf("compression C time: %f seconds\n", compressTime);
+  }
   return result;
 }
 
@@ -228,7 +324,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
     return NULL;
   }
 
-  char *result = combine_buffers((char *)view1.buf, (char *)view2.buf,
+  uint8_t *result = combine_buffers((uint8_t *)view1.buf, (uint8_t *)view2.buf,
                                  view1.len, bytes_mode, threads);
   if (result == NULL) {
     PyBuffer_Release(&view1);
@@ -241,7 +337,6 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   if (bits_mode == 1) {
     revert_all_floats(result, view1.len * 2);
   }
-
   PyObject *py_result = PyByteArray_FromStringAndSize(result, view1.len * 2);
   PyMem_Free(result);
   PyBuffer_Release(&view1);
