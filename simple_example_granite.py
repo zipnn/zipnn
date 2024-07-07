@@ -10,6 +10,7 @@ with open(file_path, 'rb') as file:
     file_bytes = file.read()
 
 original_bytes = file_bytes[100000000:1173741824]
+original_bytes = file_bytes[100000000:200000000]
 #original_bytes = file_bytes[:]
 #original_bytes = file_bytes[100:200]
 original_bytes_saved = bytearray(original_bytes)
@@ -57,7 +58,6 @@ elif (is_torch_numpy_byte == 0): # Byte
     compressed_data = zipnn.compress(tensor_bytes)
 
 print ("compressed_data remain ", len(compressed_data)/len(tensor_bytes), " time ", time.time() - start_time)
-
 z = zstd.ZstdCompressor(level=3, threads=threads)
 start_time = time.time()
 c = z.compress(original_bytes_saved)
@@ -71,8 +71,8 @@ print ("decompress zstd ", time.time() - start_time)
 #Decompress the byte string back
 start_time = time.time()
 decompressed_data = zipnn.decompress(compressed_data)
-
 print ("decompress zipnn data ", time.time() - start_time)
+exit(0)
 
 # Verify the result
 if (is_torch_numpy_byte == 2): # Tensor

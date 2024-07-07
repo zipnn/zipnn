@@ -228,6 +228,9 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   }
  
   ///// Compression using huffman /////////
+  uint32_t chunk_size = 128 * 1024; // TBD 
+  float compThreshold = 0.95; // TBD
+  size_t checkThreshold = 10; // TBD
 
   if (isPrint) {
       clock_t startCompTime = clock();
@@ -237,67 +240,75 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   size_t bufSize = view.len / numBuf;
   size_t maxCompressedSize = HUF_compressBound(bufSize);
 
-  uint8_t *compressedData[] = {
-    NULL, NULL
-  };
+  uint8_t *compressedData[numBuf] = {NULL, NULL};
+  size_t numChunks = (bufSize + chunk_size -1)/ chunk_size;
+  size_t* compressedChunksSize[numBuf];
+  size_t bufNumChunks[numBuf];
 
   for (uint32_t i = 0; i < numBuf; i++) {
       compressedData[i] = PyMem_Malloc(maxCompressedSize);
-      if (!compressedData[i]) {
+      compressedChunksSize[i] = PyMem_Malloc(numChunks*sizeof(size_t));
+
+      if (!compressedData[i] | !compressedChunksSize[i]) {
 	  for (uint32_t j = 0; j < i; j++) {
-              free(compressedData[j]);  // Free each successfully allocated buffer.
+              free(compressedData[j]); 
+	      free(compressedChunksSize[j]);
           }    
           PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
           return NULL;
       }
   }
-
-  size_t chunkSize = 128 * 1024; // TBD
-  float compThreshold = 0.95; // TBD
-  size_t checkThreshold = 10; // TBD
-  size_t numChunks = (bufSize + chunkSize -1)/ chunkSize;
-  size_t* compressedChunksSize = PyMem_Malloc(numChunks*sizeof(size_t));
-  if (!compressedChunksSize) {
-      PyMem_Free(compressedChunksSize);
-      PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
-      return NULL;
-  }
-
-  uint8_t bufComp[numBuf];
+  
+  uint8_t isBufComp[numBuf];
   size_t totalCompressedSize[numBuf];
   
   for (uint32_t i = 0; i < numBuf; i++) {
-      bufComp[i] = 0;
+      isBufComp[i] = 1;
+      bufNumChunks[i] = numChunks;
       if (isPrint) {
           startCompBufTime[i] = clock();
       }
       if (buffers[i] != NULL) {	 
-          totalCompressedSize[i] = hufCompressData(buffers[i], bufSize, maxCompressedSize, compressedData[i], compressedChunksSize, chunkSize, compThreshold, checkThreshold);
-	  if (totalCompressedSize[i] > 0) { // This buffer was compressed
-              bufComp[i] = 1;
+          totalCompressedSize[i] = hufCompressData(buffers[i], bufSize, maxCompressedSize, compressedData[i], compressedChunksSize[i], chunk_size, compThreshold, checkThreshold);
+	  if (totalCompressedSize[i] == 0) { // This buffer was not compressed
+              isBufComp[i] = 0;
+	      bufNumChunks[i] = 0;
+	      compressedChunksSize[i] = NULL;
 	  }
       }
-      if (isPrint)
+      if (isPrint) {
           endCompBufTime[i] = clock();
           compBufTime[i] = (double)(endCompBufTime[i] - startCompBufTime[i]) / CLOCKS_PER_SEC;
       }
   }
   
   PyObject *result;
+  uint8_t* resBuf[numBuf];
+  uint8_t* resBufSize[numBuf];
+
   if (buffers[1] != NULL) {
-    // option A compress + compress 
-    // option B compress + buffer 
-    // option C buffer + compress 	  
-    result = Py_BuildValue("y#y#", buffers[0], bufSize, buffers[1], bufSize);
+    for (uint32_t i = 0; i < numBuf; i++) {
+        if (isBufComp[i]) { // The buffer was compressed
+            resBuf[i] = compressedData[i];
+	    resBufSize[i] = totalCompressedSize[i];
+        }	   
+        else {// The buffer was not compressed
+            resBuf[i] = buffers[i];	    
+	    resBufSize[i] = bufSize;
+        }
+    }
+    
+    result = Py_BuildValue("y#y#y#y#y#y#", resBuf[0], resBufSize[0], resBuf[1], resBufSize[1], &isBufComp[0], 1, &isBufComp[1], 1, compressedChunksSize[0], sizeof(size_t)*bufNumChunks[0], compressedChunksSize[1], sizeof(size_t)*bufNumChunks[1]);
   } else {
+    PyErr_SetString(PyExc_MemoryError, "In split16 return two buffers, still not implemented to return 1 Buffer");
     result = Py_BuildValue("y#O", buffers[0], view.len / numBuf, Py_None);
   }
 
   for (uint32_t i = 0; i < numBuf; i++) {
     PyMem_Free(compressedData[i]);
+    PyMem_Free(compressedChunksSize[i]);
     PyMem_Free(buffers[i]);
   }
-  PyMem_Free(compressedChunksSize);
   PyBuffer_Release(&view);
 
   if (isPrint) {
@@ -316,14 +327,82 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 
 // Python callable function to combine four buffers into a single bytearray
 PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
-  Py_buffer view1, view2;
-  int bits_mode, bytes_mode, threads;
+  Py_buffer view;
 
-  if (!PyArg_ParseTuple(args, "y*y*iii", &view1, &view2, &bits_mode,
+  int bits_mode, bytes_mode, threads;
+  int numBuf = 2;
+  uint32_t chunk_size = 128 * 1024; // TBD 
+
+  if (!PyArg_ParseTuple(args, "y*iii", &view, &bits_mode,
                         &bytes_mode, &threads)) {
     return NULL;
   }
 
+  clock_t startTime, endTime;
+  uint32_t offset = 0;
+  startTime = clock();
+  uint8_t* bufUint8Pointer = (uint8_t *)view.buf;
+  uint8_t isBufComp[numBuf];
+  memcpy(&isBufComp, bufUint8Pointer + offset, numBuf * sizeof(uint8_t));
+  offset += numBuf * sizeof(uint8_t);
+  size_t origSize;
+  memcpy(&origSize, bufUint8Pointer + offset, sizeof(size_t));
+  offset += sizeof(size_t);
+  size_t bufSize[numBuf];
+  memcpy(&bufSize, bufUint8Pointer + offset, numBuf * sizeof(size_t));
+  offset += numBuf * sizeof(size_t);
+  size_t numChunks;
+  memcpy(&numChunks, bufUint8Pointer + offset, sizeof(size_t));
+  offset += sizeof(size_t);
+  size_t compressedChunksSize[numBuf][numChunks]; 
+
+  if (!isBufComp[0] && isBufComp[1]){
+      memcpy(compressedChunksSize[1], bufUint8Pointer + offset, numChunks * sizeof(size_t));    
+      offset += numChunks * sizeof(size_t);
+  }
+  else{
+      if (isBufComp[0] && !isBufComp[1]) {
+      // The exponent is in buf1	  
+          memcpy(compressedChunksSize[0], bufUint8Pointer + offset, numChunks * sizeof(size_t));    
+          offset += numChunks * sizeof(size_t);
+      }
+      else{
+          // Both buffers were compressed	  
+          memcpy(compressedChunksSize[0], bufUint8Pointer + offset, numChunks * sizeof(size_t));    
+          offset += numChunks * sizeof(size_t);
+          memcpy(compressedChunksSize[1], bufUint8Pointer + offset, numChunks * sizeof(size_t));    
+          offset += numChunks * sizeof(size_t);
+      }
+  } 
+
+  uint8_t* decompressedData = malloc(origSize/2);
+  if (!decompressedData) {
+      PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
+      free(decompressedData);
+      return 1;
+  }  
+  size_t decompressedSize = hufDecompressData(bufUint8Pointer + offset, compressedChunksSize[1], numChunks, origSize/2, decompressedData, chunk_size);
+
+  endTime = clock();
+  double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+  printf("compression C time: %f seconds\n", compressTime);
+  printf ("buf len %zu\n " , view.len);
+  printf ("bits_mode %d\n " , bits_mode);
+  printf ("bytes_mode %d\n " , bytes_mode);
+  printf ("threads %d\n " , threads);
+  printf ("isBufComp1 %d\n " , isBufComp[0]);
+  printf ("isBufComp2 %d\n " , isBufComp[1]);
+  printf ("Original size %zu\n " , origSize);
+  printf ("BufLen1 %zu\n " , bufSize[0]);
+  printf ("BufLen2 %zu\n " , bufSize[1]);
+  printf ("numChunks %zu\n " , numChunks);
+  printf ("compressedChunksSize[1][0] %zu\n " , compressedChunksSize[1][0]);
+  printf ("compressedChunksSize[1][1] %zu\n " , compressedChunksSize[1][1]);
+  printf ("compressedChunksSize[1][numChunks-1] %zu\n " , compressedChunksSize[1][numChunks-1]);
+  printf ("decompressedSize %zu\n", decompressedSize);
+   
+  exit(0);
+  /*
   uint8_t *result = combine_buffers((uint8_t *)view1.buf, (uint8_t *)view2.buf,
                                  view1.len, bytes_mode, threads);
   if (result == NULL) {
@@ -343,4 +422,5 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   PyBuffer_Release(&view2);
 
   return py_result;
+  */
 }

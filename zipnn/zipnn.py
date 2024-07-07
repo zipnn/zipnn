@@ -441,7 +441,7 @@ class ZipNN:
         Returns a byte array of the header, data, and some metadata.
         """
         compress_bin_time = time.time()
-        is_print = 0
+        is_print = 1
 
         if self.bg == 1:
             stime = time.time()
@@ -452,7 +452,7 @@ class ZipNN:
             stime = time.time()
             bg_ret = []
             bg_len = []
-            bg_is_comp = []
+            buf_is_comp = []
 
             if dtype_size == 32:
                 start_time = time.time()
@@ -476,7 +476,7 @@ class ZipNN:
 
                     if len(bg_comp) / (len(b)) < self.bg_compression_threshold:
                         # Save this byte group compressed
-                        bg_is_comp.append((1).to_bytes(1, byteorder="little"))
+                        buf_is_comp.append((1).to_bytes(1, byteorder="little"))
                         bg_len.append(len(bg_comp).to_bytes(length=8, byteorder="little"))
                         bg_ret.append(bg_comp)
                         if is_print:
@@ -485,42 +485,51 @@ class ZipNN:
                         if is_print:
                             print(f"We did't compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
                         # Save the byte group not compressed
-                        bg_is_comp.append((0).to_bytes(1, byteorder="little"))
+                        buf_is_comp.append((0).to_bytes(1, byteorder="little"))
                         bg_len.append(len(b).to_bytes(length=8, byteorder="little"))
                         bg_ret.append(b)
+            if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
+                shape_bytes = zipnn_pack_shape(shape)
+                ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + bg_len + bg_ret)
+            else:
+                ba_comp = b"".join([self._header] + buf_is_comp + bg_len + bg_ret)
 
             if dtype_size == 16:
-                start_time = time.time()
-                buf1, buf2 = split_dtype.split_dtype16(ba, bit_reorder, byte_reorder, is_review, self.threads)
                 if is_print:
-                    print("reorder ", time.time() - start_time)
-                stime = time.time()
-                for b in buf1, buf2:
-                    if len(b) == 0:
-                        continue
                     start_time = time.time()
-                    bg_comp = self.compress_method(b)
-                    if len(bg_comp) / (len(b)) < self.bg_compression_threshold:
-                        # Save this byte group compressed
-                        bg_is_comp.append((1).to_bytes(1, byteorder="little"))
-                        bg_len.append(len(bg_comp).to_bytes(length=8, byteorder="little"))
-                        bg_ret.append(bg_comp)
-                        if is_print:
-                            print(f"We compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
-                    else:
-                        if is_print:
-                            print(f"We don't compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
-                        # Save the byte group not compressed
-                        bg_is_comp.append((0).to_bytes(1, byteorder="little"))
-                        bg_len.append(len(b).to_bytes(length=8, byteorder="little"))
-                        bg_ret.append(b)
+                chunk_size: int = int(128 * 1024); # TBD
+                num_chunks = int((len(ba)/2 + chunk_size - 1)/ chunk_size)
+                original_size = len(ba).to_bytes(length=8, byteorder="little")
+                buf1, buf2, buf_is_comp1, buf_is_comp2, compress_chunks_size1, compress_chunks_size2  = split_dtype.split_dtype16(ba, bit_reorder, byte_reorder, is_review, self.threads)
+                buf = [buf1, buf2]
+                print ("len(buf1) ", len(buf1))
+                print ("len(buf2) ", len(buf2))
+                buf_len = [len(buf1).to_bytes(length=8, byteorder="little"), len(buf2).to_bytes(length=8, byteorder="little")]
+                buf_is_comp = [buf_is_comp1, buf_is_comp2]
+                print (num_chunks)
 
-        if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-            shape_bytes = zipnn_pack_shape(shape)
-            ba_comp = b"".join([self._header] + [shape_bytes] + bg_is_comp + bg_len + bg_ret)
-        else:
-            ba_comp = b"".join([self._header] + bg_is_comp + bg_len + bg_ret)
+                num_chunks_bytes = num_chunks.to_bytes(length=8, byteorder="little")
 
+                if (compress_chunks_size1 is None):
+                    compress_chunks_size = [compress_chunks_size2]
+                elif (compress_chunks_size2 is None):    
+                    compress_chunks_size = [compress_chunks_size1]
+                else:
+                    compress_chunks_size = [compress_chunks_size1, compress_chunks_size2]
+
+                if is_print:
+                    print("reorder+compress ", time.time() - start_time)
+             
+            if is_print:
+                start_time = time.time()
+            if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
+                shape_bytes = zipnn_pack_shape(shape)
+                ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
+            else:
+                ba_comp = b"".join([self._header] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
+                print (len(ba_comp))
+            if is_print:
+                print("aggregate output bin ", time.time() - start_time)
         if is_print:
             print("total compression ", time.time() - stime)
             print(f"len ba-comp {len(ba_comp)}")
@@ -864,31 +873,34 @@ class ZipNN:
             start_len = start_is_comp + groups
             start_ba = [start_len + 8 * groups]
             end_ba = []
-            for i in range(groups):
-                btime = time.time()
-                mv = memoryview(ba_compress)
-                is_comp = int.from_bytes(mv[start_is_comp + i : start_is_comp + i + 1], byteorder="little")
-                end_ba.append(int.from_bytes(mv[start_len + i * 8 : start_len + (i + 1) * 8 - 1], byteorder="little") + start_ba[i])
-                start_ba.append(end_ba[i])
-                if is_comp == 1:
-                    ba_bg.append(self.decompress_method(ba_compress[start_ba[i] : end_ba[i]]))
-                else:
-                    ba_bg.append(mv[start_ba[i] : end_ba[i]])
-                if is_print:
-                    print(f"the time of this byte is: {time.time()-btime}")
-            start_time = time.time()
-
             if skip_combine == 0:
-                if float32:
-                    ba_decom = split_dtype.combine_dtype32(
-                        ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads
-                    )
+                if float32 or uint32:
+                    for i in range(groups):
+                        btime = time.time()
+                        mv = memoryview(ba_compress)
+                        is_comp = int.from_bytes(mv[start_is_comp + i : start_is_comp + i + 1], byteorder="little")
+                        end_ba.append(int.from_bytes(mv[start_len + i * 8 : start_len + (i + 1) * 8 - 1], byteorder="little") + start_ba[i])
+                        start_ba.append(end_ba[i])
+                        if is_comp == 1:
+                            ba_bg.append(self.decompress_method(ba_compress[start_ba[i] : end_ba[i]]))
+                        else:
+                            ba_bg.append(mv[start_ba[i] : end_ba[i]])
+                        if is_print:
+                            print(f"the time of this byte is: {time.time()-btime}")
+
+                    if float32:      
+                        start_time = time.time()
+                        ba_decom = split_dtype.combine_dtype32(
+                            ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads
+                        )
+                    else: # uint32_t    
+                        mv = memoryview(ba_compress)
+                        ba_decom = split_dtype.combine_dtype32(
+                            ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
+                        )
                 elif bfloat16 or float16:
-                    ba_decom = split_dtype.combine_dtype16(ba_bg[0], ba_bg[1], self._bit_reorder, self._byte_reorder, self.threads)
-                elif uint32:
-                    ba_decom = split_dtype.combine_dtype32(
-                        ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
-                    )
+                    mv = memoryview(ba_compress)
+                    ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads)
                 if is_print:
                     print("combine using c ", time.time() - start_time)
             else:
