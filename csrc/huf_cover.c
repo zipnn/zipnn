@@ -3,8 +3,8 @@
 #include <string.h>
 #include <time.h>
 #include <stddef.h>
-#include "huf_api.h"  // Ensure you include the correct Huffman header
-#include "huf.h"  // Ensure you include the correct Huffman header
+#include "huf_cover.h"  
+#include "huf.h"
 
 
 size_t hufCompressData(const uint8_t* data, size_t size, int maxCompressedSize, uint8_t* compressedData, size_t* compressedChunksSize, size_t chunkSize, float compThreshold, size_t checkThreshold) {
@@ -52,11 +52,10 @@ size_t hufCompressData(const uint8_t* data, size_t size, int maxCompressedSize, 
 
 size_t hufDecompressData(const uint8_t* compressedData, size_t* compressedChunksSize, size_t numChunks, size_t original_size, uint8_t* decompressedData, size_t chunkSize)
 {
-    printf ("numChunks %zu", numChunks);
     size_t totalDecompressedSize = 0;
     size_t compressedOffset = 0;
     size_t totalCompressedSize = compressedChunksSize[numChunks-1];
-
+    
     for (size_t i = 0; i < numChunks; i++) {
         size_t curChunkSize = (i > 0) ? compressedChunksSize[i] - compressedChunksSize[i-1]: compressedChunksSize[0];
         size_t remainingOriginalSize = original_size - totalDecompressedSize;

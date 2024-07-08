@@ -3,7 +3,7 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
-#include "huf_api.h"
+#include "huf_cover.h"
 #include "huf.h"
 
 ///////////////////////////////////
@@ -240,7 +240,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   size_t bufSize = view.len / numBuf;
   size_t maxCompressedSize = HUF_compressBound(bufSize);
 
-  uint8_t *compressedData[numBuf] = {NULL, NULL};
+  uint8_t *compressedData[] = {NULL, NULL};
   size_t numChunks = (bufSize + chunk_size -1)/ chunk_size;
   size_t* compressedChunksSize[numBuf];
   size_t bufNumChunks[numBuf];
@@ -297,6 +297,9 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 	    resBufSize[i] = bufSize;
         }
     }
+    uint8_t item;  
+    memcpy(&item, resBuf[0], sizeof(uint8_t));
+    printf ("resBuf[1] %d\n " , item);
     
     result = Py_BuildValue("y#y#y#y#y#y#", resBuf[0], resBufSize[0], resBuf[1], resBufSize[1], &isBufComp[0], 1, &isBufComp[1], 1, compressedChunksSize[0], sizeof(size_t)*bufNumChunks[0], compressedChunksSize[1], sizeof(size_t)*bufNumChunks[1]);
   } else {
@@ -355,37 +358,39 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   memcpy(&numChunks, bufUint8Pointer + offset, sizeof(size_t));
   offset += sizeof(size_t);
   size_t compressedChunksSize[numBuf][numChunks]; 
+  size_t decompressedSize[numBuf];
+  uint8_t* decompressedData[] = {NULL, NULL};
+  size_t offset_compressedChunksSize = offset;
 
-  if (!isBufComp[0] && isBufComp[1]){
-      memcpy(compressedChunksSize[1], bufUint8Pointer + offset, numChunks * sizeof(size_t));    
-      offset += numChunks * sizeof(size_t);
+  for (uint32_t i = 0; i < numBuf; i++) {
+	  if (isBufComp[i]){
+              decompressedData[i] = malloc(origSize/numBuf);  		  
+              if (!decompressedData) {
+                  PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
+                  free(decompressedData);
+                  return 1;
+              }
+	      printf ("offset_compressedChunksSize %d\n", offset_compressedChunksSize); 
+	      memcpy(compressedChunksSize[i], bufUint8Pointer + offset_compressedChunksSize, numChunks * sizeof(size_t));
+              printf ("compressedChunksSize[1][numChunks-1] %zu\n " , compressedChunksSize[i][numChunks-1]);
+	      printf ("offset %d\n", offset); 
+	      decompressedSize[i] = hufDecompressData(bufUint8Pointer + offset, compressedChunksSize[i], numChunks, origSize/numBuf, decompressedData[i], chunk_size);
+	      if (i < numBuf -1) {
+		      offset += compressedChunksSize[i][numChunks-1];
+		      offset_compressedChunksSize += numChunks * sizeof(size_t); 
+	      }
+	  }
+          else{
+                  decompressedData[i] = bufUint8Pointer + offset + numChunks * sizeof(size_t); 
+		  offset += origSize/numBuf + numChunks * sizeof(size_t);
+	  }
   }
-  else{
-      if (isBufComp[0] && !isBufComp[1]) {
-      // The exponent is in buf1	  
-          memcpy(compressedChunksSize[0], bufUint8Pointer + offset, numChunks * sizeof(size_t));    
-          offset += numChunks * sizeof(size_t);
-      }
-      else{
-          // Both buffers were compressed	  
-          memcpy(compressedChunksSize[0], bufUint8Pointer + offset, numChunks * sizeof(size_t));    
-          offset += numChunks * sizeof(size_t);
-          memcpy(compressedChunksSize[1], bufUint8Pointer + offset, numChunks * sizeof(size_t));    
-          offset += numChunks * sizeof(size_t);
-      }
-  } 
-
-  uint8_t* decompressedData = malloc(origSize/2);
-  if (!decompressedData) {
-      PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
-      free(decompressedData);
-      return 1;
-  }  
-  size_t decompressedSize = hufDecompressData(bufUint8Pointer + offset, compressedChunksSize[1], numChunks, origSize/2, decompressedData, chunk_size);
-
+  uint8_t item;  
+  memcpy(&item, bufUint8Pointer + offset, sizeof(uint8_t));
+  printf ("bufUint8Pointer + offset + origSize/2 %d\n " , item);
   endTime = clock();
   double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
-  printf("compression C time: %f seconds\n", compressTime);
+  printf("decompression C time: %f seconds\n", compressTime);
   printf ("buf len %zu\n " , view.len);
   printf ("bits_mode %d\n " , bits_mode);
   printf ("bytes_mode %d\n " , bytes_mode);
@@ -399,28 +404,23 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   printf ("compressedChunksSize[1][0] %zu\n " , compressedChunksSize[1][0]);
   printf ("compressedChunksSize[1][1] %zu\n " , compressedChunksSize[1][1]);
   printf ("compressedChunksSize[1][numChunks-1] %zu\n " , compressedChunksSize[1][numChunks-1]);
-  printf ("decompressedSize %zu\n", decompressedSize);
-   
-  exit(0);
-  /*
-  uint8_t *result = combine_buffers((uint8_t *)view1.buf, (uint8_t *)view2.buf,
-                                 view1.len, bytes_mode, threads);
+  printf ("decompressedSize[1] %zu\n", decompressedSize[1]);
+  
+  uint8_t *result = combine_buffers((uint8_t *)decompressedData[0], (uint8_t *)decompressedData[1],
+                                origSize/2 , bytes_mode, threads);
   if (result == NULL) {
-    PyBuffer_Release(&view1);
-    PyBuffer_Release(&view2);
+    PyBuffer_Release(&view);
     PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
     return NULL;
   }
 
   // Revert the reordering of all floats if needed
   if (bits_mode == 1) {
-    revert_all_floats(result, view1.len * 2);
+    revert_all_floats(result, origSize);
   }
-  PyObject *py_result = PyByteArray_FromStringAndSize(result, view1.len * 2);
+  PyObject *py_result = PyByteArray_FromStringAndSize(result, origSize);
   PyMem_Free(result);
-  PyBuffer_Release(&view1);
-  PyBuffer_Release(&view2);
+  PyBuffer_Release(&view);
 
   return py_result;
-  */
 }
