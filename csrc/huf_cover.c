@@ -54,7 +54,6 @@ size_t hufDecompressData(const uint8_t* compressedData, size_t* compressedChunks
 {
     size_t totalDecompressedSize = 0;
     size_t compressedOffset = 0;
-    size_t totalCompressedSize = compressedChunksSize[numChunks-1];
     
     for (size_t i = 0; i < numChunks; i++) {
         size_t curChunkSize = (i > 0) ? compressedChunksSize[i] - compressedChunksSize[i-1]: compressedChunksSize[0];

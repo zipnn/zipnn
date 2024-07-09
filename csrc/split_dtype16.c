@@ -232,11 +232,6 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   float compThreshold = 0.95; // TBD
   size_t checkThreshold = 10; // TBD
 
-  if (isPrint) {
-      clock_t startCompTime = clock();
-//      clock_t CompBufTime[numBuf];
-  }
-
   size_t bufSize = view.len / numBuf;
   size_t maxCompressedSize = HUF_compressBound(bufSize);
 
@@ -284,7 +279,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   
   PyObject *result;
   uint8_t* resBuf[numBuf];
-  uint8_t* resBufSize[numBuf];
+  size_t resBufSize[numBuf];
 
   if (buffers[1] != NULL) {
     for (uint32_t i = 0; i < numBuf; i++) {
@@ -321,7 +316,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
       printf("BG compression time: %f seconds\n", bgTime);
       for (uint32_t i = 0; i < numBuf; i++) {
           printf("compression Buf time [%d]: %f seconds\n", i, compBufTime[i]);
-          printf("totalCompressedSize[%d] %zu [%f%]\n", i, totalCompressedSize[i], totalCompressedSize[i]*1.0/bufSize);
+          printf("totalCompressedSize[%d] %zu [%f]\n", i, totalCompressedSize[i], totalCompressedSize[i]*1.0/bufSize);
       }
       printf("compression C time: %f seconds\n", compressTime);
   }
@@ -333,7 +328,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   Py_buffer view;
 
   int bits_mode, bytes_mode, threads;
-  int numBuf = 2;
+  uint32_t numBuf = 2;
   uint32_t chunk_size = 128 * 1024; // TBD 
 
   if (!PyArg_ParseTuple(args, "y*iii", &view, &bits_mode,
@@ -365,12 +360,13 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   for (uint32_t i = 0; i < numBuf; i++) {
 	  if (isBufComp[i]){
               decompressedData[i] = malloc(origSize/numBuf);  		  
-              if (!decompressedData) {
-                  PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
-                  free(decompressedData);
-                  return 1;
+              if (!decompressedData[i]) {
+	          for (uint32_t j = 0; j < i; j++) {
+                      PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
+                      free(decompressedData[i]);
+		  }
               }
-	      printf ("offset_compressedChunksSize %d\n", offset_compressedChunksSize); 
+	      printf ("offset_compressedChunksSize %zu\n", offset_compressedChunksSize); 
 	      memcpy(compressedChunksSize[i], bufUint8Pointer + offset_compressedChunksSize, numChunks * sizeof(size_t));
               printf ("compressedChunksSize[1][numChunks-1] %zu\n " , compressedChunksSize[i][numChunks-1]);
 	      printf ("offset %d\n", offset); 
@@ -387,6 +383,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   }
   uint8_t item;  
   memcpy(&item, bufUint8Pointer + offset, sizeof(uint8_t));
+  /*
   printf ("bufUint8Pointer + offset + origSize/2 %d\n " , item);
   endTime = clock();
   double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
@@ -395,8 +392,8 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   printf ("bits_mode %d\n " , bits_mode);
   printf ("bytes_mode %d\n " , bytes_mode);
   printf ("threads %d\n " , threads);
-  printf ("isBufComp1 %d\n " , isBufComp[0]);
-  printf ("isBufComp2 %d\n " , isBufComp[1]);
+  printf ("isBufComp[0] %d\n " , isBufComp[0]);
+  printf ("isBufComp[1] %d\n " , isBufComp[1]);
   printf ("Original size %zu\n " , origSize);
   printf ("BufLen1 %zu\n " , bufSize[0]);
   printf ("BufLen2 %zu\n " , bufSize[1]);
@@ -405,7 +402,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   printf ("compressedChunksSize[1][1] %zu\n " , compressedChunksSize[1][1]);
   printf ("compressedChunksSize[1][numChunks-1] %zu\n " , compressedChunksSize[1][numChunks-1]);
   printf ("decompressedSize[1] %zu\n", decompressedSize[1]);
-  
+  */
   uint8_t *result = combine_buffers((uint8_t *)decompressedData[0], (uint8_t *)decompressedData[1],
                                 origSize/2 , bytes_mode, threads);
   if (result == NULL) {
@@ -418,7 +415,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   if (bits_mode == 1) {
     revert_all_floats(result, origSize);
   }
-  PyObject *py_result = PyByteArray_FromStringAndSize(result, origSize);
+  PyObject *py_result = PyByteArray_FromStringAndSize((const char *)result, origSize);
   PyMem_Free(result);
   PyBuffer_Release(&view);
 
