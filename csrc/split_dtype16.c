@@ -274,6 +274,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
       if (isPrint) {
           endCompBufTime[i] = clock();
           compBufTime[i] = (double)(endCompBufTime[i] - startCompBufTime[i]) / CLOCKS_PER_SEC;
+          printf("totalCompressedSize[%d] %zu [%f] time %f  \n", i, totalCompressedSize[i], totalCompressedSize[i]*1.0/bufSize, compBufTime[i]);
       }
   }
   
@@ -294,7 +295,6 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
     }
     uint8_t item;  
     memcpy(&item, resBuf[0], sizeof(uint8_t));
-    printf ("resBuf[1] %d\n " , item);
     
     result = Py_BuildValue("y#y#y#y#y#y#", resBuf[0], resBufSize[0], resBuf[1], resBufSize[1], &isBufComp[0], 1, &isBufComp[1], 1, compressedChunksSize[0], sizeof(size_t)*bufNumChunks[0], compressedChunksSize[1], sizeof(size_t)*bufNumChunks[1]);
   } else {
@@ -383,7 +383,6 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   }
   uint8_t item;  
   memcpy(&item, bufUint8Pointer + offset, sizeof(uint8_t));
-  /*
   printf ("bufUint8Pointer + offset + origSize/2 %d\n " , item);
   endTime = clock();
   double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
@@ -402,7 +401,6 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   printf ("compressedChunksSize[1][1] %zu\n " , compressedChunksSize[1][1]);
   printf ("compressedChunksSize[1][numChunks-1] %zu\n " , compressedChunksSize[1][numChunks-1]);
   printf ("decompressedSize[1] %zu\n", decompressedSize[1]);
-  */
   uint8_t *result = combine_buffers((uint8_t *)decompressedData[0], (uint8_t *)decompressedData[1],
                                 origSize/2 , bytes_mode, threads);
   if (result == NULL) {

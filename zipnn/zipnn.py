@@ -520,16 +520,24 @@ class ZipNN:
                 if is_print:
                     print("reorder+compress ", time.time() - start_time)
              
-            if is_print:
-                start_time = time.time()
-            if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-                shape_bytes = zipnn_pack_shape(shape)
-                ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
-            else:
-                ba_comp = b"".join([self._header] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
-                print (len(ba_comp))
-            if is_print:
-                print("aggregate output bin ", time.time() - start_time)
+                if is_print:
+                    start_time = time.time()
+
+                if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
+                    shape_bytes = zipnn_pack_shape(shape)
+                    if (buf_is_comp != [b'\x00', b'\x00']):
+                        ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
+                    else:    
+                        ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [ba])
+                else:
+                    print (compress_chunks_size)
+                    print ("buf_is_comp ", buf_is_comp)
+                    if (buf_is_comp != [b'\x00', b'\x00']):
+                        ba_comp = b"".join([self._header] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
+                    else:
+                        ba_comp = b"".join([self._header] + buf_is_comp + [ba])
+                if is_print:
+                    print("aggregate output bin ", time.time() - start_time)
         if is_print:
             print("total compression ", time.time() - stime)
             print(f"len ba-comp {len(ba_comp)}")
@@ -899,8 +907,14 @@ class ZipNN:
                             ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
                         )
                 elif bfloat16 or float16:
+
                     mv = memoryview(ba_compress)
-                    ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads)
+                    if (list(mv[start_is_comp:start_is_comp+2]) != [0, 0]): # decompress
+                        print ("decompress")
+                        ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads)
+                    else: # original_value
+                        print ("not decompress")
+                        ba_decom = mv[start_is_comp+2:]
                 if is_print:
                     print("combine using c ", time.time() - start_time)
             else:
