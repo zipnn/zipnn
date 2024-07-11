@@ -31,11 +31,16 @@ def update_vars_dict(vars_dict, **kwargs):
 
 
 def test_zipnn(self, original_bin, original_tensor, vars_dict):
+
     zipnn = ZipNN(**vars_dict)
+    print ("original_bin " , int(original_bin[1]))
+    original_bin_saved = bytearray(original_bin)
     # Act: Compress and then decompress
     start_time = time.time()
     if vars_dict["input_format"] == "byte":
+        print ("original_bin " , int(original_bin[1]))
         compressed_zipnn_byte = zipnn.compress(original_bin)
+        print ("!!!compressed_zipnn_byte " , int(compressed_zipnn_byte[19]))
     elif vars_dict["input_format"] == "torch":
         compressed_zipnn_byte = zipnn.compress(original_tensor)
     else:
@@ -46,27 +51,22 @@ def test_zipnn(self, original_bin, original_tensor, vars_dict):
     decompress_time = time.time() - start_time
 
     # Asserts
-    if vars_dict["input_format"] == "byte":
-        input_byte = original_bin
-    elif vars_dict["input_format"] == "torch":
-        input_byte = original_tensor.numpy().tobytes()
-    else:
-        sys.exit(f"Unsupported decompressed_ret_type")
 
     if vars_dict["input_format"] == "byte":
         decompressed_zipnn_byte = decompressed_zipnn
-    elif vars_dict["input_format"] == "torch":
-        decompressed_zipnn_byte = decompressed_zipnn.numpy().tobytes()
-    else:
-        sys.exit(f"Unsupported decompressed_ret_type")
 
     if vars_dict["input_format"] == "torch":
         self.assertEqual(original_tensor.shape, decompressed_zipnn.shape)
         self.assertEqual(original_tensor.dtype, decompressed_zipnn.dtype)
+    else:
+        print (int(original_bin_saved[1]))
+        print (int(decompressed_zipnn_byte[1]))
+        self.assertEqual(original_bin_saved[1] , decompressed_zipnn_byte[1])
 
+   
     compress_ratio = len(compressed_zipnn_byte) / len(original_bin)
     var_str = f"compress_ratio {compress_ratio:.2f} compression_time = {compress_time} decompression_time {decompress_time} original_len {len(original_bin)}"
-    for var, value in zipnn.__dict__.items():
+    for var, value in vars_dict.items():
         var_str += f" {var}: {value} "
     print(var_str)
 
@@ -85,7 +85,6 @@ def run_few_config(
 
 ):
     # one model different method "zstd","lz4","snappy"
-    print("Check different methods  zstd,lz4,snappy with Byte Gorup 4")
     for method in method_list:
         for input_format in input_format_list:
             for bytearray_dtype in bytearray_dtype_list:
@@ -108,7 +107,7 @@ def run_few_config(
                             test_zipnn(self, original_bin, original_tensor, vars_dict)
 
 
-def build_tensors_and_vars():
+def build_tensors_and_vars(dtype):
     # Arrange: Original data to compress (a byte array)
 
     random.seed(42)
@@ -116,36 +115,60 @@ def build_tensors_and_vars():
 
     # Generate random floats between low_rand and high_rand
 
-    # From -0.02 to 0.02
-    size = 1024*1024
-    original_tensor = torch.rand(size) * 0.04 - 0.02
+    
+    if (dtype == torch.float32):
+       bytearray_dtype = "float32"
+    elif (dtype == torch.bfloat16):
+       bytearray_dtype = "bfloat16"
+    elif (dtype == torch.float16):
+       bytearray_dtype = "float16"
+
+    element_size = torch.tensor([], dtype=dtype).element_size()
+    num_elements = 1024*1024*1024 // element_size 
+    num_elements = 1024*1024 // element_size 
+
+
+    element_size = torch.tensor([], dtype=dtype).element_size()
+    
+
+    # Create a tensor of these many elements of type float32
+    # Initialize the tensor with random numbers from a uniform distribution between -1 and 1
+    original_tensor = torch.rand(num_elements, dtype=dtype) * 2 - 1
+
 
     # Convert the tensor to a numpy array
-    np_array = original_tensor.numpy()
+    if (dtype == torch.bfloat16):
+        tensor_uint16 = original_tensor.view(torch.uint16)
+        np_array = tensor_uint16.numpy() 
+    else:
+        np_array = original_tensor.numpy()
 
     # Convert the numpy array to bytes
     original_bin = np_array.tobytes()
     print (f"original length in bytes {len(original_bin)}")
-    return vars_dict, original_tensor, original_bin
+    return vars_dict, original_tensor, original_bin, bytearray_dtype
 
 
-def test_compression_decompression_one_model_method(self):
+def test_compression_decompression_float(self):
     # one model different method "zstd","lz4","snappy" with and without byte grouping
-    vars_dict, original_tensor, original_bin = build_tensors_and_vars()
 
-    print("Check different methods  zstd,lz4,snappy with Byte Gorup 4 and vanilla method (Byte Group = 1)")
-    run_few_config(
-        self,
-        original_bin,
-        original_tensor,
-        vars_dict,
-        method_list=["zstd", "lz4", "snappy"],
-        input_format_list=["byte", "torch"],
-        bytearray_dtype_list = ["float32"],
-        bg_list=[0, 2, 4],
-        threads_list = [1, 8]
+#    for dtype in [torch.float32, torch.bfloat16, torch.float16]:
+    for dtype in [torch.float32, torch.bfloat16]:
+        vars_dict, original_tensor, original_bin, bytearray_dtype = build_tensors_and_vars(dtype)
+
+        print("Check different methods  zstd,lz4,snappy with Byte Gorup 4 and vanilla method (Byte Group = 1)")
+        run_few_config(
+            self,
+            original_bin,
+            original_tensor,
+            vars_dict,
+            method_list=["zstd"],
+            #            input_format_list=["byte", "torch"],
+            input_format_list=["byte", "torch"],
+            bytearray_dtype_list = [bytearray_dtype],
+            bg_list=[0],
+            threads_list = [1]
     )
-
 
 # if __name__ == '__main__':
 #    unittest.main()
