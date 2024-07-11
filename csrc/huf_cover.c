@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <stddef.h>
+#include <stdint.h>
 #include "huf_cover.h"  
 #include "huf.h"
 
