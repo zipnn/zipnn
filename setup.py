@@ -1,13 +1,21 @@
 from setuptools import setup, find_packages, Extension
 
 # Define the C extension module, adjusting paths to source files
+
+
 split_dtype_extension = Extension(
     'split_dtype',
     sources=[
         'csrc/split_dtype_module.c',
         'csrc/split_dtype32.c',
         'csrc/split_dtype16.c',
-        'csrc/huf_cover.c'
+        'csrc/huf_cover.c',
+        'csrc/FiniteStateEntropy/lib/fse_compress.c',
+        'csrc/FiniteStateEntropy/lib/fse_decompress.c',
+        'csrc/FiniteStateEntropy/lib/huf_compress.c',
+        'csrc/FiniteStateEntropy/lib/huf_decompress.c',
+        'csrc/FiniteStateEntropy/lib/entropy_common.c',
+        'csrc/FiniteStateEntropy/lib/hist.c'
     ],
     include_dirs=[
         'csrc/FiniteStateEntropy/lib/',  
