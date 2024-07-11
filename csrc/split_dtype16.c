@@ -198,7 +198,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   const uint32_t numBuf = 2;
   Py_buffer view;
   int bits_mode, bytes_mode, is_review, threads;
-  uint8_t isPrint = 1;
+  uint8_t isPrint = 0;
   clock_t startTime, endTime, startBGTime, endBGTime, startCompBufTime[numBuf], endCompBufTime[numBuf];
   double bgTime, compBufTime[numBuf];
 
@@ -373,10 +373,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
             }
         }
       }
-      printf ("offset_compressedChunksSize %zu\n", offset_compressedChunksSize); 
       memcpy(compressedChunksSize[i], bufUint8Pointer + offset_compressedChunksSize, numChunks * sizeof(size_t));
-      printf ("compressedChunksSize[1][numChunks-1] %zu\n " , compressedChunksSize[i][numChunks-1]);
-      printf ("offset %d\n", offset); 
       decompressedSize[i] = hufDecompressData(bufUint8Pointer + offset, compressedChunksSize[i], numChunks, origSize/numBuf, decompressedData[i], chunk_size);
       if (i < numBuf -1) {
             offset += compressedChunksSize[i][numChunks-1];
@@ -390,10 +387,10 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
     }
     uint8_t item;  
     memcpy(&item, bufUint8Pointer + offset, sizeof(uint8_t));
-    printf ("bufUint8Pointer + offset + origSize/2 %d\n " , item);
+    /*
     endTime = clock();
-    double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
-    printf("decompression C time: %f seconds\n", compressTime);
+    double decompressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+    printf("decompression C time: %f seconds\n", decompressTime);
     printf ("buf len %zu\n " , view.len);
     printf ("bits_mode %d\n " , bits_mode);
     printf ("bytes_mode %d\n " , bytes_mode);
@@ -408,6 +405,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
     printf ("compressedChunksSize[1][1] %zu\n " , compressedChunksSize[1][1]);
     printf ("compressedChunksSize[1][numChunks-1] %zu\n " , compressedChunksSize[1][numChunks-1]);
     printf ("decompressedSize[1] %zu\n", decompressedSize[1]);
+    */
     uint8_t *result = combine_buffers((uint8_t *)decompressedData[0], (uint8_t *)decompressedData[1],
                                   origSize/2 , bytes_mode, threads);
     if (result == NULL) {

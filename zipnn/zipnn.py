@@ -441,7 +441,7 @@ class ZipNN:
         Returns a byte array of the header, data, and some metadata.
         """
         compress_bin_time = time.time()
-        is_print = 1
+        is_print = 0
 
         if self.bg == 1:
             stime = time.time()
@@ -502,11 +502,8 @@ class ZipNN:
                 original_size = len(ba).to_bytes(length=8, byteorder="little")
                 buf1, buf2, buf_is_comp1, buf_is_comp2, compress_chunks_size1, compress_chunks_size2  = split_dtype.split_dtype16(ba, bit_reorder, byte_reorder, is_review, self.threads)
                 buf = [buf1, buf2]
-                print ("len(buf1) ", len(buf1))
-                print ("len(buf2) ", len(buf2))
                 buf_len = [len(buf1).to_bytes(length=8, byteorder="little"), len(buf2).to_bytes(length=8, byteorder="little")]
                 buf_is_comp = [buf_is_comp1, buf_is_comp2]
-                print (num_chunks)
 
                 num_chunks_bytes = num_chunks.to_bytes(length=8, byteorder="little")
 
@@ -530,8 +527,6 @@ class ZipNN:
                     else:    
                         ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [ba])
                 else:
-                    print (compress_chunks_size)
-                    print ("buf_is_comp ", buf_is_comp)
                     if (buf_is_comp != [b'\x00', b'\x00']):
                         ba_comp = b"".join([self._header] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
                     else:
@@ -910,7 +905,6 @@ class ZipNN:
 
                     mv = memoryview(ba_compress)
                     if (list(mv[start_is_comp:start_is_comp+2]) != [0, 0]): # decompress
-                        print ("decompress")
                         ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads)
                     else: # original_value
                         print ("not decompress")
