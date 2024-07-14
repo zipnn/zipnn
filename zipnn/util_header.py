@@ -28,6 +28,7 @@ class EnumFormat(Enum):
             if value in cls.__members__:
                 return cls.__members__[value]
 
+
 class EnumLossy(Enum):
     NONE = 0
     INTEGER = 1

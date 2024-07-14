@@ -497,38 +497,52 @@ class ZipNN:
             if dtype_size == 16:
                 if is_print:
                     start_time = time.time()
-                chunk_size: int = int(128 * 1024); # TBD
-                num_chunks = int((len(ba)/2 + chunk_size - 1)/ chunk_size)
+                chunk_size: int = int(128 * 1024)
+                # TBD
+                num_chunks = int((len(ba) / 2 + chunk_size - 1) / chunk_size)
                 original_size = len(ba).to_bytes(length=8, byteorder="little")
-                buf1, buf2, buf_is_comp1, buf_is_comp2, compress_chunks_size1, compress_chunks_size2  = split_dtype.split_dtype16(ba, bit_reorder, byte_reorder, is_review, self.threads)
+                buf1, buf2, buf_is_comp1, buf_is_comp2, compress_chunks_size1, compress_chunks_size2 = split_dtype.split_dtype16(
+                    ba, bit_reorder, byte_reorder, is_review, self.threads
+                )
                 buf = [buf1, buf2]
                 buf_len = [len(buf1).to_bytes(length=8, byteorder="little"), len(buf2).to_bytes(length=8, byteorder="little")]
                 buf_is_comp = [buf_is_comp1, buf_is_comp2]
 
                 num_chunks_bytes = num_chunks.to_bytes(length=8, byteorder="little")
 
-                if (compress_chunks_size1 is None):
+                if compress_chunks_size1 is None:
                     compress_chunks_size = [compress_chunks_size2]
-                elif (compress_chunks_size2 is None):    
+                elif compress_chunks_size2 is None:
                     compress_chunks_size = [compress_chunks_size1]
                 else:
                     compress_chunks_size = [compress_chunks_size1, compress_chunks_size2]
 
                 if is_print:
                     print("reorder+compress ", time.time() - start_time)
-             
+
                 if is_print:
                     start_time = time.time()
 
                 if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                     shape_bytes = zipnn_pack_shape(shape)
-                    if (buf_is_comp != [b'\x00', b'\x00']):
-                        ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
-                    else:    
+                    if buf_is_comp != [b"\x00", b"\x00"]:
+                        ba_comp = b"".join(
+                            [self._header]
+                            + [shape_bytes]
+                            + buf_is_comp
+                            + [original_size]
+                            + buf_len
+                            + [num_chunks_bytes]
+                            + compress_chunks_size
+                            + buf
+                        )
+                    else:
                         ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [ba])
                 else:
-                    if (buf_is_comp != [b'\x00', b'\x00']):
-                        ba_comp = b"".join([self._header] + buf_is_comp + [original_size] + buf_len +  [num_chunks_bytes] + compress_chunks_size + buf)
+                    if buf_is_comp != [b"\x00", b"\x00"]:
+                        ba_comp = b"".join(
+                            [self._header] + buf_is_comp + [original_size] + buf_len + [num_chunks_bytes] + compress_chunks_size + buf
+                        )
                     else:
                         ba_comp = b"".join([self._header] + buf_is_comp + [ba])
                 if is_print:
@@ -601,9 +615,9 @@ class ZipNN:
         is_review = 0
         bit_reorder = 0
         skip_split = 0
-        #lossy_type = self.use_var(lossy_compressed_type, self.lossy_compressed_type)
-        #lossy_type = EnumLossy.NONE if lossy_type is None else lossy_type
-        #if lossy_type is not EnumLossy.NONE:
+        # lossy_type = self.use_var(lossy_compressed_type, self.lossy_compressed_type)
+        # lossy_type = EnumLossy.NONE if lossy_type is None else lossy_type
+        # if lossy_type is not EnumLossy.NONE:
         #    lossy_factor = self.use_var(lossy_compressed_factor, self.lossy_compressed_factor)
         #    lossy_compress = self.lossy_compress(data, lossy_type, lossy_factor)
 
@@ -891,12 +905,12 @@ class ZipNN:
                         if is_print:
                             print(f"the time of this byte is: {time.time()-btime}")
 
-                    if float32:      
+                    if float32:
                         start_time = time.time()
                         ba_decom = split_dtype.combine_dtype32(
                             ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads
                         )
-                    else: # uint32_t    
+                    else:  # uint32_t
                         mv = memoryview(ba_compress)
                         ba_decom = split_dtype.combine_dtype32(
                             ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
@@ -904,11 +918,11 @@ class ZipNN:
                 elif bfloat16 or float16:
 
                     mv = memoryview(ba_compress)
-                    if (list(mv[start_is_comp:start_is_comp+2]) != [0, 0]): # decompress
+                    if list(mv[start_is_comp : start_is_comp + 2]) != [0, 0]:  # decompress
                         ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads)
-                    else: # original_value
-                        print ("not decompress")
-                        ba_decom = mv[start_is_comp+2:]
+                    else:  # original_value
+                        print("not decompress")
+                        ba_decom = mv[start_is_comp + 2 :]
                 if is_print:
                     print("combine using c ", time.time() - start_time)
             else:
