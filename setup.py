@@ -21,13 +21,13 @@ split_dtype_extension = Extension(
         'csrc/FiniteStateEntropy/lib/',  
         'csrc/'  
     ],
-    extra_compile_args=['-O3'],
-    extra_link_args=['-O3']
+    extra_compile_args=['-O3', '-Wall', '-Wextra'],
+    extra_link_args=['-O3', '-Wall', '-Wextra']
 )
 
 setup(
     name='zipnn',
-    version='0.1.1',
+    version='0.1.2',
     author='Moshik Hershcovitch',
     author_email='moshik1@gmail.com',
     description='A lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment',

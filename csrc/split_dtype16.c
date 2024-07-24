@@ -203,9 +203,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
       endCompBufTime[numBuf];
   double bgTime, compBufTime[numBuf];
 
-  if (isPrint) {
-    startTime = clock();
-  }
+  startTime = clock();
 
   if (!PyArg_ParseTuple(args, "y*iiii", &view, &bits_mode, &bytes_mode,
                         &is_review, &threads)) {

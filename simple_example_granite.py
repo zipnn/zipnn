@@ -6,15 +6,26 @@ import numpy as np
 
 
 file_path = "csrc/granite-3b-code-base.2.bin" 
+#file_path = "../data/llama3.bin" 
+#file_path = "../data/mistral.bin" 
+#file_path = "../data/Arcee-Nova-bf16.bin" 
+#file_path = "../data/Arcee-Nova-Alpha-GGUF.fp16.bin" 
+#file_path = "../data/jamba.bin" 
+#file_path = "../data/llama3-1.int4.bin" 
+file_path = "../data/llama3-1.bf16.405B.bin" 
+file_path = "../data/llama3-1.bf16.8B.bin" 
+
 with open(file_path, 'rb') as file:
     file_bytes = file.read()
 
 original_bytes = file_bytes[100000000:1173741824]
-#original_bytes = file_bytes[100000000:200000000]
+#original_bytes = file_bytes[100000000:100524288]
+#original_bytes = file_bytes[0:500000]
 #original_bytes = file_bytes[:]
 #original_bytes = file_bytes[100:200]
 original_bytes_saved = bytearray(original_bytes)
 print ("len of original bytes ", len(original_bytes)/1024/1024/1024, " GB")
+print ("len of original bytes ", len(original_bytes)/1024, " GB")
 
 is_torch_numpy_byte = 0 # torch 2 / numpy 1/ byte = 0
 #is_torch_numpy_byte = 1 # torch 2 / numpy 1/ byte = 0
