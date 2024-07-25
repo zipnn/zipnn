@@ -349,25 +349,44 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   }
 
   clock_t startTime, endTime;
-  uint32_t offset = 0;
+  uint32_t header_offset = 0;
+  uint32_t compressedChunksSize_offset[] = {0, 0};
+  uint32_t data_offset[] = {0, 0};
+
   startTime = clock();
   uint8_t *bufUint8Pointer = (uint8_t *)view.buf;
   uint8_t isBufComp[numBuf];
-  memcpy(&isBufComp, bufUint8Pointer + offset, numBuf * sizeof(uint8_t));
-  offset += numBuf * sizeof(uint8_t);
+  memcpy(&isBufComp, bufUint8Pointer + header_offset, numBuf * sizeof(uint8_t));
+  header_offset += numBuf * sizeof(uint8_t);
   size_t origSize;
-  memcpy(&origSize, bufUint8Pointer + offset, sizeof(size_t));
-  offset += sizeof(size_t);
+  memcpy(&origSize, bufUint8Pointer + header_offset, sizeof(size_t));
+  header_offset += sizeof(size_t);
   size_t bufSize[numBuf];
-  memcpy(&bufSize, bufUint8Pointer + offset, numBuf * sizeof(size_t));
-  offset += numBuf * sizeof(size_t);
+  memcpy(&bufSize, bufUint8Pointer + header_offset, numBuf * sizeof(size_t));
+  header_offset += numBuf * sizeof(size_t);
   size_t numChunks;
-  memcpy(&numChunks, bufUint8Pointer + offset, sizeof(size_t));
-  offset += sizeof(size_t);
+  memcpy(&numChunks, bufUint8Pointer + header_offset, sizeof(size_t));
+  header_offset += sizeof(size_t);
   size_t compressedChunksSize[numBuf][numChunks];
   size_t decompressedSize[numBuf];
   uint8_t *decompressedData[] = {NULL, NULL};
-  size_t offset_compressedChunksSize = offset;
+  size_t offset_compressedChunksSize = header_offset;
+
+
+  // calc offset for the compressedChunksSize and offest to the data
+  compressedChunksSize_offset[0] = header_offset;
+  compressedChunksSize_offset[1] = header_offset;
+  data_offset[0] = header_offset;
+
+  if (isBufComp[0]) { 
+    compressedChunksSize_offset[1] += numChunks * sizeof(size_t); 
+    data_offset[0] += numChunks * sizeof(size_t);
+  }
+  if (isBufComp[1]) {
+     data_offset[0] += numChunks * sizeof(size_t);
+  } 
+  
+  data_offset[1] = data_offset[0]; 
 
   for (uint32_t i = 0; i < numBuf; i++) {
     if (isBufComp[i]) {
@@ -381,23 +400,25 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
         }
       }
       memcpy(compressedChunksSize[i],
-             bufUint8Pointer + offset_compressedChunksSize,
+             bufUint8Pointer + compressedChunksSize_offset[i],
              numChunks * sizeof(size_t));
+
       decompressedSize[i] = hufDecompressData(
-          bufUint8Pointer + offset, compressedChunksSize[i], numChunks,
+          bufUint8Pointer + data_offset[i], compressedChunksSize[i], numChunks,
           origSize / numBuf, decompressedData[i], chunk_size);
+
       if (i < numBuf - 1) {
-        offset += compressedChunksSize[i][numChunks - 1];
-        offset_compressedChunksSize += numChunks * sizeof(size_t);
+        data_offset[i+1] += compressedChunksSize[i][numChunks - 1];
       }
+
     } else {
       decompressedData[i] =
-          bufUint8Pointer + offset + numChunks * sizeof(size_t);
-      offset += origSize / numBuf + numChunks * sizeof(size_t);
+          bufUint8Pointer + data_offset[0];
+      if (i < numBuf - 1) {
+        data_offset[i+1] += origSize / numBuf;
+      }
     }
   }
-  uint8_t item;
-  memcpy(&item, bufUint8Pointer + offset, sizeof(uint8_t));
   /*
   endTime = clock();
   double decompressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;

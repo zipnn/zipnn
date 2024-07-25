@@ -921,7 +921,8 @@ class ZipNN:
                     if list(mv[start_is_comp : start_is_comp + 2]) != [0, 0]:  # decompress
                         ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads)
                     else:  # original_value
-                        print("not decompress")
+                        if (is_print):
+                            print("not decompress")
                         ba_decom = mv[start_is_comp + 2 :]
                 if is_print:
                     print("combine using c ", time.time() - start_time)
@@ -944,7 +945,7 @@ class ZipNN:
                 elif float16:
                     array = np.frombuffer(ba_decom, dtype=np.float16)
                     array = array.reshape(self.shape_bytes)
-                    tensor = torch.from_numpy(array)
+                    tensor = torch.tensor(array, dtype=torch.float16)
                 return tensor
 
             if self.input_format == EnumFormat.NUMPY.value:

@@ -22,7 +22,7 @@ original_bytes = file_bytes[100000000:1173741824]
 #original_bytes = file_bytes[100000000:100524288]
 #original_bytes = file_bytes[0:500000]
 #original_bytes = file_bytes[:]
-#original_bytes = file_bytes[100:200]
+#original_bytes = file_bytes[0:20000]
 original_bytes_saved = bytearray(original_bytes)
 print ("len of original bytes ", len(original_bytes)/1024/1024/1024, " GB")
 print ("len of original bytes ", len(original_bytes)/1024, " GB")

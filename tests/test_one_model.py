@@ -33,14 +33,11 @@ def update_vars_dict(vars_dict, **kwargs):
 def test_zipnn(self, original_bin, original_tensor, vars_dict):
 
     zipnn = ZipNN(**vars_dict)
-    print ("original_bin " , int(original_bin[1]))
     original_bin_saved = bytearray(original_bin)
     # Act: Compress and then decompress
     start_time = time.time()
     if vars_dict["input_format"] == "byte":
-        print ("original_bin " , int(original_bin[1]))
         compressed_zipnn_byte = zipnn.compress(original_bin)
-        print ("!!!compressed_zipnn_byte " , int(compressed_zipnn_byte[19]))
     elif vars_dict["input_format"] == "torch":
         compressed_zipnn_byte = zipnn.compress(original_tensor)
     else:
@@ -59,8 +56,6 @@ def test_zipnn(self, original_bin, original_tensor, vars_dict):
         self.assertEqual(original_tensor.shape, decompressed_zipnn.shape)
         self.assertEqual(original_tensor.dtype, decompressed_zipnn.dtype)
     else:
-        print (int(original_bin_saved[1]))
-        print (int(decompressed_zipnn_byte[1]))
         self.assertEqual(original_bin_saved[1] , decompressed_zipnn_byte[1])
 
    
@@ -124,7 +119,7 @@ def build_tensors_and_vars(dtype):
        bytearray_dtype = "float16"
 
     element_size = torch.tensor([], dtype=dtype).element_size()
-    num_elements = 1024*1024*1024 // element_size 
+#    num_elements = 1024*1024*1024 // element_size 
     num_elements = 1024*1024 // element_size 
 
 
@@ -152,18 +147,16 @@ def build_tensors_and_vars(dtype):
 def test_compression_decompression_float(self):
     # one model different method "zstd","lz4","snappy" with and without byte grouping
 
-#    for dtype in [torch.float32, torch.bfloat16, torch.float16]:
-    for dtype in [torch.float32, torch.bfloat16]:
+    for dtype in [torch.float32, torch.bfloat16, torch.float16]:
         vars_dict, original_tensor, original_bin, bytearray_dtype = build_tensors_and_vars(dtype)
 
-        print("Check different methods  zstd,lz4,snappy with Byte Gorup 4 and vanilla method (Byte Group = 1)")
+        print("Check different standart option with different dtypes")
         run_few_config(
             self,
             original_bin,
             original_tensor,
             vars_dict,
             method_list=["zstd"],
-            #            input_format_list=["byte", "torch"],
             input_format_list=["byte", "torch"],
             bytearray_dtype_list = [bytearray_dtype],
             bg_list=[0],
