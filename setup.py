@@ -10,15 +10,15 @@ split_dtype_extension = Extension(
         'csrc/split_dtype32.c',
         'csrc/split_dtype16.c',
         'csrc/huf_cover.c',
-        'csrc/FiniteStateEntropy/lib/fse_compress.c',
-        'csrc/FiniteStateEntropy/lib/fse_decompress.c',
-        'csrc/FiniteStateEntropy/lib/huf_compress.c',
-        'csrc/FiniteStateEntropy/lib/huf_decompress.c',
-        'csrc/FiniteStateEntropy/lib/entropy_common.c',
-        'csrc/FiniteStateEntropy/lib/hist.c'
+        'include/FiniteStateEntropy/lib/fse_compress.c',
+        'include/FiniteStateEntropy/lib/fse_decompress.c',
+        'include/FiniteStateEntropy/lib/huf_compress.c',
+        'include/FiniteStateEntropy/lib/huf_decompress.c',
+        'include/FiniteStateEntropy/lib/entropy_common.c',
+        'include/FiniteStateEntropy/lib/hist.c'
     ],
     include_dirs=[
-        'csrc/FiniteStateEntropy/lib/',  
+        'include/FiniteStateEntropy/lib/',  
         'csrc/'  
     ],
     extra_compile_args=['-O3', '-Wall', '-Wextra'],
