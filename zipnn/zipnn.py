@@ -14,25 +14,26 @@ from zipnn.util_torch import (
     zipnn_unpack_shape,
     zipnn_is_floating_point,
 )
-
+import math
 
 class ZipNN:
 
     def __init__(
         self,
-        method: str = "zstd",
+        method: str = "auto",
         input_format: str = "byte",
-        bytearray_dtype: str = "float32",
+        bytearray_dtype: str = "bfloat16",
         is_monotonic: int = 0,
         threads: int = 1,
-        bg_compression_threshold=0.95,
-        bg: int = 0,
+        compression_threshold=0.95,
+        byte_reorder: int = 0,
         reorder_signbit: int = 0,
         delta_compressed_type: str = 0,
         lossy_compressed_type: str = 0,
         lossy_compressed_factor=27,
+        compression_chunk = 256 * 1024,
         is_streaming: bool = False,
-        streaming_chunk_kb: int = 64 * 1024,
+        streaming_chunk_kb: int = 1024 * 1024,
         input_file: str = "byte",
         compressed_file: str = None,
         decompressed_file: str = None,
@@ -47,8 +48,8 @@ class ZipNN:
          Parameters
          -------------------------------------
          method: string
-                 Chosen compression method. The options are: ‘zstd’/’ZSTD’, ‘lz4’/’LZ4’, ‘snappy’/’SNAPPY’.
-                 Default is ‘zstd’.
+                 Chosen compression method. The options are: ‘zstd’/’ZSTD’, 'huffman'/'HUFFMAN' ‘lz4’/’LZ4’, ‘snappy’/’SNAPPY’.
+                 Default is ‘AUTO’, which choose the best compression method automatically.
 
          input_format: string
                  The type of the input, the same will be for the output.
@@ -69,16 +70,22 @@ class ZipNN:
                  If 0, the code decide according to the dataset len.
                  Default is 1
 
-         bg_compression_threshold: float
+         compression_threshold: float
                  Compression threshhold for byte grouping.
                  Only relevant for a compression that uses byte grouping.
                  Default is 0.95.
 
-         bg: int
-                 Number of partitions for byte grouping.
-                 If set to zero [defualt], auto decision according to the dtype
-                 If set to 255 - no byte grouping, running vanilla compression method.
-                 If 2,4 - Byte group to 2 groups or 4 roups respectively
+         byte_reorder: int 
+                 Number of grouping.
+                 4 Groups - Nu,ber for the group and zero for truncate. 
+                 [7] - Gorup 0/1 - 4'th Byte 
+                 [6-5] - Group 0/1/2 - 3'th Byte
+                 [4-3] - Group 0/1/2/3 - 2'th Byte
+                 [2-0] - Group 0/1/2/3/4 - 1'th Byte
+                 for example: 
+                 bg16: two groups - 0_00_01_001 - decimal 9
+                 fp32: four groups - 1_10_11_100 - decimal 220
+                 int32: truncate two MSBs - 0_00_01_001 - decimal 9 
 
          reorder_signbit: int
                  This reorder the bits of the float32 or bfloat16 to better compression.
@@ -103,6 +110,10 @@ class ZipNN:
                  Compression factor for lossy compression.
                  Only relevant if compression is lossy.
                  Default is 27.
+          
+         compression_chunk: int 
+                 Chunk size for compression.
+                 Cefault is 256KB
 
          is_streaming: bool
                  NOT IMPLEMENTED YET.
@@ -151,13 +162,15 @@ class ZipNN:
         self.is_monotonic = is_monotonic
 
         self.threads = threads
-        self.bg_compression_threshold = bg_compression_threshold
-        self.bg = bg
+        self.compression_threshold = compression_threshold
+        self.byte_reorder = byte_reorder
         self.reorder_signbit = reorder_signbit
 
         self.delta_compressed_type = delta_compressed_type
         self.lossy_compressed_type = EnumLossy.NONE if lossy_compressed_type is None else EnumLossy(lossy_compressed_type)
         self.lossy_compressed_factor = lossy_compressed_factor
+        
+        self.compression_chunk = compression_chunk
 
         self.is_streaming = is_streaming
         if is_streaming == 0:
@@ -239,16 +252,16 @@ class ZipNN:
     # Header: at least 8 Bytes
     # [0:1] 2 Bytes [ZN]
     # [2:4] 3 Bytes [Versions]
-    # [5] 1 Byte [byte_order]
-    # [6] 1 Byte [bit_order]
+    # [5] 1 Byte [byte_reorder]
+    # [6] 1 Byte [bit_reorder]
     # [9] 1 Byte [delta compression]
     # [8] 1 Byte [method]
     # [9] 1 Byte [format]
     # [10] 1 Byte [lossy_compress_type]
     # [11] 1 Byte [lossy_compress_factor]
     # [12] 1 Byte [lossy_is_int]
-    # [13] 1 Byte [is_streaming, streaming_chunk_kb]
-    # [14] 1 Byte bg
+    # [13] 1 Byte [Compression Chunk]
+    # [14] 1 Byte [is_streaming, streaming_chunk_kb]
     # [15] = self.dtype
 
     # byte order for 64bit
@@ -316,9 +329,8 @@ class ZipNN:
         #        self._header[11] = self.lossy_compressed_factor
         #        self._header[12] = self._lossy_is_int
         #        self._header[13] = self.is_streaming + self.streaming_chunk_kb
-        self._header[14] = self.bg
-
-    #        self._header[15] = dtype
+        self._header[14] = int(math.log(self.compression_chunk, 2))
+        #        self._header[15] = dtype
 
     def _retrieve_header(self, ba_compress):
         """
@@ -350,7 +362,7 @@ class ZipNN:
         self.lossy_compressed_factor = int(header[11])
         self._lossy_is_int = int(header[12])
         #        self.is_streaming = int(header[13]
-        self.bg = int(header[14])
+        self.compression_chunk = 2**header[14]
         self.dtype = int(header[15])
 
         if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
@@ -443,7 +455,8 @@ class ZipNN:
         compress_bin_time = time.time()
         is_print = 0
 
-        if self.bg == 1:
+        if (self.byte_reorder == 0b1_01_01_001 and dtype_size == 32) or (self.byte_reorder ==  0b0_00_01_001 and dtype_size == 16):
+            # one group
             stime = time.time()
             ba_comp = self._header + self.compress_method(ba)
             if self.input_format == EnumFormat.BYTE.value:
@@ -474,7 +487,7 @@ class ZipNN:
                     start_time = time.time()
                     bg_comp = self.compress_method(b)
 
-                    if len(bg_comp) / (len(b)) < self.bg_compression_threshold:
+                    if len(bg_comp) / (len(b)) < self.compression_threshold:
                         # Save this byte group compressed
                         buf_is_comp.append((1).to_bytes(1, byteorder="little"))
                         bg_len.append(len(bg_comp).to_bytes(length=8, byteorder="little"))
@@ -855,8 +868,10 @@ class ZipNN:
         is_print = 0
         header_length = self._retrieve_header(ba_compress)
         start_is_comp = header_length
+        
+        dtype_size = 0 # Need to implement
 
-        if self.bg == 1:
+        if (self.byte_reorder == 0b1_01_01_001 and dtype_size == 32) or (self.byte_reorder ==  0b0_00_01_001 and dtype_size == 16):
             mv = memoryview(ba_compress[start_is_comp:])
             ba_decom = self.decompress_method(mv[start_is_comp:])
             if self.input_format == EnumFormat.BYTE.value:

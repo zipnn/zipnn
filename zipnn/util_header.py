@@ -3,9 +3,11 @@ from enum import Enum
 
 
 class EnumMethod(Enum):
+    AUTO = 0
     ZSTD = 1
-    LZ4 = 2
-    SNAPPY = 3
+    HUFFMAN = 2
+    LZ4 = 3
+    SNAPPY = 4
 
     @classmethod
     def _missing_(cls, value):

@@ -16,7 +16,6 @@ def build_vars_dict():
             "input_format" : "byte",
             "bytearray_dtype" : "float32",
             "threads" : 1,
-            "bg" : 0
     }
     return vars_dict
 
@@ -75,7 +74,6 @@ def run_few_config(
     method_list,
     input_format_list,
     bytearray_dtype_list,
-    bg_list,
     threads_list,
 
 ):
@@ -83,23 +81,21 @@ def run_few_config(
     for method in method_list:
         for input_format in input_format_list:
             for bytearray_dtype in bytearray_dtype_list:
-                for bg in bg_list:
-                    for threads in threads_list:
-                            vars_dict = update_vars_dict(
-                                vars_dict,
-                                method=method,
-                                input_format=input_format,
-                                bytearray_dtype = bytearray_dtype,
-                                bg = bg,
-                                threads = threads
+               for threads in threads_list:
+                       vars_dict = update_vars_dict(
+                           vars_dict,
+                           method=method,
+                           input_format=input_format,
+                           bytearray_dtype = bytearray_dtype,
+                           threads = threads
 
-                            )
-                            if (input_format == "byte"):
-                                print(f"{method} {input_format} /bytearray_dtype={bytearray_dtype}/bg={bg}/threads={threads}")
-                            else:    
-                                print(f"{method} {input_format} /bg={bg}/threads={threads}")
+                       )
+                       if (input_format == "byte"):
+                           print(f"{method} {input_format} /bytearray_dtype={bytearray_dtype}/threads={threads}")
+                       else:    
+                           print(f"{method} {input_format} / threads={threads}")
 
-                            test_zipnn(self, original_bin, original_tensor, vars_dict)
+                       test_zipnn(self, original_bin, original_tensor, vars_dict)
 
 
 def build_tensors_and_vars(dtype):
@@ -159,7 +155,6 @@ def test_compression_decompression_float(self):
             method_list=["zstd"],
             input_format_list=["byte", "torch"],
             bytearray_dtype_list = [bytearray_dtype],
-            bg_list=[0],
             threads_list = [1]
     )
 
