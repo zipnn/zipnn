@@ -3,17 +3,52 @@ import torch
 import time
 import zstandard as zstd
 import numpy as np
+import os
+import requests
 
 
-file_path = "csrc/granite-3b-code-base.2.bin" 
-#file_path = "../data/llama3.bin" 
-#file_path = "../data/mistral.bin" 
-#file_path = "../data/Arcee-Nova-bf16.bin" 
-#file_path = "../data/Arcee-Nova-Alpha-GGUF.fp16.bin" 
-#file_path = "../data/jamba.bin" 
-#file_path = "../data/llama3-1.int4.bin" 
-file_path = "../data/llama3-1.bf16.405B.bin" 
-file_path = "../data/llama3-1.bf16.8B.bin" 
+file_path = "data/granite-3b-code-base.2.bin"
+url = 'https://huggingface.co/ibm-granite/granite-3b-code-base/resolve/main/model-00002-of-00002.safetensors?download=true'
+
+#file_path = "data/granite-8b-instruct.2.bin"
+#url = 'https://huggingface.co/ibm-granite/granite-8b-code-instruct/resolve/main/model-00002-of-00004.safetensors?download=true'
+
+#file_path = "data/llama3.bin" 
+
+#file_path = "data/mistral.bin" 
+
+#file_path = "data/Arcee-Nova-bf16.bin" 
+
+#file_path = "data/Arcee-Nova-Alpha-GGUF.fp16.bin" 
+
+#file_path = "data/jamba.bin" 
+
+#file_path = "/data/llama3-1.int4.bin" 
+
+#file_path = "data/llama3-1.bf16.405B.bin" 
+
+#file_path = "data/llama3-1.bf16.8B.bin" 
+
+def download_file(url, file_path):
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    response = requests.get(url, stream=True)
+    
+    response.raise_for_status()
+   
+    print("start downloading file")
+    with open(file_path, 'wb') as file:
+        for chunk in response.iter_content(chunk_size=8192):
+            file.write(chunk)
+    print ("end downloading file")        
+
+
+
+if not os.path.exists(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    download_file(url, file_path)
 
 with open(file_path, 'rb') as file:
     file_bytes = file.read()
