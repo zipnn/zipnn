@@ -43,7 +43,7 @@ static int split_bytearray(uint8_t *src, Py_ssize_t len, uint8_t **buffers,
 
   Py_ssize_t half_len = len / 2;
   switch (bytes_mode) {
-  case 6: // 2b0110 - Byte Group to two different groups
+  case 10: // 2b01_010 - Byte Group to two different groups
     buffers[0] = PyMem_Malloc(half_len);
     buffers[1] = PyMem_Malloc(half_len);
 
@@ -136,7 +136,7 @@ static uint8_t *combine_buffers(uint8_t *buf1, uint8_t *buf2,
   dst = result;
 
   switch (bytes_mode) {
-  case 6: // 2b0110 - Byte Group to two different groups
+  case 10: // 2b01_010 - Byte Group to two different groups
 
     if (result == NULL) {
 
@@ -151,7 +151,7 @@ static uint8_t *combine_buffers(uint8_t *buf1, uint8_t *buf2,
 
   case 8: // 4b1000 - Truncate MSByte
           // We are refering to the MSByte as a little endian, thus we omit buf2
-  case 1: // 4b1000 - Truncate LSByte
+  case 1: // 4b001 - Truncate LSByte
           // We are refering to the LSByte as a little endian, thus we omit buf1
 
     if (bytes_mode == 8) {

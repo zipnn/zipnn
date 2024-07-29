@@ -83,7 +83,7 @@ class ZipNN:
                  [4-3] - Group 0/1/2/3 - 2'th Byte
                  [2-0] - Group 0/1/2/3/4 - 1'th Byte
                  for example: 
-                 bg16: two groups - 0_00_01_001 - decimal 9
+                 bg16: two groups - 0_00_01_010 - decimal 10
                  fp32: four groups - 1_10_11_100 - decimal 220
                  int32: truncate two MSBs - 0_00_01_001 - decimal 9 
 
@@ -649,13 +649,13 @@ class ZipNN:
                 dtype_size = 32
             #            elif (dtype_enum == ZipNNDtypeEnum.BFLOAT16.code):
             elif dtype_enum == ZipNNDtypeEnum.BFLOAT16.code:
-                byte_reorder = 6  # 8b01_10
+                byte_reorder = 10  # 8b01_010
                 dtype_size = 16
                 if self.input_format == EnumFormat.TORCH.value:
                     data = data.view(torch.uint16)
             elif dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code):
                 bit_reorder = 0
-                byte_reorder = 6  # 8b01_10
+                byte_reorder = 10  # 8b01_010
                 dtype_size = 16
             else:
                 raise ValueError("Support only torch.dtype float32/bfloat16/float16")
