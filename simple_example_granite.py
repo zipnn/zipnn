@@ -16,18 +16,24 @@ url = 'https://huggingface.co/ibm-granite/granite-3b-code-base/resolve/main/mode
 #file_path = "data/llama3.bin" 
 
 #file_path = "data/mistral.bin" 
+# Need authentication -> download from the browser or use Huggingface Token
 
-#file_path = "data/Arcee-Nova-bf16.bin" 
+#file_path = "data/Arcee-Nova.70B.2.bin" 
+#url = 'https://huggingface.co/arcee-ai/Arcee-Nova/resolve/main/model-00002-of-00031.safetensors?download=true'
 
-#file_path = "data/Arcee-Nova-Alpha-GGUF.fp16.bin" 
+#file_path = "data/Arcee-Nova-Alpha-GGUF.fp16.2.bin" 
+#url = 'https://huggingface.co/arcee-ai/Arcee-Nova-GGUF/resolve/main/Arcee-Nova-Alpha-GGUF.fp16-00002-of-00008.gguf?download=true'
 
-#file_path = "data/jamba.bin" 
+#file_path = "data/jamba-v0.1.2.bin"
+#url = 'https://huggingface.co/ai21labs/Jamba-v0.1/resolve/main/model-00002-of-00021.safetensors?download=true'
 
-#file_path = "/data/llama3-1.int4.bin" 
+#file_path = "data/llama3-1.bf16.405B.bin"
+# Need authentication -> download from the browser or use Huggingface Token
+#url = 'https://huggingface.co/meta-llama/Meta-Llama-3.1-405B/resolve/main/model-00002-of-00191.safetensors?download=true'
 
-#file_path = "data/llama3-1.bf16.405B.bin" 
-
-#file_path = "data/llama3-1.bf16.8B.bin" 
+#file_path = "data/llama3-1.8B.instruct.3.bin" 
+# Need authentication -> download from the browser or use Huggingface Token
+#url = 'https://huggingface.co/meta-llama/Meta-Llama-3.1-8B-Instruct/resolve/main/model-00003-of-00004.safetensors?download=true'
 
 def download_file(url, file_path):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
