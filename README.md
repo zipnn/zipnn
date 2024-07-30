@@ -1,58 +1,77 @@
-# ZipNN
+# ZipNN - A holistic solution to reduce storage and transfer needs for all AI pipelines
 
 ## Introduction
 
-ZipNN is a lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment. 
-It adds Bit-Manipulation before and after vanilla compression/decompression methods.
+In the realm of data compression, achieving a high compression/decompression ratio often requires careful consideration of the data types and the nature of the datasets being compressed. For instance, different strategies may be optimal for floating-point numbers compared to integers, and datasets in monotonic order may benefit from distinct preparations.
 
- - [Byte Grouping](./docs/BITMANIPULATION.md#byte-grouping) - grouping together similar bytes (group together the first byte from all parameters, then the second byte, etc.) - The default is ByteGroup of 4 (partitions to 4 groups)
- - [Sign Bit](./docs/BITMANIPULATION.md#signbit-handeling) -  (On the way) - Move the sign bit since it hold high entropy. 
- - [Tunable Lossy Compression](./docs/BITMANIPULATION.md#tunable-lossy-compression) -This technique allows for incurring controlled inaccuracies to parameters, under the assumption that a lot of the entropy in model weights is actually redundant, i.e., noise saved to disk.
- - [Delta](./docs/BITMANIPULATION.md#delta-compression) - (On the way) - Compute the difference between the two inputs (for exmple: models)
+ZipNN is a lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment, designed to automatically prepare the data for compression according to its type. By simply calling zipnn.compress(data), users can rely on the package to apply the most effective compression technique under the hood.
+
+[Click here to explore the options we use for different datasets and data types](./UTH.md)
+
+With zipnn, users can focus on their core tasks without worrying about the complexities of data compression, confident that the package will deliver the best possible results for their specific data types and structures.
 
 For more details, please see our paper: [Lossless and Near-Lossless Compression for Foundation Models](https://arxiv.org/pdf/2404.15198)
 
 Currently, ZipNN compression methods are implemented on CPUs, and GPU implementations are on the way. 
 
-## zipnn package
-
-Zipnn is a tool designed to compress and decompress data in byte, file, and Torch tensor formats. This repository includes implementations for compressing data into byte or file formats and decompressing it back to byte, file, or Torch tensor formats. The Zipnn package implements support for several kinds of compression.
+Given a specific data set, ZipNN Automatically rearranges the data according to it's type, and applies the most effective techniques for the given instance to improve compression ratios and rates.
 
 <p align="center">
-  <img src="./images/updated_flow.png" alt="Flow Image" width="800" height="400" style="display: block; margin: 0 auto;">
+  <img src="./updated_flow.png" alt="Flow Image" width="900" height="390" style="display: block; margin: 0 auto;">
 </p>
 
+## Results
+
+Below is a comparison of compression results between ZipNN and several other methods on bfloat16 data.
+
+| Compressor name | Compression ratio / Output size | Compression Throughput | Decompression Throughput |
+|-----------|--------------------------------|------------------------|--------------------------|
+| ZipNN     | 1.51 / 66.3%                 | 1120MB/sec          | 1660MB/sec            |
+| ZSTD      | 1.27 / 78.3%                 | 785MB/sec           | 950MB/sec             |
+| LZ4       | 1 / 100%                     | ---                    | ---                      |
+| Snappy    | 1 / 100%                     | ---                    | ---                      |
+
+
+* Gzip, Zlib compression rate are similar to ZSTD, but much slower.
+* The above results are for a single-threaded compression (Working with chunks size of 256KB).
+* Similar results with other BF16 Models such as Mistral, Lamma-3, Lamma-3.1, Arcee-Nova and Jamba.
 
 ## Installation
-
-Install with pip:
+Install using pip:
 
 ```sh
 pip install zipnn
 ```
+
+We are using two submodules:
+* Cyan4973/FiniteStateEntropy [https://github.com/Cyan4973/FiniteStateEntropy]
+* facebok/zstd [https://github.com/facebook/zstd] tag 1.5.6
+
+### Dependencies
+
+This project requires the following Python packages:
+
+* numpy
+* zstandard
+* torch
 
 ### For specific Compression methods other than ZSTD
 
 * For lz4 method: ```pip install lz4```
 * For snappy method: ```pip install python-snappy```
 
-
-### For compressing/decompressing PyTorch tensor:
-
-```
-pip install torch
-```
-
 ## Usage
 
+Import zipnn
+
 ```python
-from zipnn import ZipNN
+from zipnn import zipnn
 ```
 
 Instance class:
 
 ```python
-zipnn = ZipNN(method='zstd')
+zipnn = zipnn.ZipNN(method='zstd')
 ```
 
 Compression:
@@ -69,53 +88,41 @@ decompressed_data = zipnn.decompress(compressed_data)
 
 ## Example
 
-```python
-from zipnn import ZipNN
+We've included an example that compresses and decompresses 1GB of the Granite model and validates that the original file and the decompressed file are equal.
 
-example_string = b"Example string for compression"
-
-# Initializing the ZipNN class with the default configuration
-# for Byte->Byte compression and Byte->Byte decompression
-zipnn = ZipNN(method='zstd')
-
-# Compress the byte string
-compressed_data = zipnn.compress(example_string)
-
-# Decompress the byte string back
-decompressed_data = zipnn.decompress(compressed_data)
-
-# Verify the result
-print("Are the original and decompressed byte strings the same? ", example_string == decompressed_data)
->>> True
-
+```
+>>> python3 simple_example_granite.py
+>>> Are the original and decompressed byte strings the same [BYTE]?  True
 ```
 
 ## Configuration
 
-The default configuration is ByteGrouping of 4 with vanilla ZSTD (running with 8 threads), and the input and outputs are "byte"
-For more advanced methods, please see the following option:
+The default configuration is ByteGrouping of 4 with vanilla ZSTD (running with 8 threads), and the input and outputs are "byte". For more advanced methods, please see the following options:
 
-* ```method```: Compression method, Supporting zstd, lz4, snappy (default value = zstd).
-* ```delta_compressed_type```: Type of delta compression if chosen (default value = None, supports byte and file).
-* ```bg_partitions```: Number of partitions for Byte Grouping (default value = 4).
-* ```bg_compression_threshold```: Compression threshold of Byte Grouping (default value = 0.99).
-* ```torch_dtype```: If a non-torch compressed file is decompressed as torch, it's dtype should be noted (default value = None).
-* ```torch_shape```: If a non-torch compressed file is decompressed as torch, it's shape should be noted (default value = None).
-* ```reorder_signbit```: Reorder the float32/bloat16 bites for better compression. For float32/bloat16 the value should be 32/16 respectably (default value = 0)
-* ```lossy_compressed_type```: Type for lossy compression if wanted, supporting only integer (default value = None).
-* ```lossy_compressed_factor```: Compression factor for lossy compression (default value = 27).
-* ```is_streaming```: Streaming flag (default value = False, supports only file at the moment).
-* ```streaming_chunk_KB```: Chunk size for streaming if is_streaming is True (default value = 1MB).
-* ```input_type```: Supporting byte, torch, file (default value = byte, and in case of file, enter the file name).
-* ```input_file```: Path to the input file (default value = byte, and in case of file, enter none).
-* ```compressed_ret_type```: The Compression type, Supporting byte, file (default value = byte).
-* ```compressed_file```: Path to the compressed file, if compress_ret_type is file.
-* ```decompressed_ret_type```: The Decompression type, Supporting byte, torch, file (default value = byte).
-* ```decompressed_file```: Path to the decompressed file.
-* ```zstd_level```: Compression level for zstd (default value = 3).
-* ```zstd_threads```: Number of threads to be used for zstd compression (default value = 8).
-* ```lz4_compression_level```: Compression level for lz4 (default value = 0).
+* ```method```: Compression method, Supporting zstd, lz4, snappy (default value = 'zstd').
+* ```input_format```: The input data format, can be one of the following: torch, numpy, byte (default value = 'byte').
+* ```bytearray_dtype```: The data type of the byte array, if input_format is 'byte'. If input_format is torch or numpy, the dtype will be derived from the data automatically (default value = 'float32').
+* ```threads```: The maximum threads for the compression and the bit manipulation. If 0, the code decides according to the dataset length (default value = 1).
+* ```compression_threshold```: Only relevant for a compression that uses byte grouping. Compression threshhold for the byte grouping (default value = 0.95).
+* ```byte_reorder```: Number of grouping. The format is the following:
+  - Bit Format:
+    - `[7]` - Group 0/1: 4th Byte
+    - `[6-5]` - Group 0/1/2: 3rd Byte
+    - `[4-3]` - Group 0/1/2/3: 2nd Byte
+    - `[2-0]` - Group 0/1/2/3/4: 1st Byte
 
+  - Examples:
+    - bg16: Two groups - `0_00_01_010` (decimal 10)
+    - fp32: Four groups - `1_10_11_100` (decimal 220)
+    - int32: Truncate two MSBs - `0_00_01_001` (decimal 9)
+
+* ```reorder_signbit```: This parameter controls the reordering of the sign bit for float32 or bfloat16 to improve compression. Options are:
+    - `255`: No reordering of the sign bit.
+    - `16`: Reorders the sign bit for bfloat16.
+    - `32`: Reorders the sign bit for float32.
+    - `0`: Automatically decides based on the data type (default value = 0).
+
+For even more advanced methods, please see the [Under the Hood file.](./UTH.md)
 
 ### Validation test
 
@@ -132,4 +139,5 @@ We are excited to hear your feedback!
 For issues and feature requests, please open a GitHub issue.
 
 ## Contributing
-We welcome and value all contributions to the project!!
+We welcome and value all contributions to the project!
+
