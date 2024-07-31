@@ -97,7 +97,7 @@ We've included an example that compresses and decompresses 1GB of the Granite mo
 
 ## Configuration
 
-The default configuration is ByteGrouping of 4 with vanilla ZSTD (running with 8 threads), and the input and outputs are "byte". For more advanced methods, please see the following options:
+The default configuration is ByteGrouping of 4 with vanilla ZSTD (running with 8 threads), and the input and outputs are "byte". For more advanced options, please consider the following parameters:
 
 * ```method```: Compression method, Supporting zstd, lz4, snappy (default value = 'zstd').
 * ```input_format```: The input data format, can be one of the following: torch, numpy, byte (default value = 'byte').
@@ -124,7 +124,7 @@ The default configuration is ByteGrouping of 4 with vanilla ZSTD (running wit
  
 *  ```compression_chunk```: Chunk size for compression. (default value = 256KB).
 
-For even more advanced methods, please refer to the [Under the Hood file.](./UTH.md)
+For even more advanced parameters, please refer to the [Under the Hood file.](./UTH.md#Additional-ZipNN-Configuration)
 
 ### Validation test
 
