@@ -34,7 +34,7 @@ class ZipNN:
         compression_chunk = 256 * 1024,
         is_streaming: bool = False,
         streaming_chunk_kb: int = 1024 * 1024,
-        input_file: str = "byte",
+        input_file: str = None,
         compressed_file: str = None,
         decompressed_file: str = None,
         zstd_level: int = 3,
