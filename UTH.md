@@ -126,4 +126,13 @@ While model compressibility has high variance, we observe that there are essenti
 
 These are older results, so the results may vary slightly, but they clearly and visually highlight the differences in compressibility between model categories, making it easy to understand.
 
+# Additional ZipNN Configuration
 
+Below are additional arguments you can provide to ZipNN to tailor the compression to your needs:
+
+* ```input_file```: Path to the input file. If ‘file’ is the input_format – enter file name. (default value = 'byte').
+* ```compressed_file```: Path to the compressed file. Only relevant if input_format is ‘file’. (default value = None).
+* ```decompressed_file```: Path to the decompressed file. Only relevant if input_format is ‘file’. (default value = None).
+* ```zstd_level```: Compression level for ‘zstd’ compression. Only relevant if method is ‘zstd’. (default value = 3).
+* ```lz4_compression_level```: Compression level for ‘lz4’ compression. Only relevant if method is ‘lz4’. (default value = 0).
+ 
