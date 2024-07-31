@@ -121,8 +121,10 @@ The default configuration is ByteGrouping of 4 with vanilla ZSTD (running wit
     - `16`: Reorders the sign bit for bfloat16.
     - `32`: Reorders the sign bit for float32.
     - `0`: Automatically decides based on the data type (default value = 0).
+ 
+*  ```compression_chunk```: Chunk size for compression. (default value = 256KB).
 
-For even more advanced methods, please see the [Under the Hood file.](./UTH.md)
+For even more advanced methods, please refer to the [Under the Hood file.](./UTH.md)
 
 ### Validation test
 
