@@ -124,7 +124,7 @@ The default configuration is ByteGrouping of 4 with vanilla ZSTD (running wit
  
 *  ```compression_chunk```: Chunk size for compression. (default value = 256KB).
 
-For even more advanced parameters, please refer to the [Under the Hood file.](./UTH.md#Additional-ZipNN-Configuration)
+[Click here to explore additional ZipNN configuration options](./UTH.md#additional-zipnn-configuration)
 
 ### Validation test
 
