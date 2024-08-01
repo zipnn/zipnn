@@ -91,7 +91,7 @@ num_elements = 1024*1024*1024 // element_size
 tensor_bytes = original_bytes
     
 if (is_torch_numpy_byte == 2): # Tensor
-    zipnn = ZipNN(method='zstd', input_format="torch", threads = threads)
+    zipnn = ZipNN(input_format="torch", threads = threads)
 elif (is_torch_numpy_byte == 1): # Numpy   
     zipnn = ZipNN(method='zstd', input_format="numpy", threads = threads)
 elif (is_torch_numpy_byte == 0): # Byte 

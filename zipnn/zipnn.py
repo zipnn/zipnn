@@ -208,7 +208,7 @@ class ZipNN:
         -------------------------------------
         None.
         """
-        if self.method == EnumMethod.ZSTD.value:
+        if self.method == EnumMethod.ZSTD.value or self.method == EnumMethod.AUTO.value:
             self._zstd_compress = zstd.ZstdCompressor(level=zstd_level, threads=self.threads)
             self._zstd_decompress = zstd.ZstdDecompressor()
 

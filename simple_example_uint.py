@@ -12,7 +12,7 @@ is_torch_numpy_byte = 1 # torch 2 / numpy 1/ byte = 0
 threads = 8
 
 max_val = 2**24 + 2**30
-#max_val = 2**16 + 2**20
+max_val = 2**16 + 2**20
 #max_val = 2**8 + 2**15
 #max_val = 56
 
