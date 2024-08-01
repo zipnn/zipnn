@@ -1,4 +1,4 @@
-# ZipNN - A holistic solution to reduce storage and transfer needs for all AI pipelines
+# ZipNN - A Lossless Compression Library for AI pipelines
 
 ## Introduction
 
@@ -26,8 +26,8 @@ Below is a comparison of compression results between ZipNN and several other met
 
 | Compressor name | Compression ratio / Output size | Compression Throughput | Decompression Throughput |
 |-----------|--------------------------------|------------------------|--------------------------|
-| ZipNN     | 1.51 / 66.3%                 | 1120MB/sec          | 1660MB/sec            |
-| ZSTD      | 1.27 / 78.3%                 | 785MB/sec           | 950MB/sec             |
+| ZipNN v0.2.0    | 1.51 / 66.3%                 | 1120MB/sec          | 1660MB/sec            |
+| ZSTD v1.56     | 1.27 / 78.3%                 | 785MB/sec           | 950MB/sec             |
 | LZ4       | 1 / 100%                     | ---                    | ---                      |
 | Snappy    | 1 / 100%                     | ---                    | ---                      |
 
@@ -36,16 +36,31 @@ Below is a comparison of compression results between ZipNN and several other met
 * The above results are for a single-threaded compression (Working with chunks size of 256KB).
 * Similar results with other BF16 Models such as Mistral, Lamma-3, Lamma-3.1, Arcee-Nova and Jamba.
 
-## Installation
-Install using pip:
+## Installation using pip
 
 ```sh
 pip install zipnn
 ```
 
+## Install source code
+
+```
+git clone git@github.com:zipnn/zipnn.git
+cd zipnn
+```
+
 We are using two submodules:
 * Cyan4973/FiniteStateEntropy [https://github.com/Cyan4973/FiniteStateEntropy]
 * facebok/zstd [https://github.com/facebook/zstd] tag 1.5.6
+
+```
+git submodule update --init --recursive
+```
+
+Compile locally using pip
+```
+pip install -e .
+```
 
 ### Dependencies
 
@@ -65,25 +80,37 @@ This project requires the following Python packages:
 Import zipnn
 
 ```python
-from zipnn import zipnn
+from zipnn import ZipNN
 ```
 
 Instance class:
 
 ```python
-zipnn = zipnn.ZipNN(method='zstd')
+zpn = ZipNN(method='zstd', input_format='torch')
+```
+
+Create a 1MB tensor with random numbers from a uniform distribution between -1 and 1
+The dtype is bfloat
+```
+import torch
+original_tensor = torch.rand(10124*1024, dtype=torch.bfloat16) * 2 - 1
 ```
 
 Compression:
 
 ```python
-compressed_data = zipnn.compress(example_string)
+compressed_data = zpn.compress(original_tensor)
 ```
 
 Decompression:
 
 ```python
-decompressed_data = zipnn.decompress(compressed_data)
+decompressed_data = zpn.decompress(compressed_data)
+```
+
+Check for correctness:
+```python
+torch.equal(original_tensor, decompressed_data)
 ```
 
 ## Example
