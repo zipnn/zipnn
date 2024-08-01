@@ -9,7 +9,7 @@ split_dtype_extension = Extension(
         'csrc/split_dtype_module.c',
         'csrc/split_dtype32.c',
         'csrc/split_dtype16.c',
-        'csrc/huf_cover.c',
+        'csrc/huf_wrapper.c',
         'include/FiniteStateEntropy/lib/fse_compress.c',
         'include/FiniteStateEntropy/lib/fse_decompress.c',
         'include/FiniteStateEntropy/lib/huf_compress.c',
