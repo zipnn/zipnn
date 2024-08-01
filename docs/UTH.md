@@ -6,35 +6,34 @@ With the growth of model sizes and the scale of their deployment, their sheer si
 
 In this README, we'll outline the supported data types and the various techniques tailored for these data types that are being used in the zipnn package.  When the user calls ```zipnn.compress(data)``` , the package automatically selects and applies the most effective compression technique from its arsenal, ensuring optimal compression results.
 
-## Byte Grouping
+## Byte handeling
 
-After exploring the source of compressibility in models we implemented byte grouping – an adaptation that is tailored for the models' use case. The method rearranges the bytes in a model to compress the different bytes of the parameters together. This results in grouping of similar bytes which in turn yields better compression. If each parameter in the model consists of several bytes (typically 2 or 4 bytes), then group together the first byte from all parameters, then the second byte, etc.
+To achieve better compression, we apply bit manipulation to the input data. We observed that the sign bit tends to hold high entropy and compressing it together with the exponent byte interferes with compression effectiveness. To address this, we implemented two approaches to handle the sign bits.
 
-<p align="center">
-  <img src="../images/grouping.png" alt="Grouping Image" width="750" height="225" style="display: block; margin: 0 auto;">
-</p>
+### Byte reordering + Bit reordering
 
-### Truncate zero Bytes
-
-Truncate all-zero bytes. This enhances the compression ratio and reduces both compression and decompression times. This method is ideal for unsigned data types and also beneficial for certain FP32 models.
-
-## Signbit handeling
-
-Another observation is that the sign bit tends to hold high entropy and that compressing it together with the exponent byte interferes with compression effectiveness. To overcome this, we implemented two approaches that you can choose from to deal with the sign bits.
-
-### Signbit reordering
-
-This is beneficial for floating-point numbers, as the exponent can be stored separately, improving the compression ratio with minimal compression overhead.
+This approach is beneficial for floating-point numbers, as storing the exponent separately improves the compression ratio with minimal overhead.
 <p align="center">
   <img src="../images/signbit_move.png" alt="Signbit Image" style="display: block; margin: 0 auto;">
 </p>
 
-### ABS and Signbit array
+### Sign reordering
 
 Converts integer data types to unsigned data types and stores the sign bit in a separate array. This is beneficial for integers, as their two-component format is not ideal for achieving a high compression ratio.
 <p align="center">
   <img src="../images/abs_array.png" alt="Signbit Image" style="display: block; margin: 0 auto;">
 </p>
+
+## Truncate zero Bytes
+
+We truncate all-zero bytes to enhance the compression ratio and reduce both compression and decompression times. This method is ideal for unsigned data types and beneficial for certain FP32 models.
+
+## Compression methods
+
+Compression is performed in chunks (default chunk size is 256KB). The compression method is chosen automatically for each chunk to ensure the best possible compression:
+* Huffman is the default choice.
+* ZSTD is used if a chunk contains a significant amount of zeros or if the data type is unsigned integers.
+* If a chunk is composed entirely of zeros, it has already been truncated.
 
 ## More advanced data type preparations
 
