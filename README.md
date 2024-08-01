@@ -6,7 +6,7 @@ In the realm of data compression, achieving a high compression/decompression rat
 
 ZipNN is a lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment, designed to automatically prepare the data for compression according to its type. By simply calling zipnn.compress(data), users can rely on the package to apply the most effective compression technique under the hood.
 
-[Click here to explore the options we use for different datasets and data types](./UTH.md)
+[Click here to explore the options we use for different datasets and data types](./docs/UTH.md)
 
 With zipnn, users can focus on their core tasks without worrying about the complexities of data compression, confident that the package will deliver the best possible results for their specific data types and structures.
 
@@ -151,7 +151,7 @@ The default configuration is ByteGrouping of 4 with vanilla ZSTD (running wit
  
 *  ```compression_chunk```: Chunk size for compression. (default value = 256KB).
 
-[Click here to explore additional ZipNN configuration options](./UTH.md#additional-zipnn-configuration)
+[Click here to explore additional ZipNN configuration options](./docs/UTH.md#additional-zipnn-configuration)
 
 ### Validation test
 
