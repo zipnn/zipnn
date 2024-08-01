@@ -15,9 +15,9 @@ static void count_zero_bytes(const uint8_t *src, Py_ssize_t len,
   Py_ssize_t num_uint32 =
       len /
       sizeof(
-          uint32_t); // Calculate how many uint32_t elements are in the buffer
+          uint32_t);  // Calculate how many uint32_t elements are in the buffer
   uint32_t *uint32_array =
-      (uint32_t *)src; // Cast the byte buffer to a uint32_t array
+      (uint32_t *)src;  // Cast the byte buffer to a uint32_t array
 
   *msb_zeros = 0;
   *mid_high = 0;
@@ -87,7 +87,6 @@ static int handle_split_mode_220(uint8_t *src, Py_ssize_t total_len,
                                  uint8_t **buf4, Py_ssize_t *buf1_len,
                                  Py_ssize_t *buf2_len, Py_ssize_t *buf3_len,
                                  Py_ssize_t *buf4_len) {
-
   Py_ssize_t q_len = total_len / 4;
   *buf1_len = q_len;
   *buf2_len = q_len;
@@ -114,7 +113,6 @@ static int handle_split_mode_41(uint8_t *src, Py_ssize_t total_len,
                                 uint8_t **buf4, Py_ssize_t *buf1_len,
                                 Py_ssize_t *buf2_len, Py_ssize_t *buf3_len,
                                 Py_ssize_t *buf4_len) {
-
   Py_ssize_t three_q_len = total_len / 4 * 3;
   *buf1_len = three_q_len;
   *buf2_len = 0;
@@ -141,7 +139,6 @@ static int handle_split_mode_9(uint8_t *src, Py_ssize_t total_len,
                                uint8_t **buf4, Py_ssize_t *buf1_len,
                                Py_ssize_t *buf2_len, Py_ssize_t *buf3_len,
                                Py_ssize_t *buf4_len) {
-
   Py_ssize_t half_len = total_len / 2;
   *buf1_len = half_len;
   *buf2_len = 0;
@@ -169,7 +166,6 @@ static int handle_split_mode_1(uint8_t *src, Py_ssize_t total_len,
                                uint8_t **buf4, Py_ssize_t *buf1_len,
                                Py_ssize_t *buf2_len, Py_ssize_t *buf3_len,
                                Py_ssize_t *buf4_len) {
-
   Py_ssize_t half_len = total_len / 4;
   *buf1_len = half_len;
   *buf2_len = 0;
@@ -199,8 +195,7 @@ static int split_dtype32(uint8_t *src, Py_ssize_t total_len, uint8_t **buf1,
                          Py_ssize_t *buf3_len, Py_ssize_t *buf4_len,
                          int bits_mode, int bytes_mode, int is_review,
                          int threads) {
-
-  if (bits_mode == 1) { // reoreder exponent
+  if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats(src, total_len);
   }
 
@@ -211,7 +206,7 @@ static int split_dtype32(uint8_t *src, Py_ssize_t total_len, uint8_t **buf1,
     start = clock();
     count_zero_bytes(src, total_len, &msb_zeros, &mid_high, &mid_low, &low);
 
-    end = clock(); // End the timer
+    end = clock();  // End the timer
     cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
     printf("msb_zeros %zd mid_high %zd mid_low %zd low %zd time in sec %f \n",
            msb_zeros, mid_high, mid_low, low, cpu_time_used);
@@ -290,7 +285,6 @@ static int handle_combine_mode_220(uint8_t **result, Py_ssize_t *total_len,
                                    uint8_t *buf4, Py_ssize_t buf1_len,
                                    Py_ssize_t buf2_len, Py_ssize_t buf3_len,
                                    Py_ssize_t buf4_len) {
-
   *total_len = buf1_len * 4;
   if (allocate_buffer(result, *total_len) != 0)
     return -1;
@@ -313,7 +307,6 @@ static int handle_combine_mode_41(uint8_t **result, Py_ssize_t *total_len,
                                   uint8_t *buf4, Py_ssize_t buf1_len,
                                   Py_ssize_t buf2_len, Py_ssize_t buf3_len,
                                   Py_ssize_t buf4_len) {
-
   *total_len = buf1_len / 3 * 4;
   if (allocate_buffer(result, *total_len) != 0)
     return -1;
@@ -335,7 +328,6 @@ static int handle_combine_mode_9(uint8_t **result, Py_ssize_t *total_len,
                                  uint8_t *buf4, Py_ssize_t buf1_len,
                                  Py_ssize_t buf2_len, Py_ssize_t buf3_len,
                                  Py_ssize_t buf4_len) {
-
   *total_len = buf1_len * 2;
   if (allocate_buffer(result, *total_len) != 0)
     return -1;
@@ -357,7 +349,6 @@ static int handle_combine_mode_1(uint8_t **result, Py_ssize_t *total_len,
                                  uint8_t *buf4, Py_ssize_t buf1_len,
                                  Py_ssize_t buf2_len, Py_ssize_t buf3_len,
                                  Py_ssize_t buf4_len) {
-
   *total_len = buf1_len * 4;
   if (allocate_buffer(result, *total_len) != 0)
     return -1;
@@ -380,7 +371,7 @@ static uint8_t *combine_dtype32(Py_ssize_t *total_len, uint8_t *buf1,
                                 Py_ssize_t buf1_len, Py_ssize_t buf2_len,
                                 Py_ssize_t buf3_len, Py_ssize_t buf4_len,
                                 int bytes_mode, int threads) {
-  uint8_t *result = NULL; // Declare result at the beginning of the function
+  uint8_t *result = NULL;
 
   switch (bytes_mode) {
   case 220:

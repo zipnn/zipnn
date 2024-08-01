@@ -1,6 +1,6 @@
 #define PY_SSIZE_T_CLEAN
 #include "huf.h"
-#include "huf_cover.h"
+#include "huf_wrapper.h"
 #include "split_dtype_functions.h"
 #include <Python.h>
 #include <stdint.h>
@@ -32,18 +32,17 @@ static void reorder_all_floats(uint8_t *src, Py_ssize_t len) {
   }
 }
 
-// Helper function to split a bytearray into four buffers
+// Helper function to split a bytearray into groups
 static int split_bytearray(uint8_t *src, Py_ssize_t len, uint8_t **buffers,
                            int bits_mode, int bytes_mode, int is_review,
                            int threads) {
-
-  if (bits_mode == 1) { // reoreder exponent
+  if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats(src, len);
   }
 
   Py_ssize_t half_len = len / 2;
   switch (bytes_mode) {
-  case 10: // 2b01_010 - Byte Group to two different groups
+  case 10:  // 2b01_010 - Byte Group to two different groups
     buffers[0] = PyMem_Malloc(half_len);
     buffers[1] = PyMem_Malloc(half_len);
 
@@ -62,9 +61,9 @@ static int split_bytearray(uint8_t *src, Py_ssize_t len, uint8_t **buffers,
     }
     break;
 
-  case 8: // 4b1000 - Truncate MSByte
-          // We are refering to the MSBbyte as little endian, thus we omit buf2
-  case 1: // 4b1000 - Truncate LSByte
+  case 8:  // 4b1000 - Truncate MSByte
+           // We are refering to the MSBbyte as little endian, thus we omit buf2
+  case 1:  // 4b1000 - Truncate LSByte
     // We are refering to the LSByte  as a little endian, thus we omit buf1
     buffers[0] = PyMem_Malloc(half_len);
     buffers[1] = NULL;
@@ -125,7 +124,7 @@ static uint8_t *combine_buffers(uint8_t *buf1, uint8_t *buf2,
                                 Py_ssize_t half_len, int bytes_mode,
                                 int threads) {
   Py_ssize_t total_len = half_len * 2;
-  uint8_t *result = NULL; // Declare result at the beginning of the function
+  uint8_t *result = NULL;  // Declare result at the beginning of the function
   uint8_t *dst;
   result = PyMem_Malloc(total_len);
   if (result == NULL) {
@@ -136,7 +135,7 @@ static uint8_t *combine_buffers(uint8_t *buf1, uint8_t *buf2,
   dst = result;
 
   switch (bytes_mode) {
-  case 10: // 2b01_010 - Byte Group to two different groups
+  case 10:  // 2b01_010 - Byte Group to two different groups
 
     if (result == NULL) {
 
@@ -149,10 +148,10 @@ static uint8_t *combine_buffers(uint8_t *buf1, uint8_t *buf2,
     }
     break;
 
-  case 8: // 4b1000 - Truncate MSByte
-          // We are refering to the MSByte as a little endian, thus we omit buf2
-  case 1: // 4b001 - Truncate LSByte
-          // We are refering to the LSByte as a little endian, thus we omit buf1
+  case 8:  // 4b1000 - Truncate MSByte
+           // We are refering to the MSByte as a little endian, thus we omit buf2
+  case 1:  // 4b001 - Truncate LSByte
+           // We are refering to the LSByte as a little endian, thus we omit buf1
 
     if (bytes_mode == 8) {
       for (Py_ssize_t i = 0; i < half_len; i++) {
@@ -194,7 +193,6 @@ static uint8_t *combine_buffers(uint8_t *buf1, uint8_t *buf2,
 //     1 - the finction can change the Bytes_mode
 
 PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
-
   const uint32_t numBuf = 2;
   Py_buffer view;
   int bits_mode, bytes_mode, is_review, threads;
@@ -228,9 +226,9 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   }
 
   ///// Compression using huffman /////////
-  uint32_t chunk_size = 128 * 1024; // TBD
-  float compThreshold = 0.95;       // TBD
-  size_t checkThreshold = 10;       // TBD
+  uint32_t chunk_size = 128 * 1024;  // TBD
+  float compThreshold = 0.95;        // TBD
+  size_t checkThreshold = 10;        // TBD
 
   size_t bufSize = view.len / numBuf;
   size_t maxCompressedSize = HUF_compressBound(bufSize);
@@ -267,7 +265,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
       totalCompressedSize[i] = hufCompressData(
           buffers[i], bufSize, maxCompressedSize, compressedData[i],
           compressedChunksSize[i], chunk_size, compThreshold, checkThreshold);
-      if (totalCompressedSize[i] == 0) { // This buffer was not compressed
+      if (totalCompressedSize[i] == 0) {  // This buffer was not compressed
         isBufComp[i] = 0;
         bufNumChunks[i] = 0;
         compressedChunksSize[i] = NULL;
@@ -289,10 +287,10 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 
   if (buffers[1] != NULL) {
     for (uint32_t i = 0; i < numBuf; i++) {
-      if (isBufComp[i]) { // The buffer was compressed
+      if (isBufComp[i]) {  // The buffer was compressed
         resBuf[i] = compressedData[i];
         resBufSize[i] = totalCompressedSize[i];
-      } else { // The buffer was not compressed
+      } else {  // The buffer was not compressed
         resBuf[i] = buffers[i];
         resBufSize[i] = bufSize;
       }
@@ -341,7 +339,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
 
   int bits_mode, bytes_mode, threads;
   uint32_t numBuf = 2;
-  uint32_t chunk_size = 128 * 1024; // TBD
+  uint32_t chunk_size = 128 * 1024;  // TBD
 
   if (!PyArg_ParseTuple(args, "y*iii", &view, &bits_mode, &bytes_mode,
                         &threads)) {
@@ -372,21 +370,20 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   uint8_t *decompressedData[] = {NULL, NULL};
   size_t offset_compressedChunksSize = header_offset;
 
-
   // calc offset for the compressedChunksSize and offest to the data
   compressedChunksSize_offset[0] = header_offset;
   compressedChunksSize_offset[1] = header_offset;
   data_offset[0] = header_offset;
 
-  if (isBufComp[0]) { 
-    compressedChunksSize_offset[1] += numChunks * sizeof(size_t); 
+  if (isBufComp[0]) {
+    compressedChunksSize_offset[1] += numChunks * sizeof(size_t);
     data_offset[0] += numChunks * sizeof(size_t);
   }
   if (isBufComp[1]) {
-     data_offset[0] += numChunks * sizeof(size_t);
-  } 
-  
-  data_offset[1] = data_offset[0]; 
+    data_offset[0] += numChunks * sizeof(size_t);
+  }
+
+  data_offset[1] = data_offset[0];
 
   for (uint32_t i = 0; i < numBuf; i++) {
     if (isBufComp[i]) {
@@ -408,14 +405,13 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
           origSize / numBuf, decompressedData[i], chunk_size);
 
       if (i < numBuf - 1) {
-        data_offset[i+1] += compressedChunksSize[i][numChunks - 1];
+        data_offset[i + 1] += compressedChunksSize[i][numChunks - 1];
       }
 
     } else {
-      decompressedData[i] =
-          bufUint8Pointer + data_offset[0];
+      decompressedData[i] = bufUint8Pointer + data_offset[0];
       if (i < numBuf - 1) {
-        data_offset[i+1] += origSize / numBuf;
+        data_offset[i + 1] += origSize / numBuf;
       }
     }
   }

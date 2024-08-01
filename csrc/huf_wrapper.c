@@ -1,4 +1,4 @@
-#include "huf_cover.h"
+#include "huf_wrapper.h"
 #include "huf.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -11,13 +11,12 @@ size_t hufCompressData(const uint8_t *data, size_t size, int maxCompressedSize,
                        uint8_t *compressedData, size_t *compressedChunksSize,
                        size_t chunkSize, float compThreshold,
                        size_t checkThreshold) {
-
   size_t curChunk = 0;
   size_t totalCompressedSize = 0;
   size_t RemianCapacity = maxCompressedSize;
   size_t checkCompTh =
-      size / checkThreshold; // check after checkTh% of the size, if not
-                             // compressed sont comtinue
+      size / checkThreshold;  // check after checkTh% of the size,
+			      //  if not compressed -> stop compressing
   uint8_t isCheck = 0;
 
   for (size_t offset = 0; offset < size; offset += chunkSize) {
