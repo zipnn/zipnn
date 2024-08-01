@@ -11,7 +11,7 @@ In this README, we'll outline the supported data types and the various technique
 After exploring the source of compressibility in models we implemented byte grouping – an adaptation that is tailored for the models' use case. The method rearranges the bytes in a model to compress the different bytes of the parameters together. This results in grouping of similar bytes which in turn yields better compression. If each parameter in the model consists of several bytes (typically 2 or 4 bytes), then group together the first byte from all parameters, then the second byte, etc.
 
 <p align="center">
-  <img src="./images/grouping.png" alt="Grouping Image" width="750" height="225" style="display: block; margin: 0 auto;">
+  <img src="../images/grouping.png" alt="Grouping Image" width="750" height="225" style="display: block; margin: 0 auto;">
 </p>
 
 ### Truncate zero Bytes
@@ -26,14 +26,14 @@ Another observation is that the sign bit tends to hold high entropy and that com
 
 This is beneficial for floating-point numbers, as the exponent can be stored separately, improving the compression ratio with minimal compression overhead.
 <p align="center">
-  <img src="./images/signbit_move.png" alt="Signbit Image" style="display: block; margin: 0 auto;">
+  <img src="../images/signbit_move.png" alt="Signbit Image" style="display: block; margin: 0 auto;">
 </p>
 
 ### ABS and Signbit array
 
 Converts integer data types to unsigned data types and stores the sign bit in a separate array. This is beneficial for integers, as their two-component format is not ideal for achieving a high compression ratio.
 <p align="center">
-  <img src="./images/abs_array.png" alt="Signbit Image" style="display: block; margin: 0 auto;">
+  <img src="../images/abs_array.png" alt="Signbit Image" style="display: block; margin: 0 auto;">
 </p>
 
 ## More advanced data type preparations
@@ -122,7 +122,7 @@ While model compressibility has high variance, we observe that there are essenti
 * The second category includes “clean” models, or base models. These have high compressibility stemming from both the exponent and the two lower bytes of the mantissa. The second byte, in all cases, is incompressible and holds most of the model’s entropy. Overall these models show very high compressibility.
 * The final category is of BF16 models that show ∼30% space savings. Like the first group, the exponent is very compressible, and the mantissa is not, but in these models, the savings are more significant as the exponent makes up a larger part of the model.
 
-![table](./images/table2.png)
+![table](../images/table2.png)
 
 These are older results, so the results may vary slightly, but they clearly and visually highlight the differences in compressibility between model categories, making it easy to understand.
 
