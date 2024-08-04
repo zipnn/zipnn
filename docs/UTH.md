@@ -34,6 +34,7 @@ Compression is performed in chunks (default chunk size is 256KB). The compressio
 * Huffman is the default choice.
 * ZSTD is used if a chunk contains a significant amount of zeros or if the data type is unsigned integers.
 * If a chunk is composed entirely of zeros, it has already been truncated.
+* Not Compressing - Whenever compression is not useful (the compression savings are too small), stop compressing after a few chunks and save the original data.
 
 ## More advanced data type preparations
 
