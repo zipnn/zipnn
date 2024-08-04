@@ -1,7 +1,16 @@
 from setuptools import setup, find_packages, Extension
+import subprocess
+import os
 
-# Define the C extension module, adjusting paths to source files
+def update_submodules():
+    if os.path.exists('.git'):
+        try:
+            subprocess.check_call(['git', 'submodule', 'update', '--init', '--recursive'])
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to update submodules: {e}")
+            raise
 
+update_submodules()
 
 split_dtype_extension = Extension(
     'split_dtype',
@@ -18,8 +27,8 @@ split_dtype_extension = Extension(
         'include/FiniteStateEntropy/lib/hist.c'
     ],
     include_dirs=[
-        'include/FiniteStateEntropy/lib/',  
-        'csrc/'  
+        'include/FiniteStateEntropy/lib/',
+        'csrc/'
     ],
     extra_compile_args=['-O3', '-Wall', '-Wextra'],
     extra_link_args=['-O3', '-Wall', '-Wextra']
@@ -27,7 +36,7 @@ split_dtype_extension = Extension(
 
 setup(
     name='zipnn',
-    version='0.1.2',
+    version='0.2.0',
     author='Moshik Hershcovitch',
     author_email='moshik1@gmail.com',
     description='A lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment',
@@ -46,6 +55,6 @@ setup(
         'zstandard',
         'torch',
     ],
-    ext_modules=[split_dtype_extension]  # Add the C extension module here
+    ext_modules=[split_dtype_extension],  # Add the C extension module here
 )
 
