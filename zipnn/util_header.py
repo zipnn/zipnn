@@ -3,9 +3,25 @@ from enum import Enum
 
 
 class EnumMethod(Enum):
+    AUTO = 0
     ZSTD = 1
-    LZ4 = 2
-    SNAPPY = 3
+    HUFFMAN = 2
+    LZ4 = 3
+    SNAPPY = 4
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            value = value.upper()
+            if value in cls.__members__:
+                return cls.__members__[value]
+
+
+class EnumFormat(Enum):
+    BYTE = 1
+    TORCH = 2
+    NUMPY = 3
+    FILE = 4  # Note: I changed this from 3 to 4 to avoid duplicate values unless that's intended
 
     @classmethod
     def _missing_(cls, value):

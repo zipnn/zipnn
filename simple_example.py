@@ -1,16 +1,20 @@
 from zipnn import ZipNN
 
-example_string = b"Example string for compression"
+# instance class:
+zpn = ZipNN(input_format='torch')
 
-# Initializing the ZipNN class with the default configuration
-# for Byte->Byte compression and Byte->Byte decompression
-zipnn = ZipNN(method='zstd')
-    
-# Compress the byte string
-compressed_data = zipnn.compress(example_string)
-    
-# Decompress the byte string back
-decompressed_data = zipnn.decompress(compressed_data)
+# Create a 1MB tensor with random numbers from a uniform distribution between -1 and 1 The dtype is bfloat
+import torch
+print ("Create a 1MB tensor with random numbers")
+original_tensor = torch.rand(10124*1024, dtype=torch.bfloat16) * 2 - 1
 
-# Verify the result
-print("Are the original and decompressed byte strings the same? ", example_string == decompressed_data)
+# Compression:
+print ("compressed_data")
+compressed_data = zpn.compress(original_tensor)
+
+# Decompression:
+print ("decompressed_data")
+decompressed_data = zpn.decompress(compressed_data)
+
+# Check for correctness:
+print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(original_tensor, decompressed_data))
