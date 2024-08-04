@@ -115,11 +115,23 @@ torch.equal(original_tensor, decompressed_data)
 
 ## Example
 
-We've included an example that compresses and decompresses 1GB of the Granite model and validates that the original file and the decompressed file are equal.
+### Example of synthetic data
+In this example, ZipNN compresses and decompresses 1MB of a random number between -1 to 1 in a torch.tensor format. 
+```
+> python3 simple_example.py
+...
+Are the original and decompressed byte strings the same [TORCH]?  True
+``` 
+
+
+### Example of a real module
+In this example, ZipNN and ZSTD compress and decompress 1GB of the Granite model and validate that the original file and the decompressed file are equal. <br>
+The script reads the file and compresses and decompresses in Byte format.
 
 ```
->>> python3 simple_example_granite.py
->>> Are the original and decompressed byte strings the same [BYTE]?  True
+> python3 simple_example_granite.py
+...
+Are the original and decompressed byte strings the same [BYTE]?  True
 ```
 
 ## Configuration
@@ -169,4 +181,21 @@ For issues and feature requests, please open a GitHub issue.
 
 ## Contributing
 We welcome and value all contributions to the project!
+
+## Change Log
+
+##### v0.2.0
+
+* Change the byte ordering implementation to C (for better performance).
+
+* Change the bfloat16/float16 implementation to a C implementation with Huffman encoding, running on chunks of 256KB each.
+  
+* Float 32 using ZSTD compression as in v0.1.1
+
+* Add support with uint32 with ZSTD compression.
+
+##### v0.1.1
+
+* Python implementation of compressing Models, float32, float15, bfloat16 with byte ordering and ZSTD.
+
 
