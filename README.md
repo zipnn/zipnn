@@ -184,7 +184,7 @@ We welcome and value all contributions to the project!
 
 ## Change Log
 
-##### v0.2.0
+##### v0.2.1
 
 * Change the byte ordering implementation to C (for better performance).
 
