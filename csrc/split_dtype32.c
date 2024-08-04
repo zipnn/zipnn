@@ -9,7 +9,7 @@
 //////////////////////////////////
 
 // Helper function ithat count zero bytes
-static void count_zero_bytes(const uint8_t *src, Py_ssize_t len,
+static void count_zero_bytes(const u_int8_t *src, Py_ssize_t len,
                              Py_ssize_t *msb_zeros, Py_ssize_t *mid_high,
                              Py_ssize_t *mid_low, Py_ssize_t *lsb_zeros) {
   Py_ssize_t num_uint32 =
@@ -55,7 +55,7 @@ static uint32_t reorder_float_bits(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void reorder_all_floats(uint8_t *src, Py_ssize_t len) {
+static void reorder_all_floats(u_int8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
@@ -63,8 +63,8 @@ static void reorder_all_floats(uint8_t *src, Py_ssize_t len) {
   }
 }
 
-static int allocate_4buffers(uint8_t **buf1, uint8_t **buf2, uint8_t **buf3,
-                             uint8_t **buf4, Py_ssize_t size1, Py_ssize_t size2,
+static int allocate_4buffers(u_int8_t **buf1, u_int8_t **buf2, u_int8_t **buf3,
+                             u_int8_t **buf4, Py_ssize_t size1, Py_ssize_t size2,
                              Py_ssize_t size3, Py_ssize_t size4) {
   *buf1 = (size1 > 0) ? PyMem_Malloc(size1) : NULL;
   *buf2 = (size2 > 0) ? PyMem_Malloc(size2) : NULL;
@@ -82,9 +82,9 @@ static int allocate_4buffers(uint8_t **buf1, uint8_t **buf2, uint8_t **buf3,
   return 0;
 }
 
-static int handle_split_mode_220(uint8_t *src, Py_ssize_t total_len,
-                                 uint8_t **buf1, uint8_t **buf2, uint8_t **buf3,
-                                 uint8_t **buf4, Py_ssize_t *buf1_len,
+static int handle_split_mode_220(u_int8_t *src, Py_ssize_t total_len,
+                                 u_int8_t **buf1, u_int8_t **buf2, u_int8_t **buf3,
+                                 u_int8_t **buf4, Py_ssize_t *buf1_len,
                                  Py_ssize_t *buf2_len, Py_ssize_t *buf3_len,
                                  Py_ssize_t *buf4_len) {
   Py_ssize_t q_len = total_len / 4;
@@ -97,7 +97,7 @@ static int handle_split_mode_220(uint8_t *src, Py_ssize_t total_len,
                         *buf4_len) != 0)
     return -1;
 
-  uint8_t *dst1 = *buf1, *dst2 = *buf2, *dst3 = *buf3, *dst4 = *buf4;
+  u_int8_t *dst1 = *buf1, *dst2 = *buf2, *dst3 = *buf3, *dst4 = *buf4;
 
   for (Py_ssize_t i = 0; i < total_len; i += 4) {
     *dst1++ = src[i];
@@ -108,9 +108,9 @@ static int handle_split_mode_220(uint8_t *src, Py_ssize_t total_len,
   return 0;
 }
 
-static int handle_split_mode_41(uint8_t *src, Py_ssize_t total_len,
-                                uint8_t **buf1, uint8_t **buf2, uint8_t **buf3,
-                                uint8_t **buf4, Py_ssize_t *buf1_len,
+static int handle_split_mode_41(u_int8_t *src, Py_ssize_t total_len,
+                                u_int8_t **buf1, u_int8_t **buf2, u_int8_t **buf3,
+                                u_int8_t **buf4, Py_ssize_t *buf1_len,
                                 Py_ssize_t *buf2_len, Py_ssize_t *buf3_len,
                                 Py_ssize_t *buf4_len) {
   Py_ssize_t three_q_len = total_len / 4 * 3;
@@ -123,7 +123,7 @@ static int handle_split_mode_41(uint8_t *src, Py_ssize_t total_len,
                         *buf4_len) != 0)
     return -1;
 
-  uint8_t *dst1 = *buf1;
+  u_int8_t *dst1 = *buf1;
 
   Py_ssize_t j = 0;
   for (Py_ssize_t i = 0; i < total_len; i += 4) {
@@ -134,9 +134,9 @@ static int handle_split_mode_41(uint8_t *src, Py_ssize_t total_len,
   return 0;
 }
 
-static int handle_split_mode_9(uint8_t *src, Py_ssize_t total_len,
-                               uint8_t **buf1, uint8_t **buf2, uint8_t **buf3,
-                               uint8_t **buf4, Py_ssize_t *buf1_len,
+static int handle_split_mode_9(u_int8_t *src, Py_ssize_t total_len,
+                               u_int8_t **buf1, u_int8_t **buf2, u_int8_t **buf3,
+                               u_int8_t **buf4, Py_ssize_t *buf1_len,
                                Py_ssize_t *buf2_len, Py_ssize_t *buf3_len,
                                Py_ssize_t *buf4_len) {
   Py_ssize_t half_len = total_len / 2;
@@ -161,9 +161,9 @@ static int handle_split_mode_9(uint8_t *src, Py_ssize_t total_len,
   return 0;
 }
 
-static int handle_split_mode_1(uint8_t *src, Py_ssize_t total_len,
-                               uint8_t **buf1, uint8_t **buf2, uint8_t **buf3,
-                               uint8_t **buf4, Py_ssize_t *buf1_len,
+static int handle_split_mode_1(u_int8_t *src, Py_ssize_t total_len,
+                               u_int8_t **buf1, u_int8_t **buf2, u_int8_t **buf3,
+                               u_int8_t **buf4, Py_ssize_t *buf1_len,
                                Py_ssize_t *buf2_len, Py_ssize_t *buf3_len,
                                Py_ssize_t *buf4_len) {
   Py_ssize_t half_len = total_len / 4;
@@ -177,20 +177,20 @@ static int handle_split_mode_1(uint8_t *src, Py_ssize_t total_len,
     return -1;
 
   uint32_t *src_uint32 = (uint32_t *)src;
-  uint8_t *dst_uint8 = (uint8_t *)*buf1;
+  u_int8_t *dst_uint8 = (u_int8_t *)*buf1;
 
   Py_ssize_t num_uint32 = total_len / sizeof(uint32_t);
 
   for (Py_ssize_t i = 0; i < num_uint32; i++) {
-    dst_uint8[i] = (uint8_t)src_uint32[i];
+    dst_uint8[i] = (u_int8_t)src_uint32[i];
   }
 
   return 0;
 }
 
 // Helper function to split a bytearray into four buffers
-static int split_dtype32(uint8_t *src, Py_ssize_t total_len, uint8_t **buf1,
-                         uint8_t **buf2, uint8_t **buf3, uint8_t **buf4,
+static int split_dtype32(u_int8_t *src, Py_ssize_t total_len, u_int8_t **buf1,
+                         u_int8_t **buf2, u_int8_t **buf3, u_int8_t **buf4,
                          Py_ssize_t *buf1_len, Py_ssize_t *buf2_len,
                          Py_ssize_t *buf3_len, Py_ssize_t *buf4_len,
                          int bits_mode, int bytes_mode, int is_review,
@@ -263,7 +263,7 @@ static uint32_t revert_float_bits(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void revert_all_floats(uint8_t *src, Py_ssize_t len) {
+static void revert_all_floats(u_int8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
@@ -271,7 +271,7 @@ static void revert_all_floats(uint8_t *src, Py_ssize_t len) {
   }
 }
 
-static int allocate_buffer(uint8_t **result, Py_ssize_t total_len) {
+static int allocate_buffer(u_int8_t **result, Py_ssize_t total_len) {
   *result = PyMem_Malloc(total_len);
   if (*result == NULL) {
     PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
@@ -280,16 +280,16 @@ static int allocate_buffer(uint8_t **result, Py_ssize_t total_len) {
   return 0;
 }
 
-static int handle_combine_mode_220(uint8_t **result, Py_ssize_t *total_len,
-                                   uint8_t *buf1, uint8_t *buf2, uint8_t *buf3,
-                                   uint8_t *buf4, Py_ssize_t buf1_len,
+static int handle_combine_mode_220(u_int8_t **result, Py_ssize_t *total_len,
+                                   u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
+                                   u_int8_t *buf4, Py_ssize_t buf1_len,
                                    Py_ssize_t buf2_len, Py_ssize_t buf3_len,
                                    Py_ssize_t buf4_len) {
   *total_len = buf1_len * 4;
   if (allocate_buffer(result, *total_len) != 0)
     return -1;
 
-  uint8_t *dst = *result;
+  u_int8_t *dst = *result;
   Py_ssize_t q_len = *total_len / 4;
 
   Py_ssize_t j = 0;
@@ -302,16 +302,16 @@ static int handle_combine_mode_220(uint8_t **result, Py_ssize_t *total_len,
   return 0;
 }
 
-static int handle_combine_mode_41(uint8_t **result, Py_ssize_t *total_len,
-                                  uint8_t *buf1, uint8_t *buf2, uint8_t *buf3,
-                                  uint8_t *buf4, Py_ssize_t buf1_len,
+static int handle_combine_mode_41(u_int8_t **result, Py_ssize_t *total_len,
+                                  u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
+                                  u_int8_t *buf4, Py_ssize_t buf1_len,
                                   Py_ssize_t buf2_len, Py_ssize_t buf3_len,
                                   Py_ssize_t buf4_len) {
   *total_len = buf1_len / 3 * 4;
   if (allocate_buffer(result, *total_len) != 0)
     return -1;
 
-  uint8_t *dst = *result;
+  u_int8_t *dst = *result;
 
   Py_ssize_t i = 0;
   for (Py_ssize_t j = 0; j < *total_len; j += 4) {
@@ -323,9 +323,9 @@ static int handle_combine_mode_41(uint8_t **result, Py_ssize_t *total_len,
   return 0;
 }
 
-static int handle_combine_mode_9(uint8_t **result, Py_ssize_t *total_len,
-                                 uint8_t *buf1, uint8_t *buf2, uint8_t *buf3,
-                                 uint8_t *buf4, Py_ssize_t buf1_len,
+static int handle_combine_mode_9(u_int8_t **result, Py_ssize_t *total_len,
+                                 u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
+                                 u_int8_t *buf4, Py_ssize_t buf1_len,
                                  Py_ssize_t buf2_len, Py_ssize_t buf3_len,
                                  Py_ssize_t buf4_len) {
   *total_len = buf1_len * 2;
@@ -344,9 +344,9 @@ static int handle_combine_mode_9(uint8_t **result, Py_ssize_t *total_len,
   return 0;
 }
 
-static int handle_combine_mode_1(uint8_t **result, Py_ssize_t *total_len,
-                                 uint8_t *buf1, uint8_t *buf2, uint8_t *buf3,
-                                 uint8_t *buf4, Py_ssize_t buf1_len,
+static int handle_combine_mode_1(u_int8_t **result, Py_ssize_t *total_len,
+                                 u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
+                                 u_int8_t *buf4, Py_ssize_t buf1_len,
                                  Py_ssize_t buf2_len, Py_ssize_t buf3_len,
                                  Py_ssize_t buf4_len) {
   *total_len = buf1_len * 4;
@@ -354,7 +354,7 @@ static int handle_combine_mode_1(uint8_t **result, Py_ssize_t *total_len,
     return -1;
 
   uint32_t *dst_uint32 = (uint32_t *)*result;
-  uint8_t *src_uint8 = (uint8_t *)buf1;
+  u_int8_t *src_uint8 = (u_int8_t *)buf1;
 
   Py_ssize_t num_uint32 = *total_len / sizeof(uint32_t);
 
@@ -366,12 +366,12 @@ static int handle_combine_mode_1(uint8_t **result, Py_ssize_t *total_len,
 }
 
 // Helper function to combine four buffers into a single bytearray
-static uint8_t *combine_dtype32(Py_ssize_t *total_len, uint8_t *buf1,
-                                uint8_t *buf2, uint8_t *buf3, uint8_t *buf4,
+static u_int8_t *combine_dtype32(Py_ssize_t *total_len, u_int8_t *buf1,
+                                u_int8_t *buf2, u_int8_t *buf3, u_int8_t *buf4,
                                 Py_ssize_t buf1_len, Py_ssize_t buf2_len,
                                 Py_ssize_t buf3_len, Py_ssize_t buf4_len,
                                 int bytes_mode, int threads) {
-  uint8_t *result = NULL;
+  u_int8_t *result = NULL;
 
   switch (bytes_mode) {
   case 220:
@@ -448,7 +448,7 @@ PyObject *py_split_dtype32(PyObject *self, PyObject *args) {
     return NULL;
   }
 
-  uint8_t *buf1 = NULL, *buf2 = NULL, *buf3 = NULL, *buf4 = NULL;
+  u_int8_t *buf1 = NULL, *buf2 = NULL, *buf3 = NULL, *buf4 = NULL;
   Py_ssize_t buf1_len = 0, buf2_len = 0, buf3_len = 0, buf4_len = 0;
   if (split_dtype32(view.buf, view.len, &buf1, &buf2, &buf3, &buf4, &buf1_len,
                     &buf2_len, &buf3_len, &buf4_len, bits_mode, bytes_mode,
@@ -480,9 +480,9 @@ PyObject *py_combine_dtype32(PyObject *self, PyObject *args) {
   }
 
   Py_ssize_t total_len = 0;
-  uint8_t *result =
-      combine_dtype32(&total_len, (uint8_t *)view1.buf, (uint8_t *)view2.buf,
-                      (uint8_t *)view3.buf, (uint8_t *)view4.buf, view1.len,
+  u_int8_t *result =
+      combine_dtype32(&total_len, (u_int8_t *)view1.buf, (u_int8_t *)view2.buf,
+                      (u_int8_t *)view3.buf, (u_int8_t *)view4.buf, view1.len,
                       view2.len, view3.len, view4.len, bytes_mode, threads);
 
   if (result == NULL) {

@@ -7,8 +7,8 @@
 #include <string.h>
 #include <time.h>
 
-size_t hufCompressData(const uint8_t *data, size_t size, int maxCompressedSize,
-                       uint8_t *compressedData, size_t *compressedChunksSize,
+size_t hufCompressData(const u_int8_t *data, size_t size, int maxCompressedSize,
+                       u_int8_t *compressedData, size_t *compressedChunksSize,
                        size_t chunkSize, float compThreshold,
                        size_t checkThreshold) {
   size_t curChunk = 0;
@@ -17,7 +17,7 @@ size_t hufCompressData(const uint8_t *data, size_t size, int maxCompressedSize,
   size_t checkCompTh =
       size / checkThreshold;  // check after checkTh% of the size,
 			      //  if not compressed -> stop compressing
-  uint8_t isCheck = 0;
+  u_int8_t isCheck = 0;
 
   for (size_t offset = 0; offset < size; offset += chunkSize) {
     size_t curChunkSize =
@@ -58,9 +58,9 @@ size_t hufCompressData(const uint8_t *data, size_t size, int maxCompressedSize,
   return totalCompressedSize;
 }
 
-size_t hufDecompressData(const uint8_t *compressedData,
+size_t hufDecompressData(const u_int8_t *compressedData,
                          size_t *compressedChunksSize, size_t numChunks,
-                         size_t original_size, uint8_t *decompressedData,
+                         size_t original_size, u_int8_t *decompressedData,
                          size_t chunkSize) {
   size_t totalDecompressedSize = 0;
   size_t compressedOffset = 0;

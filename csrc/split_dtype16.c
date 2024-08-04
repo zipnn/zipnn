@@ -24,7 +24,7 @@ static uint32_t reorder_float_bits(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void reorder_all_floats(uint8_t *src, Py_ssize_t len) {
+static void reorder_all_floats(u_int8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
@@ -33,7 +33,7 @@ static void reorder_all_floats(uint8_t *src, Py_ssize_t len) {
 }
 
 // Helper function to split a bytearray into groups
-static int split_bytearray(uint8_t *src, Py_ssize_t len, uint8_t **buffers,
+static int split_bytearray(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
                            int bits_mode, int bytes_mode, int is_review,
                            int threads) {
   if (bits_mode == 1) {  // reoreder exponent
@@ -52,8 +52,8 @@ static int split_bytearray(uint8_t *src, Py_ssize_t len, uint8_t **buffers,
       return -1;
     }
 
-    uint8_t *dst0 = buffers[0];
-    uint8_t *dst1 = buffers[1];
+    u_int8_t *dst0 = buffers[0];
+    u_int8_t *dst1 = buffers[1];
 
     for (Py_ssize_t i = 0; i < len; i += 2) {
       *dst0++ = src[i];
@@ -111,7 +111,7 @@ static uint32_t revert_float_bits(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void revert_all_floats(uint8_t *src, Py_ssize_t len) {
+static void revert_all_floats(u_int8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
@@ -120,12 +120,12 @@ static void revert_all_floats(uint8_t *src, Py_ssize_t len) {
 }
 
 // Helper function to combine four buffers into a single bytearray
-static uint8_t *combine_buffers(uint8_t *buf1, uint8_t *buf2,
+static u_int8_t *combine_buffers(u_int8_t *buf1, u_int8_t *buf2,
                                 Py_ssize_t half_len, int bytes_mode,
                                 int threads) {
   Py_ssize_t total_len = half_len * 2;
-  uint8_t *result = NULL;  // Declare result at the beginning of the function
-  uint8_t *dst;
+  u_int8_t *result = NULL;  // Declare result at the beginning of the function
+  u_int8_t *dst;
   result = PyMem_Malloc(total_len);
   if (result == NULL) {
     PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
@@ -196,7 +196,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   const uint32_t numBuf = 2;
   Py_buffer view;
   int bits_mode, bytes_mode, is_review, threads;
-  uint8_t isPrint = 0;
+  u_int8_t isPrint = 0;
   clock_t startTime, endTime, startBGTime, endBGTime, startCompBufTime[numBuf],
       endCompBufTime[numBuf];
   double bgTime, compBufTime[numBuf];
@@ -208,7 +208,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
     return NULL;
   }
 
-  uint8_t *buffers[] = {NULL, NULL};
+  u_int8_t *buffers[] = {NULL, NULL};
 
   if (isPrint) {
     startBGTime = clock();
@@ -233,7 +233,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   size_t bufSize = view.len / numBuf;
   size_t maxCompressedSize = HUF_compressBound(bufSize);
 
-  uint8_t *compressedData[] = {NULL, NULL};
+  u_int8_t *compressedData[] = {NULL, NULL};
   size_t numChunks = (bufSize + chunk_size - 1) / chunk_size;
   size_t *compressedChunksSize[numBuf];
   size_t bufNumChunks[numBuf];
@@ -252,7 +252,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
     }
   }
 
-  uint8_t isBufComp[numBuf];
+  u_int8_t isBufComp[numBuf];
   size_t totalCompressedSize[numBuf];
 
   for (uint32_t i = 0; i < numBuf; i++) {
@@ -282,7 +282,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   }
 
   PyObject *result;
-  uint8_t *resBuf[numBuf];
+  u_int8_t *resBuf[numBuf];
   size_t resBufSize[numBuf];
 
   if (buffers[1] != NULL) {
@@ -295,8 +295,8 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
         resBufSize[i] = bufSize;
       }
     }
-    uint8_t item;
-    memcpy(&item, resBuf[0], sizeof(uint8_t));
+    u_int8_t item;
+    memcpy(&item, resBuf[0], sizeof(u_int8_t));
 
     result = Py_BuildValue(
         "y#y#y#y#y#y#", resBuf[0], resBufSize[0], resBuf[1], resBufSize[1],
@@ -352,10 +352,10 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   uint32_t data_offset[] = {0, 0};
 
   startTime = clock();
-  uint8_t *bufUint8Pointer = (uint8_t *)view.buf;
-  uint8_t isBufComp[numBuf];
-  memcpy(&isBufComp, bufUint8Pointer + header_offset, numBuf * sizeof(uint8_t));
-  header_offset += numBuf * sizeof(uint8_t);
+  u_int8_t *bufUint8Pointer = (u_int8_t *)view.buf;
+  u_int8_t isBufComp[numBuf];
+  memcpy(&isBufComp, bufUint8Pointer + header_offset, numBuf * sizeof(u_int8_t));
+  header_offset += numBuf * sizeof(u_int8_t);
   size_t origSize;
   memcpy(&origSize, bufUint8Pointer + header_offset, sizeof(size_t));
   header_offset += sizeof(size_t);
@@ -367,7 +367,7 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   header_offset += sizeof(size_t);
   size_t compressedChunksSize[numBuf][numChunks];
   size_t decompressedSize[numBuf];
-  uint8_t *decompressedData[] = {NULL, NULL};
+  u_int8_t *decompressedData[] = {NULL, NULL};
   size_t offset_compressedChunksSize = header_offset;
 
   // calc offset for the compressedChunksSize and offest to the data
@@ -435,8 +435,8 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   compressedChunksSize[1][numChunks-1]); printf ("decompressedSize[1] %zu\n",
   decompressedSize[1]);
   */
-  uint8_t *result = combine_buffers((uint8_t *)decompressedData[0],
-                                    (uint8_t *)decompressedData[1],
+  u_int8_t *result = combine_buffers((u_int8_t *)decompressedData[0],
+                                    (u_int8_t *)decompressedData[1],
                                     origSize / 2, bytes_mode, threads);
   if (result == NULL) {
     PyBuffer_Release(&view);
