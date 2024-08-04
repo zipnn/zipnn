@@ -428,7 +428,7 @@ class ZipNN:
         -------------------------------------
         Compression of the data in the chosen method.
         """
-        if self.method == EnumMethod.ZSTD.value:
+        if self.method == EnumMethod.ZSTD.value or self.method == EnumMethod.AUTO.value:
             return self._zstd_compress.compress(data)
 
         if self.method == EnumMethod.LZ4.value:
@@ -801,7 +801,7 @@ class ZipNN:
         -------------------------------------
         Decompression of the data in the chosen method.
         """
-        if self.method == EnumMethod.ZSTD.value:
+        if self.method == EnumMethod.ZSTD.value or self.method == EnumMethod.AUTO.value:
             return self._zstd_decompress.decompress(data)
         if self.method == EnumMethod.LZ4.value:
             return lz4.frame.decompress(data)

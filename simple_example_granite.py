@@ -35,6 +35,16 @@ url = 'https://huggingface.co/ibm-granite/granite-3b-code-base/resolve/main/mode
 # Need authentication -> download from the browser or use Huggingface Token
 #url = 'https://huggingface.co/meta-llama/Meta-Llama-3.1-8B-Instruct/resolve/main/model-00003-of-00004.safetensors?download=true'
 
+#file_path = "data/ast-finetuned-audioset-10-10-0.4593.fp32.bin"
+#url = "https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593/resolve/main/model.safetensors?download=true" 
+
+#file_path = "data/xlm-roberta-large.fp32.bin"
+#url = "https://huggingface.co/FacebookAI/xlm-roberta-large/resolve/main/model.safetensors?download=true"
+
+#file_path = "data/Llama-3-8B-Instruct.bin"
+#url = "https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct/resolve/main/model-00003-of-00004.safetensors?download=true"
+
+
 def download_file(url, file_path):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     
@@ -47,7 +57,6 @@ def download_file(url, file_path):
         for chunk in response.iter_content(chunk_size=8192):
             file.write(chunk)
     print ("end downloading file")        
-
 
 
 if not os.path.exists(file_path):
@@ -93,9 +102,9 @@ tensor_bytes = original_bytes
 if (is_torch_numpy_byte == 2): # Tensor
     zipnn = ZipNN(input_format="torch", threads = threads)
 elif (is_torch_numpy_byte == 1): # Numpy   
-    zipnn = ZipNN(method='zstd', input_format="numpy", threads = threads)
+    zipnn = ZipNN(input_format="numpy", threads = threads)
 elif (is_torch_numpy_byte == 0): # Byte 
-    zipnn = ZipNN(method='zstd', input_format="byte", threads = threads, bytearray_dtype = bytearray_dtype)
+    zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = bytearray_dtype)
 else: 
     raise ValueError("Unsupported input_format")
 
