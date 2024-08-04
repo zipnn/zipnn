@@ -17,7 +17,7 @@ Currently, ZipNN compression methods are implemented on CPUs, and GPU implementa
 Given a specific data set, ZipNN Automatically rearranges the data according to it's type, and applies the most effective techniques for the given instance to improve compression ratios and rates.
 
 <p align="center">
-  <img src="./images/updated_flow.png" alt="Flow Image" width="900" height="390" style="display: block; margin: 0 auto;">
+  <img src="./images/updated_flow.png" alt="Flow Image" style="display: block; margin: 0 auto;">
 </p>
 
 ## Results
