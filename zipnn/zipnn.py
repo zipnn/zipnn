@@ -187,7 +187,7 @@ class ZipNN:
         self._version_minor = 2
         self._version_tiny = 3
         self._import_dependencies(zstd_level)
-        self._header = bytearray(16)
+        self._header = bytearray(20)
         self._update_header()
 
     def _import_dependencies(self, zstd_level):
@@ -264,6 +264,7 @@ class ZipNN:
     # [13] 1 Byte [Compression Chunk]
     # [14] 1 Byte [is_streaming, streaming_chunk_kb]
     # [15] = self.dtype
+    # [16-19] = compressed file size
 
     # byte order for 64bit
     # Not implemented yet
@@ -278,6 +279,12 @@ class ZipNN:
         self._header[10] = lossy_type.value
         self._header[11] = lossy_factor
         self._header[12] = lossy_is_int
+
+    def _update_header_comp_size(self, comp_size):
+        """
+        Updates header with the overall compression size
+        """
+        self._header[16:20] = comp_size.to_bytes(4, byteorder='big')
 
     def _update_header_dtype(self, byte_reorder: int, bit_reorder: int, dtype_code: int):
         """
@@ -566,6 +573,8 @@ class ZipNN:
             print(f"len ba-comp {len(ba_comp)}")
             print(f"len ba {len(ba)}")
             print("compress_bin_time ", time.time() - compress_bin_time)
+        self._update_header_comp_size(len(ba_comp))
+        ba_comp = self._header + ba_comp[20:]
         return ba_comp
 
     #    def prepare_file(self, filename: str):
