@@ -6,7 +6,7 @@ import numpy as np
 import os
 import requests
 
-
+start=time.time()
 ###################################
 ####    Downloading Granite    ####
 ###################################
@@ -43,37 +43,38 @@ zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = bytearra
 input_path = file_path
 output_path = "data/granite-3b-code-base.2.bin.zpn"
 output_decomp_path="data/streamed_granite-3b-code-base.2.bin"
-CHUNK_SIZE=zipnn.compression_chunk
+CHUNK_SIZE=1048576 #1MB
 
 
 #####################################
 ####    Streaming Compression    ####
 #####################################
 
-
+start_time = time.time()
 with open(input_path, 'rb') as infile, open(output_path, 'wb') as outfile:
     while chunk := infile.read(CHUNK_SIZE):
         compressed_chunk = zipnn.compress(chunk)
         if compressed_chunk:
             outfile.write(compressed_chunk)
+print ("compress zipnn data ", time.time() - start_time)
 
 
 #######################################
 ####    Streaming Decompression    ####
 #######################################
 
-
+start_time = time.time()
 with open(output_path, 'rb') as infile, open(output_decomp_path, 'wb') as outfile:
     d_data=b''
     while header:= infile.read(20):
-        mid_chunk_len=int.from_bytes(header[16:20], byteorder='big')-20
+        mid_chunk_len=int.from_bytes(header[16:20], byteorder="little")-20
         chunk=header+infile.read(mid_chunk_len)
         decompressed_chunk = zipnn.decompress(chunk)
         if decompressed_chunk:
             d_data+=decompressed_chunk
             outfile.write(d_data)
             d_data=b''
-
+print ("decompress zipnn data ", time.time() - start_time)
 
 ##########################
 ####    Comparison    ####
@@ -86,9 +87,13 @@ with open(input_path, 'rb') as file1, open(output_decomp_path, 'rb') as file2:
         chunk2 = file2.read(CHUNK_SIZE)
         if chunk1 != chunk2:
             print(input_path+","+output_decomp_path+" are not equal!")
-            exit(0)
+            break
 
         if not chunk1:
             print(input_path+", "+output_decomp_path+" are equal!")
-            exit(0)
+            break
+
+
+finish=time.time()
+print("Overall time: " + str(finish - start))
 
