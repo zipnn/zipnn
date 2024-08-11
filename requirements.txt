@@ -1,6 +1,6 @@
 bitarray==2.9.2
 bitshift==0.1
-certifi==2024.6.2
+certifi==2024.7.4
 charset-normalizer==3.3.2
 cpplint==1.6.1
 cramjam==2.8.3
