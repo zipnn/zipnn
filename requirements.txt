@@ -46,7 +46,7 @@ torch==2.3.0
 tqdm==4.66.4
 twine==5.1.0
 typing_extensions==4.12.0
-urllib3==2.2.1
+urllib3==2.2.2
 wheel==0.43.0
 -e git+ssh://git@github.com/zipnn/zipnn.git@2310f09f1f1f5e508f3531c84aaf6ecbf5b20e40#egg=zipnn
 zipp==3.19.1
