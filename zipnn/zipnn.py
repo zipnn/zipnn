@@ -594,7 +594,7 @@ class ZipNN:
                         #
                         total_length = len(shape_bytes)
                         total_length += sum(len(buf) for buf in buf_is_comp)
-                        total_length += sum(len(bg) for bg in ba)
+                        total_length += len(ba)
                         self._update_header_comp_size(total_length)
                         #
                         ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [ba])
@@ -615,7 +615,8 @@ class ZipNN:
                     else:
                         #
                         total_length = sum(len(buf) for buf in buf_is_comp)
-                        total_length += sum(len(bg) for bg in ba)
+                        #total_length += sum(bg for bg in ba)
+                        total_length += len(ba)
                         self._update_header_comp_size(total_length)
                         #
                         ba_comp = b"".join([self._header] + buf_is_comp + [ba])
@@ -992,10 +993,9 @@ class ZipNN:
                             ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
                         )
                 elif bfloat16 or float16:
-
                     mv = memoryview(ba_compress)
                     if list(mv[start_is_comp : start_is_comp + 2]) != [0, 0]:  # decompress
-                        ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads)
+                        ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads) #ISSUE
                     else:  # original_value
                         if is_print:
                             print("not decompress")
@@ -1004,7 +1004,7 @@ class ZipNN:
                     print("combine using c ", time.time() - start_time)
             else:
                 ba_decom = ba_bg[0]
-
+                
             if self.input_format == EnumFormat.BYTE.value:
                 return ba_decom
 
