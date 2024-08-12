@@ -77,7 +77,15 @@ This project requires the following Python packages:
 
 ## Usage
 
-Import zipnn
+You can integrate zipnn compression and decompression into your own projects by utilizing the scripts available in the scripts folder. This folder contains the following scripts:
+* ```zipnn_compress``` and ```zipnn_decompress```: For compressing and decompressing individual files.
+* ```run_compression_zipnn``` and ```run_decompression_zipnn```: For handling multiple files at once.
+
+For detailed information on how to use these scripts, [please refer to the README.md file located in the scripts folder](./scripts/README.md).
+
+Or, you can use the package manually, like so:
+
+Import zipnn:
 
 ```python
 from zipnn import ZipNN
