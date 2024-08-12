@@ -49,20 +49,21 @@ CHUNK_SIZE=1048576 #1MB
 #####################################
 ####    Streaming Compression    ####
 #####################################
-
+file_size_before = os.path.getsize(input_path)
 start_time = time.time()
 with open(input_path, 'rb') as infile, open(output_path, 'wb') as outfile:
     while chunk := infile.read(CHUNK_SIZE):
         compressed_chunk = zipnn.compress(chunk)
         if compressed_chunk:
             outfile.write(compressed_chunk)
-print ("compress zipnn data ", time.time() - start_time)
+print ("Compression time:", time.time() - start_time)
+file_size_after = os.path.getsize(output_path)
+print ("Original size: "+str(file_size_before)+", size after compression: "+str(file_size_after)+", Remaining size is "+str(file_size_after/file_size_before*100)+"% of original")
 
 
 #######################################
 ####    Streaming Decompression    ####
 #######################################
-
 start_time = time.time()
 with open(output_path, 'rb') as infile, open(output_decomp_path, 'wb') as outfile:
     d_data=b''
@@ -78,8 +79,7 @@ with open(output_path, 'rb') as infile, open(output_decomp_path, 'wb') as outfil
             d_data+=decompressed_chunk
             outfile.write(d_data)
             d_data=b''
-print ("decompress zipnn data ", time.time() - start_time)
-
+print ("Decompression time:", time.time() - start_time)
 ##########################
 ####    Comparison    ####
 ##########################
