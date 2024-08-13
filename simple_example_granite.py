@@ -68,7 +68,6 @@ if not os.path.exists(file_path):
 with open(file_path, 'rb') as file:
     file_bytes = file.read()
 
-#original_bytes = file_bytes
 original_bytes = file_bytes[100000000:1173741824]
 #original_bytes = file_bytes[100000000:100524288]
 #original_bytes = file_bytes[0:500000]
@@ -120,14 +119,14 @@ elif (is_torch_numpy_byte == 0): # Byte
     compressed_data = zipnn.compress(tensor_bytes)
 
 print ("compressed_data remain ", len(compressed_data)/len(tensor_bytes), " time ", time.time() - start_time)
-#z = zstd.ZstdCompressor(level=3, threads=threads)
-#start_time = time.time()
-#c = z.compress(original_bytes_saved)
-#print ("zstd remain ", len(c)/len(tensor_bytes), " time " , time.time() - start_time)
-#start_time = time.time()
-#zd = zstd.ZstdDecompressor()
-#d = zd.decompress(c)
-#print ("decompress zstd ", time.time() - start_time)
+z = zstd.ZstdCompressor(level=3, threads=threads)
+start_time = time.time()
+c = z.compress(original_bytes_saved)
+print ("zstd remain ", len(c)/len(tensor_bytes), " time " , time.time() - start_time)
+start_time = time.time()
+zd = zstd.ZstdDecompressor()
+d = zd.decompress(c)
+print ("decompress zstd ", time.time() - start_time)
 
 #Decompress the byte string back
 start_time = time.time()
@@ -142,4 +141,3 @@ elif (is_torch_numpy_byte == 1): # Numpy
 #print("Are the original and decompressed byte strings the same? ", tensor_bytes == decompressed_data)
 elif (is_torch_numpy_byte == 0): # Byte 
     print("Are the original and decompressed byte strings the same [BYTE]? ", original_bytes_saved == decompressed_data)
-

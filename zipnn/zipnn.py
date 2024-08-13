@@ -187,9 +187,7 @@ class ZipNN:
         self._version_minor = 2
         self._version_tiny = 3
         self._import_dependencies(zstd_level)
-
-        HEADER_LEN=20
-        self._header = bytearray(HEADER_LEN)
+        self._header = bytearray(16)
         self._update_header()
 
     def _import_dependencies(self, zstd_level):
@@ -266,7 +264,6 @@ class ZipNN:
     # [13] 1 Byte [Compression Chunk]
     # [14] 1 Byte [is_streaming, streaming_chunk_kb]
     # [15] = self.dtype
-    # [16-19] = compressed file size
 
     # byte order for 64bit
     # Not implemented yet
@@ -281,19 +278,6 @@ class ZipNN:
         self._header[10] = lossy_type.value
         self._header[11] = lossy_factor
         self._header[12] = lossy_is_int
-
-    def _update_header_comp_size(self, comp_len):
-        """
-        Updates header with the overall compression size
-        """
-        #comp_size_in_bytes=len(ba_comp).to_bytes(4, byteorder="little")
-        comp_bytes_len=(comp_len+20).to_bytes(4, byteorder="little")
-        self._header[16:20] = comp_bytes_len
-        #return self._header + ba_comp[20:]
-        #muteable_ba=bytearray(ba_comp)
-        #mv=memoryview(muteable_ba)
-        #mv[16:20]=comp_size_in_bytes
-        #ba_comp=bytes(muteable_ba)
 
     def _update_header_dtype(self, byte_reorder: int, bit_reorder: int, dtype_code: int):
         """
@@ -477,7 +461,6 @@ class ZipNN:
             stime = time.time()
             ba_comp = self._header + self.compress_method(ba)
             if self.input_format == EnumFormat.BYTE.value:
-                self._update_header_comp_size(len(ba_comp))
                 return b"".join([self._header] + [ba_comp])
         else:
             stime = time.time()
@@ -521,21 +504,8 @@ class ZipNN:
                         bg_ret.append(b)
             if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                 shape_bytes = zipnn_pack_shape(shape)
-                #
-                total_length = len(shape_bytes)
-                total_length += sum(len(buf) for buf in buf_is_comp)
-                total_length += sum(len(bg) for bg in bg_len)
-                total_length += sum(len(ret) for ret in bg_ret)
-                self._update_header_comp_size(total_length)
-                #
                 ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + bg_len + bg_ret)
             else:
-                #
-                total_length = sum(len(buf) for buf in buf_is_comp)
-                total_length += sum(len(bg) for bg in bg_len)
-                total_length += sum(len(ret) for ret in bg_ret)
-                self._update_header_comp_size(total_length)
-                #
                 ba_comp = b"".join([self._header] + buf_is_comp + bg_len + bg_ret)
 
             if dtype_size == 16:
@@ -570,16 +540,6 @@ class ZipNN:
                 if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                     shape_bytes = zipnn_pack_shape(shape)
                     if buf_is_comp != [b"\x00", b"\x00"]:
-                        #
-                        total_length = len(shape_bytes)
-                        total_length += sum(len(buf) for buf in buf_is_comp)
-                        total_length += len(original_size)
-                        total_length += sum(len(bg) for bg in buf_len)
-                        total_length += len(num_chunks_bytes)
-                        total_length += sum(len(bg) for bg in compress_chunks_size)
-                        total_length += sum(len(bg) for bg in buf)
-                        self._update_header_comp_size(total_length)
-                        #
                         ba_comp = b"".join(
                             [self._header]
                             + [shape_bytes]
@@ -591,34 +551,13 @@ class ZipNN:
                             + buf
                         )
                     else:
-                        #
-                        total_length = len(shape_bytes)
-                        total_length += sum(len(buf) for buf in buf_is_comp)
-                        total_length += len(ba)
-                        self._update_header_comp_size(total_length)
-                        #
                         ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [ba])
                 else:
                     if buf_is_comp != [b"\x00", b"\x00"]:
-                        #
-                        total_length = sum(len(buf) for buf in buf_is_comp)
-                        total_length += len(original_size)
-                        total_length += sum(len(bg) for bg in buf_len)
-                        total_length += len(num_chunks_bytes)
-                        total_length += sum(len(bg) for bg in compress_chunks_size)
-                        total_length += sum(len(bg) for bg in buf)
-                        self._update_header_comp_size(total_length)
-                        #
                         ba_comp = b"".join(
                             [self._header] + buf_is_comp + [original_size] + buf_len + [num_chunks_bytes] + compress_chunks_size + buf
                         )
                     else:
-                        #
-                        total_length = sum(len(buf) for buf in buf_is_comp)
-                        #total_length += sum(bg for bg in ba)
-                        total_length += len(ba)
-                        self._update_header_comp_size(total_length)
-                        #
                         ba_comp = b"".join([self._header] + buf_is_comp + [ba])
                 if is_print:
                     print("aggregate output bin ", time.time() - start_time)
@@ -993,9 +932,10 @@ class ZipNN:
                             ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
                         )
                 elif bfloat16 or float16:
+
                     mv = memoryview(ba_compress)
                     if list(mv[start_is_comp : start_is_comp + 2]) != [0, 0]:  # decompress
-                        ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads) #ISSUE
+                        ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads)
                     else:  # original_value
                         if is_print:
                             print("not decompress")
@@ -1004,7 +944,7 @@ class ZipNN:
                     print("combine using c ", time.time() - start_time)
             else:
                 ba_decom = ba_bg[0]
-                
+
             if self.input_format == EnumFormat.BYTE.value:
                 return ba_decom
 

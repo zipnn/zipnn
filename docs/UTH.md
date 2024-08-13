@@ -6,11 +6,11 @@ With the growth of model sizes and the scale of their deployment, their sheer si
 
 In this README, we'll outline the supported data types and the various techniques tailored for these data types that are being used in the zipnn package.  When the user calls ```zipnn.compress(data)``` , the package automatically selects and applies the most effective compression technique from its arsenal, ensuring optimal compression results.
 
-## Data Manipulation
+## Byte handeling
 
 To achieve better compression, we apply bit manipulation to the input data. We observed that the sign bit tends to hold high entropy and compressing it together with the exponent byte interferes with compression effectiveness. To address this, we implemented two approaches to handle the sign bits.
 
-### Byte grouping + Bit reordering
+### Byte reordering + Bit reordering
 
 This approach is beneficial for floating-point numbers, as storing the exponent separately improves the compression ratio with minimal overhead.
 <p align="center">
