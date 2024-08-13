@@ -7,7 +7,7 @@
 #include <string.h>
 #include <time.h>
 
-size_t hufCompressData(const u_int8_t *data, size_t size, int maxCompressedSize,
+size_t hufCompressData(const u_int8_t *data, size_t size, size_t maxCompressedSize,
                        u_int8_t *compressedData, size_t *compressedChunksSize,
                        size_t chunkSize, float compThreshold,
                        size_t checkThreshold) {
