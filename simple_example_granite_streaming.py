@@ -6,11 +6,13 @@ import numpy as np
 import os
 import requests
 
+
+MB = 1024*1024
+GB = 1024*1024*1024
 start=time.time()
 ###################################
 ####    Downloading Granite    ####
 ###################################
-
 
 file_path = "data/granite-3b-code-base.2.bin"
 url = 'https://huggingface.co/ibm-granite/granite-3b-code-base/resolve/main/model-00002-of-00002.safetensors?download=true'
@@ -43,7 +45,7 @@ zipnn = ZipNN()
 input_path = file_path
 output_path = "data/granite-3b-code-base.2.bin.zpn"
 output_decomp_path="data/streamed_granite-3b-code-base.2.bin"
-CHUNK_SIZE=1048576 #1MB
+CHUNK_SIZE=1*MB 
 
 
 #####################################
@@ -56,9 +58,10 @@ with open(input_path, 'rb') as infile, open(output_path, 'wb') as outfile:
         compressed_chunk = zipnn.compress(chunk)
         if compressed_chunk:
             outfile.write(compressed_chunk)
+print (f'Streaming Chunk Size is {CHUNK_SIZE/MB:.02f}MB')
 print ("Compression time:", time.time() - start_time)
 file_size_after = os.path.getsize(output_path)
-print ("Original size: "+str(file_size_before)+", size after compression: "+str(file_size_after)+", Remaining size is "+str(file_size_after/file_size_before*100)+"% of original")
+print (f'Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original')
 
 
 #######################################
