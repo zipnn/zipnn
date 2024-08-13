@@ -41,10 +41,10 @@ if __name__ == "__main__":
     parser.add_argument('input_file', type=str, help='The file to decompress')
     parser.add_argument('--float32', action='store_true', help='A flag that triggers float32 compression')
     args = parser.parse_args()
-    optional_args = []
+    optional_kwargs = {}
     if args.float32:
-        optional_args.append(32)
+        optional_kwargs['dtype'] = 32
         
     input_file = sys.argv[1]
-    decompress_file(args.input_file, *optional_args)
+    decompress_file(args.input_file, **optional_kwargs)
 
