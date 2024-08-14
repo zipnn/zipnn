@@ -4,6 +4,10 @@ from zipnn import ZipNN
 import sys
 import argparse
 
+
+MB = 1024*1024
+GB = 1024*1024*1024
+
 def check_and_install_zipnn():
     try:
         import zipnn
@@ -54,7 +58,7 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
                 file_size_after+=len(compressed_chunk)
                 outfile.write(compressed_chunk)
         print(f"Compressed {input_file} to {output_file}")
-        print ("Original size: "+str(file_size_before)+", size after compression: "+str(file_size_after)+", Remaining size is "+str(file_size_after/file_size_before*100)+"% of original")
+        print (f'Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original')
 
 
 def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path="."):
