@@ -59,7 +59,6 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
 
 def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path="."):
     import zipnn
-    from zipnn_compress import compress_file
 
     # Handle streaming chunk size
     streaming_chunk_size=parse_streaming_chunk_size(streaming_chunk_size)

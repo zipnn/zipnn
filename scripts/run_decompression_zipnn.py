@@ -14,7 +14,6 @@ def check_and_install_zipnn():
 
 def decompress_zpn_files(dtype="",path=".",input_file=None):
     import zipnn
-    from zipnn_decompress import decompress_file
 
     if input_file:
         if (path!="."):
