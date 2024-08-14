@@ -5,15 +5,15 @@ import argparse
 from zipnn import ZipNN
 
 def check_and_install_zipnn():
+    global zipnn
     try:
         import zipnn
     except ImportError:
         print("zipnn not found. Installing...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "zipnn"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "zipnn", "--upgrade"])
         import zipnn
 
 def decompress_zpn_files(dtype="",path=".",input_file=None):
-    import zipnn
 
     if input_file:
         if (path!="."):
@@ -41,9 +41,9 @@ def decompress_file(input_file,dtype=""):
 
     # Init ZipNN
     if dtype:
-        zipnn = ZipNN(bytearray_dtype='float32')
+        zpn = zipnn.ZipNN(bytearray_dtype='float32')
     else:
-        zipnn = ZipNN()
+        zpn = zipnn.ZipNN()
     
     # Decompress
     with open(input_file, 'rb') as infile, open(output_file, 'wb') as outfile:
@@ -52,7 +52,7 @@ def decompress_file(input_file,dtype=""):
             mv_header=memoryview(header)
             mid_chunk_len=int.from_bytes(mv_header[16:20], byteorder="little")-20
             chunk_data = infile.read(mid_chunk_len)
-            decompressed_chunk = zipnn.decompress(header + chunk_data)
+            decompressed_chunk = zpn.decompress(header + chunk_data)
             if decompressed_chunk:
                 d_data+=decompressed_chunk
                 outfile.write(d_data)

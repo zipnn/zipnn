@@ -1,6 +1,5 @@
 import os
 import subprocess
-from zipnn import ZipNN
 import sys
 import argparse
 
@@ -9,11 +8,12 @@ MB = 1024*1024
 GB = 1024*1024*1024
 
 def check_and_install_zipnn():
+    global zipnn
     try:
         import zipnn
     except ImportError:
         print("zipnn not found. Installing...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "zipnn"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "zipnn", "--upgrade"])
         import zipnn
 
 def parse_streaming_chunk_size(streaming_chunk_size):
@@ -42,9 +42,9 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
     # Init ZipNN
     #streaming_chunk_size=1048576 #1MB
     if dtype:
-        zipnn = ZipNN(bytearray_dtype='float32')
+        zpn = zipnn.ZipNN(bytearray_dtype='float32')
     else:
-        zipnn = ZipNN()
+        zpn = zipnn.ZipNN()
 
     
     # Compress
@@ -53,7 +53,7 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
     with open(input_file, 'rb') as infile, open(output_file, 'wb') as outfile:
         while chunk := infile.read(streaming_chunk_size):
             file_size_before+=len(chunk)
-            compressed_chunk = zipnn.compress(chunk)
+            compressed_chunk = zpn.compress(chunk)
             if compressed_chunk:
                 file_size_after+=len(compressed_chunk)
                 outfile.write(compressed_chunk)
@@ -62,7 +62,6 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
 
 
 def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path="."):
-    import zipnn
 
     # Handle streaming chunk size
     streaming_chunk_size=parse_streaming_chunk_size(streaming_chunk_size)
