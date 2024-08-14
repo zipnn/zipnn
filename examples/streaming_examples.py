@@ -4,6 +4,7 @@ import shutil
 import filecmp
 import subprocess
 
+
 # Paths and additional imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
 module_dir = os.path.abspath(os.path.join(current_dir, '..', 'scripts'))
