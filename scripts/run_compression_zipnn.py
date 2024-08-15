@@ -61,21 +61,24 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
         print (f'Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original')
 
 
-def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path="."):
+def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path=".",delete=False,r=False):
 
     # Handle streaming chunk size
     streaming_chunk_size=parse_streaming_chunk_size(streaming_chunk_size)
-
-    # List all files in the current directory
-    files_found = False
-    for file_name in os.listdir(path):
-        # Check if the file has the specified suffix
-        if file_name.endswith(suffix):
-            files_found = True
-            print(f"Compressing {file_name}...")
-            if (path!="."):
-                file_name=path+"/"+file_name
-            compress_file(file_name,dtype=dtype,streaming_chunk_size=streaming_chunk_size)
+    directories_to_search = os.walk(path) if r else [(path, [], os.listdir(path))]
+    files_found=False
+    for root, _, files in directories_to_search:
+        for file_name in files:
+            if file_name.endswith(suffix):
+                files_found = True
+                full_path = os.path.join(root, file_name)
+                
+                if delete:
+                    print(f"Deleting {full_path}...")
+                    os.remove(full_path)
+                else:
+                    print(f"Compressing {full_path}...")
+                    compress_file(full_path, dtype=dtype, streaming_chunk_size=streaming_chunk_size)
 
     if not files_found:
         print(f"No files with the suffix '{suffix}' found.")
@@ -91,6 +94,8 @@ if __name__ == "__main__":
     parser.add_argument('--float32', action='store_true', help='A flag that triggers float32 compression')
     parser.add_argument('--streaming_chunk_size', type=str, help='An optional streaming chunk size. The format is int (for size in Bytes) or int+KB/MB/GB. Default is 1MB')
     parser.add_argument('--path', type=str, help='Path to files to compress')
+    parser.add_argument('--delete', action='store_true', help='A flag that triggers deletion of a single file instead of compression')
+    parser.add_argument('--r', action='store_true', help='A flag that triggers recursive search on all subdirectories')
     args = parser.parse_args()
     optional_kwargs = {}
     if args.float32:
@@ -99,6 +104,10 @@ if __name__ == "__main__":
         optional_kwargs['streaming_chunk_size'] = args.streaming_chunk_size
     if args.path is not None:
         optional_kwargs['path'] = args.path
+    if args.delete:
+        optional_kwargs['delete'] = args.delete
+    if args.r:
+        optional_kwargs['r'] = args.r
     
     check_and_install_zipnn()
     compress_files_with_suffix(args.suffix, **optional_kwargs)
