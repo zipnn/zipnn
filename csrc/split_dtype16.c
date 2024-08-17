@@ -43,7 +43,6 @@ static int split_bytearray(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
   Py_ssize_t half_len = len / 2;
   switch (bytes_mode) {
   case 10:  // 2b01_010 - Byte Group to two different groups
-    printf ("half_len %zu\n", half_len);	     
     buffers[0] = PyMem_Malloc(half_len);
     buffers[1] = PyMem_Malloc(half_len);
 
@@ -200,7 +199,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   u_int8_t isPrint = 0;
   clock_t startTime, endTime, startBGTime, endBGTime, startCompBufTime[numBuf],
       endCompBufTime[numBuf];
-  double bgTime, compBufTime[numBuf];
+  double totalTime, bgTime, compBufTime[numBuf];
 
   startTime = clock();
 
@@ -217,7 +216,6 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   size_t checkThreshold = 10;        // TBD
 
   size_t bufSize = size / numBuf;
-  size_t maxCompressedSize = HUF_compressBound(bufSize);
 
   size_t numChunks = (size + bgChunkSize - 1) / bgChunkSize;
   size_t bufNumChunks[numBuf];
@@ -226,24 +224,28 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 
   // Byte Group per chunk, Compress per bufChunk
 
-  size_t curChunk[] = {0, 0};
+  size_t curChunk = 0;
   size_t totalCompressedSize[] = {0, 0};
 
   u_int8_t* compressedData[numBuf][numChunks];
   size_t compressedChunksSize[numBuf][numChunks];
+  size_t unCompChunksSize[numChunks];
 
+  if (isPrint) {
+      startBGTime = clock();
+    }
+ 
+
+  /////////// start multi Threading - Each chunk to different thread /////////////// 
   for (size_t offset = 0; offset < size; offset += bgChunkSize) {
     size_t curBgChunkSize =
       (view.len - offset > bgChunkSize) ? bgChunkSize : (size - offset);
 
-    printf ("offset %zu\n", offset);
+//    printf ("offset %zu\n", offset);
     size_t curCompChunkSize = curBgChunkSize/ numBuf;
-
+    unCompChunksSize[curChunk] = curCompChunkSize; 
     // Byte Grouping + Byte Ordering
-    if (isPrint) {
-      startBGTime = clock();
-    }
-    
+   
     if (split_bytearray(view.buf+offset, curBgChunkSize, buffers, bits_mode, bytes_mode,
                     is_review, threads) != 0) {
       PyBuffer_Release(&view);
@@ -257,61 +259,75 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 
     // Compression on each Buf
     
-    size_t maxCompressedSize = HUF_compressBound(bufSize);
-    for (uint32_t i = 0; i < numBuf; i++) {
+    for (uint32_t b = 0; b < numBuf; b++) {
 
-      compressedData[i][curChunk[i]] = PyMem_Malloc(maxCompressedSize);
-      if (!compressedData[i][curChunk[i]]) {
+      compressedData[b][curChunk] = PyMem_Malloc(bgChunkSize);
+      if (!compressedData[b][curChunk]) {
         PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
         exit(0);
           for (uint32_t j = 0; j < numBuf; j++) {
-	   for (uint32_t c = 0; c < curChunk[i]-1; c++) {
+	   for (uint32_t c = 0; c < curChunk-1; c++) {
              PyMem_Free(compressedData[j][c]);
 	   }
-           for (uint32_t j = 0; j < i; j++) {
-             PyMem_Free(compressedData[j][curChunk[i]]);
+           for (uint32_t j = 0; j < b; j++) {
+             PyMem_Free(compressedData[j][curChunk]);
 	   }
 	}
         return NULL;
       }
 
-      isBufComp[i] = 1;
-      bufNumChunks[i] = numChunks;
-      if (isPrint) {
-        startCompBufTime[i] = clock();
-      }
-      if (buffers[i] != NULL) {
-	compressedChunksSize[i][curChunk[i]] =
-        HUF_compress(compressedData[i][curChunk[i]], maxCompressedSize,
-                     buffers[i], curCompChunkSize);
-	totalCompressedSize[i] += compressedChunksSize[i][curChunk[i]];
+      if (buffers[b] != NULL) {
+	compressedChunksSize[b][curChunk] =
+          HUF_compress(compressedData[b][curChunk], bgChunkSize,
+                     buffers[b], curCompChunkSize);
 
-	printf ("maxCompressedSize %zu \n", maxCompressedSize);
-	printf ("curCompChunkSize %zu \n", curCompChunkSize);
-	printf ("compressedChunksSize[%d][%zu] %zu \n", i, curChunk[i], compressedChunksSize[i][curChunk[i]]);
-	printf ("totalCompressedSize[%d] %zu \n", i,totalCompressedSize[i]);
-        
-        if (totalCompressedSize[i] == 0) {  // This buffer was not compressed
-          isBufComp[i] = 0;
-          bufNumChunks[i] = 0;
-//          compressedChunksSize[i] = 0;
-        }
+//	printf ("unCompChunkSize %zu \n", unCompChunksSize[curChunk]);
+//	printf ("curCompChunkSize %zu \n", curCompChunkSize);
+//	printf ("compressedChunksSize[%d][%zu] %zu \n", i, curChunk, compressedChunksSize[i][curChunk]);
+//	printf ("totalCompressedSize[%d] %zu \n", i,totalCompressedSize[i]);
       }
-      if (isPrint) {
-        endCompBufTime[i] = clock();
-        compBufTime[i] =
-		(double)(endCompBufTime[i] - startCompBufTime[i]) / CLOCKS_PER_SEC;
-         printf("totalCompressedSize[%d] %zu [%f] time %f  \n", i,
-			 totalCompressedSize[i], totalCompressedSize[i] * 1.0 / bufSize,
-			 compBufTime[i]);
-      }
-      curChunk[i]++;
+//      if (isPrint) {
+//        endCompBufTime[i] = clock();
+//        compBufTime[i] =
+//		(double)(endCompBufTime[b] - startCompBufTime[b]) / CLOCKS_PER_SEC;
+//         printf("totalCompressedSize[%d] %zu [%f] time %f  \n", b,
+//			 totalCompressedSize[b], totalCompressedSize[b] * 1.0 / curCompChunkSize,
+//			 compBufTime[b]);
+//      }
+    }  // end for loop -> compression
+     curChunk++;
+//    printf ("buffer size %zu\n", offset);
+  } // end for loop - chunk 
+  ////////////// The end of multi Threading ////////////////////////////// 
+
+    for (uint32_t b = 0; b < numBuf; b++) {
+        for (uint32_t c = 0; c < numChunks; c++) {	     
+          if (compressedChunksSize[b][c] != 0) {
+            totalCompressedSize[b] += compressedChunksSize[b][c];
+	  }
+	  else { // the buffer was not compressed 
+            totalCompressedSize[b] += unCompChunksSize[c];
+	  }
+	}
     }
-    printf ("buffer size %zu\n", offset);
-    
-  }
-    exit(0);
+
+ 
+   
+//  if (totalCompressedSize[i] == 0) {  // This buffer was not compressed
+//          isBufComp[i] = 0;
+//          bufNumChunks[i] = 0;
+//          compressedChunksSize[i] = 0;
+//        }
+
+
+
+  endTime = clock();
+  totalTime =
+	  (double)(endTime - startTime) / CLOCKS_PER_SEC;
+  printf("totalCompressedSize[0] %zu [%f] time %f  \n", totalCompressedSize[0], totalCompressedSize[0] * 1.0/ (view.len/numBuf), totalTime);
+  printf("totalCompressedSize[1] %zu [%f] time %f  \n", totalCompressedSize[1], totalCompressedSize[1] * 1.0/ (view.len/numBuf), totalTime);
   printf ("number of chunks, %zu\n",numChunks);
+  exit(0);
 /*
   for (uint32_t i = 0; i < numBuf; i++) {
     isBufComp[i] = 1;
