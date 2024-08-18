@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 import argparse
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import zipnn
 
 
 MB = 1024*1024
@@ -58,12 +60,14 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
                 file_size_after+=len(compressed_chunk)
                 outfile.write(compressed_chunk)
         print(f"Compressed {input_file} to {output_file}")
-        print (f'Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original')
+        if file_size_before > 0:
+            print (f'Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original')
+        else:
+            print("File size was 0 bytes before compression")
 
+def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path=".",delete=False,r=False,force=False):
 
-def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path=".",delete=False,r=False):
-
-    # Handle streaming chunk size
+    # Handle streaming chunk size`
     streaming_chunk_size=parse_streaming_chunk_size(streaming_chunk_size)
     directories_to_search = os.walk(path) if r else [(path, [], os.listdir(path))]
     files_found=False
@@ -77,6 +81,12 @@ def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path
                     print(f"Deleting {full_path}...")
                     os.remove(full_path)
                 else:
+                    compressed_path=full_path+".zpn"
+                    if(not force and os.path.exists(compressed_path)):
+                        user_input = input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
+                        if user_input!="y" and user_input!="yes":
+                            print(f"Skipping {full_path}...")
+                            continue
                     print(f"Compressing {full_path}...")
                     compress_file(full_path, dtype=dtype, streaming_chunk_size=streaming_chunk_size)
 
@@ -95,7 +105,9 @@ if __name__ == "__main__":
     parser.add_argument('--streaming_chunk_size', type=str, help='An optional streaming chunk size. The format is int (for size in Bytes) or int+KB/MB/GB. Default is 1MB')
     parser.add_argument('--path', type=str, help='Path to files to compress')
     parser.add_argument('--delete', action='store_true', help='A flag that triggers deletion of a single file instead of compression')
-    parser.add_argument('--r', action='store_true', help='A flag that triggers recursive search on all subdirectories')
+    parser.add_argument('-r', action='store_true', help='A flag that triggers recursive search on all subdirectories')
+    parser.add_argument('--recursive', action='store_true', help='A flag that triggers recursive search on all subdirectories')
+    parser.add_argument('--force', action='store_true', help='A flag that forces overwriting when compressing.')
     args = parser.parse_args()
     optional_kwargs = {}
     if args.float32:
@@ -106,8 +118,10 @@ if __name__ == "__main__":
         optional_kwargs['path'] = args.path
     if args.delete:
         optional_kwargs['delete'] = args.delete
-    if args.r:
+    if args.r or args.recursive:
         optional_kwargs['r'] = args.r
+    if args.force:
+        optional_kwargs['force'] = args.force
     
     check_and_install_zipnn()
     compress_files_with_suffix(args.suffix, **optional_kwargs)
