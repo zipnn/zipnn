@@ -14,7 +14,8 @@ Below is a brief overview of each script available in the `scripts` folder:
       - A string with a unit suffix (e.g., `4KB`, `2MB`, `1GB`), where the unit is interpreted as kilobytes, megabytes, or gigabytes.
     - `--path`: Path to the folder containing all files that need compression. If left empty, it will look for all files in the current folder.
     - `--delete`: Flag that specifies to delete the files instead of compressing them.
-    - `--r`: Flag that specifies to look recursively in all subdirectories (of current folder or of the path given) for files with the specified suffix.
+    - `-r`,`--recursive`: Both flags operate the same: they specify to look recursively in all subdirectories (of current folder or of the path given) for files with the specified suffix.
+    - `--force`: Flag that forces overwriting when compressing.
 
 ### `run_zipnn_decompression.py`
 
@@ -23,7 +24,8 @@ Below is a brief overview of each script available in the `scripts` folder:
   - **Optional**:
     - `--float32`: Flag that specifies that the data type is `float32`. If not provided, the default is `bfloat16`.
     - `--path`: Path to the folder containing all files that need decompression. If left empty, it will look for all files in the current folder.
-    - `--input_file`: Name of file if only a single file needs decompression.
+    - `--file`: Name of file if only a single file needs decompression.
     - `--delete`: Flag that specifies to delete the files instead of compressing them.
+    - `--force`: Flag that forces overwriting when decompressing.
 
 To use these scripts, simply copy the desired file to your project directory and run it as needed.
