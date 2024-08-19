@@ -193,7 +193,7 @@ u_int8_t* prepare_split_results(size_t header_len, size_t original_len, size_t n
   memcpy(&header[24], resBufSize, sizeof(size_t));
 
 
-//  printf ("resBufSize %zu\n", resBufSize);
+  printf ("resBufSize %zu\n", *resBufSize);
 
   u_int8_t* resultBuf = PyMem_Malloc(*resBufSize);	
   if (!resultBuf) {
@@ -274,8 +274,8 @@ u_int8_t* prepare_split_results(size_t header_len, size_t original_len, size_t n
 
 PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   const uint32_t numBuf = 2;
-  Py_buffer header, view;
-  int bits_mode, bytes_mode, is_review, checkThAfterPercent, threads;
+  Py_buffer header, data;
+  int bits_mode, bytes_mode, is_redata, checkThAfterPercent, threads;
   size_t bgChunkSize;
   float compThreshold;
   u_int8_t isPrint = 0;
@@ -285,18 +285,18 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 
   startTime = clock();
 
-  if (!PyArg_ParseTuple(args, "y*y*iiinfii", &header, &view, &bits_mode, &bytes_mode,
-                        &is_review, &bgChunkSize, &compThreshold, &checkThAfterPercent, &threads)) {
+  if (!PyArg_ParseTuple(args, "y*y*iiinfii", &header, &data, &bits_mode, &bytes_mode,
+                        &is_redata, &bgChunkSize, &compThreshold, &checkThAfterPercent, &threads)) {
     return NULL;
   }
  
-  size_t size = view.len;
+  size_t dataSize = data.len;
   u_int8_t *buffers[] = {NULL, NULL};
-  uint32_t CompChunkSize = bgChunkSize / numBuf;  
+  uint32_t compChunkSize = bgChunkSize / numBuf;  
 
-  size_t bufSize = size / numBuf;
+  size_t bufSize = data.len / numBuf;
 
-  size_t numChunks = (size + bgChunkSize - 1) / bgChunkSize;
+  size_t numChunks = (data.len + bgChunkSize - 1) / bgChunkSize;
   size_t bufNumChunks[numBuf];
  
   u_int8_t isBufComp[numBuf];
@@ -322,18 +322,18 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
  
 
   /////////// start multi Threading - Each chunk to different thread /////////////// 
-  for (size_t offset = 0; offset < size; offset += bgChunkSize) {
+  for (size_t offset = 0; offset < data.len; offset += bgChunkSize) {
     size_t curBgChunkSize =
-      (view.len - offset > bgChunkSize) ? bgChunkSize : (size - offset);
+      (data.len - offset > bgChunkSize) ? bgChunkSize : (data.len - offset);
 
 //    printf ("offset %zu\n", offset);
     size_t curCompChunkSize = curBgChunkSize/ numBuf;
     unCompChunksSize[curChunk] = curCompChunkSize; 
     // Byte Grouping + Byte Ordering
    
-    if (split_bytearray(view.buf+offset, curBgChunkSize, buffers, bits_mode, bytes_mode,
-                    is_review, threads) != 0) {
-      PyBuffer_Release(&view);
+    if (split_bytearray(data.buf+offset, curBgChunkSize, buffers, bits_mode, bytes_mode,
+                    is_redata, threads) != 0) {
+      PyBuffer_Release(&data);
       PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
       return NULL;
     }
@@ -411,7 +411,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   PyObject *result;
   u_int8_t *resBuf;
   size_t resBufSize;
-  resBuf = prepare_split_results(header.len, view.len, numBuf, numChunks, header.buf, compressedData, compChunksSize, unCompChunksSize, compChunksType, cumulativeChunksSize, totalCompressedSize, compThreshold, &resBufSize); 
+  resBuf = prepare_split_results(header.len, data.len, numBuf, numChunks, header.buf, compressedData, compChunksSize, unCompChunksSize, compChunksType, cumulativeChunksSize, totalCompressedSize, compThreshold, &resBufSize); 
 
   result = Py_BuildValue("y#", resBuf, resBufSize);
 
@@ -437,30 +437,40 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
     }
   }
   PyBuffer_Release(&header);
-  PyBuffer_Release(&view);
+  PyBuffer_Release(&data);
   return result;
 }
 
 // Python callable function to combine four buffers into a single bytearray
 PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
-  Py_buffer view;
+  Py_buffer data;
 
   int bits_mode, bytes_mode, threads;
   uint32_t numBuf = 2;
-  uint32_t chunkSize = 128 * 1024;  // TBD
+  size_t bgChunkSize;
 
-  if (!PyArg_ParseTuple(args, "y*iii", &view, &bits_mode, &bytes_mode,
+  if (!PyArg_ParseTuple(args, "y*iini", &data, &bits_mode, &bytes_mode, &bgChunkSize,
                         &threads)) {
     return NULL;
   }
-
+  
+  uint32_t compChunksSize = bgChunkSize / numBuf;  // TBD
+  uint32_t chunkSize = 128 * 1024;  // TBD
+  size_t numChunks = (data.len + bgChunkSize - 1) / bgChunkSize;
+  printf("bgChunkSize %zu\n", bgChunkSize);				    
+  printf("bits_mode %zu\n", bits_mode);				    
+  printf("bytes_mode %zu\n", bytes_mode);				    
+  printf("data.len %zu\n", data.len);				    
+  printf("numChunks %zu\n", numChunks);				    
+  exit(0); 
+  /*
   clock_t startTime, endTime;
   uint32_t header_offset = 0;
   uint32_t compChunksSize_offset[] = {0, 0};
   uint32_t data_offset[] = {0, 0};
 
   startTime = clock();
-  u_int8_t *bufUint8Pointer = (u_int8_t *)view.buf;
+  u_int8_t *bufUint8Pointer = (u_int8_t *)data.buf;
   u_int8_t isBufComp[numBuf];
   memcpy(&isBufComp, bufUint8Pointer + header_offset, numBuf * sizeof(u_int8_t));
   header_offset += numBuf * sizeof(u_int8_t);
@@ -523,11 +533,15 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
       }
     }
   }
-  /*
+
+
+  */
+
+  /* *
   endTime = clock();
   double decompressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
   printf("decompression C time: %f seconds\n", decompressTime);
-  printf ("buf len %zu\n " , view.len);
+  printf ("buf len %zu\n " , data.len);
   printf ("bits_mode %d\n " , bits_mode);
   printf ("bytes_mode %d\n " , bytes_mode);
   printf ("threads %d\n " , threads);
@@ -542,12 +556,15 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   printf ("compChunksSize[1][numChunks-1] %zu\n " ,
   compChunksSize[1][numChunks-1]); printf ("decompressedSize[1] %zu\n",
   decompressedSize[1]);
-  */
+  * */
+
+
+  /*
   u_int8_t *result = combine_buffers((u_int8_t *)decompressedData[0],
                                     (u_int8_t *)decompressedData[1],
                                     origSize / 2, bytes_mode, threads);
   if (result == NULL) {
-    PyBuffer_Release(&view);
+    PyBuffer_Release(&data);
     PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
     return NULL;
   }
@@ -565,7 +582,10 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   }
 
   PyMem_Free(result);
-  PyBuffer_Release(&view);
+  PyBuffer_Release(&data);
 
   return py_result;
+
+
+  */
 }

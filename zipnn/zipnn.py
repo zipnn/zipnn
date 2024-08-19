@@ -864,13 +864,13 @@ class ZipNN:
         """
         is_print = 0
         header_length = self._retrieve_header(ba_compress)
-        start_is_comp = header_length
+        after_header = header_length
 
         dtype_size = 0  # Need to implement
 
         if (self.byte_reorder == 0b1_01_01_001 and dtype_size == 32) or (self.byte_reorder == 0b0_00_01_001 and dtype_size == 16):
-            mv = memoryview(ba_compress[start_is_comp:])
-            ba_decom = self.decompress_method(mv[start_is_comp:])
+            mv = memoryview(ba_compress[after_header:])
+            ba_decom = self.decompress_method(mv[after_header:])
             if self.input_format == EnumFormat.BYTE.value:
                 return ba_decom
         else:
@@ -899,7 +899,7 @@ class ZipNN:
                 skip_combine = 1
 
             ba_bg = []
-            start_len = start_is_comp + groups
+            start_len = after_header + groups
             start_ba = [start_len + 8 * groups]
             end_ba = []
             if skip_combine == 0:
@@ -907,7 +907,7 @@ class ZipNN:
                     for i in range(groups):
                         btime = time.time()
                         mv = memoryview(ba_compress)
-                        is_comp = int.from_bytes(mv[start_is_comp + i : start_is_comp + i + 1], byteorder="little")
+                        is_comp = int.from_bytes(mv[after_header + i : after_header + i + 1], byteorder="little")
                         end_ba.append(int.from_bytes(mv[start_len + i * 8 : start_len + (i + 1) * 8 - 1], byteorder="little") + start_ba[i])
                         start_ba.append(end_ba[i])
                         if is_comp == 1:
@@ -929,12 +929,7 @@ class ZipNN:
                         )
                 elif bfloat16 or float16:
                     mv = memoryview(ba_compress)
-                    if list(mv[start_is_comp : start_is_comp + 2]) != [0, 0]:  # decompress
-                        ba_decom = split_dtype.combine_dtype16(mv[start_is_comp:], self._bit_reorder, self._byte_reorder, self.threads) #ISSUE
-                    else:  # original_value
-                        if is_print:
-                            print("not decompress")
-                        ba_decom = mv[start_is_comp + 2 :]
+                    ba_decom = split_dtype.combine_dtype16(mv[after_header:], self._bit_reorder, self._byte_reorder, self.compression_chunk, self.threads)
                 if is_print:
                     print("combine using c ", time.time() - start_time)
             else:
