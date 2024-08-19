@@ -26,13 +26,14 @@ class ZipNN:
         bytearray_dtype: str = "bfloat16",
         is_monotonic: int = 0,
         threads: int = 1,
-        compression_threshold=0.95,
+        compression_threshold = 0.95,
+        check_th_after_percent = 10,
         byte_reorder: int = 0,
         reorder_signbit: int = 0,
         delta_compressed_type: str = 0,
         lossy_compressed_type: str = 0,
-        lossy_compressed_factor=27,
-        compression_chunk=256 * 1024,
+        lossy_compressed_factor = 27,
+        compression_chunk = 256 * 1024,
         is_streaming: bool = False,
         streaming_chunk_kb: int = 1024 * 1024,
         input_file: str = None,
@@ -72,9 +73,14 @@ class ZipNN:
                  Default is 1
 
          compression_threshold: float
-                 Compression threshhold for byte grouping.
+                 Save original buffer if not compress above the threshold (default value = 0.95).
                  Only relevant for a compression that uses byte grouping.
                  Default is 0.95.
+
+         check_th_after_percent: int
+                 Check the compression threshhold after % from the number of chunk and stop compressing if not pass the compression_threshold.
+                 Only relevant for a compression that uses byte grouping.
+                 Default is 10[%]
 
          byte_reorder: int
                  Number of grouping.
@@ -164,6 +170,7 @@ class ZipNN:
 
         self.threads = threads
         self.compression_threshold = compression_threshold
+        self.check_th_after_percent = check_th_after_percent
         self.byte_reorder = byte_reorder
         self.reorder_signbit = reorder_signbit
 
@@ -188,7 +195,7 @@ class ZipNN:
         self._version_tiny = 4
         self._import_dependencies(zstd_level)
 
-        HEADER_LEN=20
+        HEADER_LEN=32
         self._header = bytearray(HEADER_LEN)
         self._update_header()
 
@@ -266,7 +273,8 @@ class ZipNN:
     # [13] 1 Byte [Compression Chunk]
     # [14] 1 Byte [is_streaming, streaming_chunk_kb]
     # [15] = self.dtype
-    # [16-19] = compressed file size
+    # [16-23] = original size
+    # [24-32] = compressed file size
 
     # byte order for 64bit
     # Not implemented yet
@@ -282,18 +290,16 @@ class ZipNN:
         self._header[11] = lossy_factor
         self._header[12] = lossy_is_int
 
-    def _update_header_comp_size(self, comp_len):
+    def _update_header_original_len(self, original_len): 
+        original_bytes_len=(original_len+20).to_bytes(8, byteorder="little")
+        self._header[16:24] = original_bytes_len
+
+    def _update_header_comp_len(self, comp_len):
         """
         Updates header with the overall compression size
         """
-        #comp_size_in_bytes=len(ba_comp).to_bytes(4, byteorder="little")
-        comp_bytes_len=(comp_len+20).to_bytes(4, byteorder="little")
-        self._header[16:20] = comp_bytes_len
-        #return self._header + ba_comp[20:]
-        #muteable_ba=bytearray(ba_comp)
-        #mv=memoryview(muteable_ba)
-        #mv[16:20]=comp_size_in_bytes
-        #ba_comp=bytes(muteable_ba)
+        comp_bytes_len=(comp_len+20).to_bytes(8, byteorder="little")
+        self._header[24:32] = comp_bytes_len
 
     def _update_header_dtype(self, byte_reorder: int, bit_reorder: int, dtype_code: int):
         """
@@ -477,7 +483,7 @@ class ZipNN:
             stime = time.time()
             ba_comp = self._header + self.compress_method(ba)
             if self.input_format == EnumFormat.BYTE.value:
-                self._update_header_comp_size(len(ba_comp))
+                self._update_header_comp_len(len(ba_comp))
                 return b"".join([self._header] + [ba_comp])
         else:
             stime = time.time()
@@ -526,7 +532,7 @@ class ZipNN:
                 total_length += sum(len(buf) for buf in buf_is_comp)
                 total_length += sum(len(bg) for bg in bg_len)
                 total_length += sum(len(ret) for ret in bg_ret)
-                self._update_header_comp_size(total_length)
+                self._update_header_comp_len(total_length)
                 #
                 ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + bg_len + bg_ret)
             else:
@@ -534,92 +540,21 @@ class ZipNN:
                 total_length = sum(len(buf) for buf in buf_is_comp)
                 total_length += sum(len(bg) for bg in bg_len)
                 total_length += sum(len(ret) for ret in bg_ret)
-                self._update_header_comp_size(total_length)
+                self._update_header_comp_len(total_length)
                 #
                 ba_comp = b"".join([self._header] + buf_is_comp + bg_len + bg_ret)
 
             if dtype_size == 16:
                 if is_print:
                     start_time = time.time()
-                chunk_size: int = int(128 * 1024)
-                # TBD
-                num_chunks = int((len(ba) / 2 + chunk_size - 1) / chunk_size)
-                original_size = len(ba).to_bytes(length=8, byteorder="little")
-                buf1, buf2, buf_is_comp1, buf_is_comp2, compress_chunks_size1, compress_chunks_size2 = split_dtype.split_dtype16(
-                    ba, bit_reorder, byte_reorder, is_review, self.threads
-                )
-                buf = [buf1, buf2]
-                buf_len = [len(buf1).to_bytes(length=8, byteorder="little"), len(buf2).to_bytes(length=8, byteorder="little")]
-                buf_is_comp = [buf_is_comp1, buf_is_comp2]
-
-                num_chunks_bytes = num_chunks.to_bytes(length=8, byteorder="little")
-
-                if compress_chunks_size1 is None:
-                    compress_chunks_size = [compress_chunks_size2]
-                elif compress_chunks_size2 is None:
-                    compress_chunks_size = [compress_chunks_size1]
-                else:
-                    compress_chunks_size = [compress_chunks_size1, compress_chunks_size2]
-
-                if is_print:
-                    print("reorder+compress ", time.time() - start_time)
-
-                if is_print:
-                    start_time = time.time()
-
+                self._update_header_original_len(len(ba)) 
+                python_header = self._header
                 if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                     shape_bytes = zipnn_pack_shape(shape)
-                    if buf_is_comp != [b"\x00", b"\x00"]:
-                        #
-                        total_length = len(shape_bytes)
-                        total_length += sum(len(buf) for buf in buf_is_comp)
-                        total_length += len(original_size)
-                        total_length += sum(len(bg) for bg in buf_len)
-                        total_length += len(num_chunks_bytes)
-                        total_length += sum(len(bg) for bg in compress_chunks_size)
-                        total_length += sum(len(bg) for bg in buf)
-                        self._update_header_comp_size(total_length)
-                        #
-                        ba_comp = b"".join(
-                            [self._header]
-                            + [shape_bytes]
-                            + buf_is_comp
-                            + [original_size]
-                            + buf_len
-                            + [num_chunks_bytes]
-                            + compress_chunks_size
-                            + buf
-                        )
-                    else:
-                        #
-                        total_length = len(shape_bytes)
-                        total_length += sum(len(buf) for buf in buf_is_comp)
-                        total_length += len(ba)
-                        self._update_header_comp_size(total_length)
-                        #
-                        ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + [ba])
-                else:
-                    if buf_is_comp != [b"\x00", b"\x00"]:
-                        #
-                        total_length = sum(len(buf) for buf in buf_is_comp)
-                        total_length += len(original_size)
-                        total_length += sum(len(bg) for bg in buf_len)
-                        total_length += len(num_chunks_bytes)
-                        total_length += sum(len(bg) for bg in compress_chunks_size)
-                        total_length += sum(len(bg) for bg in buf)
-                        self._update_header_comp_size(total_length)
-                        #
-                        ba_comp = b"".join(
-                            [self._header] + buf_is_comp + [original_size] + buf_len + [num_chunks_bytes] + compress_chunks_size + buf
-                        )
-                    else:
-                        #
-                        total_length = sum(len(buf) for buf in buf_is_comp)
-                        #total_length += sum(bg for bg in ba)
-                        total_length += len(ba)
-                        self._update_header_comp_size(total_length)
-                        #
-                        ba_comp = b"".join([self._header] + buf_is_comp + [ba])
+                    python_header += shape_bytes 
+                ba_comp = split_dtype.split_dtype16(
+                    python_header, ba, bit_reorder, byte_reorder, is_review, self.compression_chunk, self.compression_threshold, self.check_th_after_percent, self.threads
+                )
                 if is_print:
                     print("aggregate output bin ", time.time() - start_time)
         if is_print:
