@@ -291,7 +291,7 @@ class ZipNN:
         self._header[12] = lossy_is_int
 
     def _update_header_original_len(self, original_len): 
-        original_bytes_len=(original_len+20).to_bytes(8, byteorder="little")
+        original_bytes_len=(original_len).to_bytes(8, byteorder="little")
         self._header[16:24] = original_bytes_len
 
     def _update_header_comp_len(self, comp_len):
@@ -387,6 +387,7 @@ class ZipNN:
         #        self.is_streaming = int(header[13]
         self.compression_chunk = 2 ** header[14]
         self.dtype = int(header[15])
+        self.original_len = int.from_bytes(header[16:24], byteorder="little")
 
         if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
             self.shape_bytes, shape_size = zipnn_unpack_shape(mv[len(self._header) :])
@@ -929,7 +930,7 @@ class ZipNN:
                         )
                 elif bfloat16 or float16:
                     mv = memoryview(ba_compress)
-                    ba_decom = split_dtype.combine_dtype16(mv[after_header:], self._bit_reorder, self._byte_reorder, self.compression_chunk, self.threads)
+                    ba_decom = split_dtype.combine_dtype16(mv[after_header:], self._bit_reorder, self._byte_reorder, self.compression_chunk, self.original_len, self.threads)
                 if is_print:
                     print("combine using c ", time.time() - start_time)
             else:

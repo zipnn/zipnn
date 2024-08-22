@@ -212,9 +212,10 @@ u_int8_t* prepare_split_results(size_t header_len, size_t original_len, size_t n
   offset += cumulativeChunksSizeLen;
 
   for (uint32_t b = 0; b < numBuf; b++) {
-    for (uint32_t c = 0; c < numChunks; c++) {
-      memcpy(resultBuf + offset, compressedData[b][c], compChunksSize[b][c]);
-      offset += compChunksSize[b][c];
+     for (uint32_t c = 0; c < numChunks; c++) {
+       memcpy(resultBuf + offset, compressedData[b][c], compChunksSize[b][c]);
+       printf("\n\n resultBuf + offset %zu\n\n\n ", resultBuf + offset);
+       offset += compChunksSize[b][c];
     }
   }
   
@@ -224,19 +225,10 @@ u_int8_t* prepare_split_results(size_t header_len, size_t original_len, size_t n
    
   return resultBuf;
   // decompression
-  //printf ("offset %zu\n ", offset);
-  startTime = clock(); 
-  size_t decumulativeChunksPos[numBuf][numChunks+1];
-  size_t decumulativeChunksLen[numBuf][numChunks];
-  decumulativeChunksPos[0][0] = 0;
-  decumulativeChunksPos[1][0] = 0;
-
-  for (uint32_t b = 0; b < numBuf; b++) {
-    for (uint32_t c = 0; c < numChunks; c++) {
-	    decumulativeChunksPos[b][c+1] = cumulativeChunksSize[b][c];
-	    decumulativeChunksLen[b][c] = decumulativeChunksPos[b][c+1]-decumulativeChunksPos[b][c];
-    }
-  }
+  size_t compCumulativeChunksPos[numBuf][numChunks+1];
+  size_t CompChunksLen[numBuf][numChunks];
+  compCumulativeChunksPos[0][0] = 0;
+  compCumulativeChunksPos[1][0] = 0;
 
 
   endTime = clock(); 
@@ -244,8 +236,8 @@ u_int8_t* prepare_split_results(size_t header_len, size_t original_len, size_t n
   //printf("deTime %f\n", deTime);
  for (uint32_t b = 0; b < numBuf; b++) {
     for (uint32_t c = 0; c < numChunks; c++) {
-//        printf("start point[%d][%d]] %zu\n", b, c, decumulativeChunksPos[b][c]);
-//        printf("len [%d][%d]] %zu\n", b, c, decumulativeChunksLen[b][c]);
+//        printf("start point[%d][%d]] %zu\n", b, c, compCumulativeChunksPos[b][c]);
+//        printf("len [%d][%d]] %zu\n", b, c, CompChunksLen[b][c]);
     }
   }
 	
@@ -372,12 +364,19 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 	  compChunksSize[b][curChunk] =
             HUF_compress(compressedData[b][curChunk], bgChunkSize,
               buffers[b], curCompChunkSize);
+
+//  	  size_t decompressedSize = HUF_decompress(
+//            buffers[b], curCompChunkSize,
+//            compressedData[b][curChunk], bgChunkSize/2);
+//          printf("Decompression size decompress size %zu  expected size %zu \n", decompressedSize, bgChunkSize);
+
+
 	}
 	else{
           compChunksSize[b][curChunk] = 0;
 	}
 
-        if (compChunksSize[b][curChunk] != 0 || (compChunksSize[b][curChunk] > unCompChunksSize[curChunk] * compThreshold)) {
+        if (compChunksSize[b][curChunk] != 0 && (compChunksSize[b][curChunk] < unCompChunksSize[curChunk] * compThreshold)) {
 	  compChunksType[b][curChunk] = 1;  // Compress with Huffman
         }
         else { // the buffer was not compressed 
@@ -385,6 +384,9 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 	  compChunksType[b][curChunk] = 0;  // not compressed
 	  compressedData[b][curChunk] = buffers[b];
 	}
+	printf ("[compChunksSize[%d][%d] %zu \n", b, curChunk, compChunksSize[b][curChunk]);
+	printf ("unCompChunksSize[%d][%d] %zu \n", b, curChunk, unCompChunksSize[b]);
+	printf ("compChunksType[%d][%d] %zu \n", b, curChunk, compChunksType[b][curChunk]);
         totalCompressedSize[b] += compChunksSize[b][curChunk]; 
         totalUnCompressedSize[b] += unCompChunksSize[curChunk]; 
 	cumulativeChunksSize[b][curChunk] = totalCompressedSize[b];
@@ -404,7 +406,7 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   
   endTime = clock();
   double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
-//  printf("compressTime %f\n", compressTime);
+  printf("compressTime %f\n", compressTime);
   // multi Threading part 2 //
   // End  multiThreading part 2 //
   
@@ -428,11 +430,9 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
       if (compChunksType[b][c] == 0) {
         compressedData[b][c] = NULL; 
       }	
-      else {
-        if (compressedData[b][c] != NULL) {
+      else if (compressedData[b][c] != NULL) {
 	  PyMem_Free(compressedData[b][c]);
 	  compressedData[b][c] = NULL; 
-	}
       }
     }
   }
@@ -447,9 +447,9 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
 
   int bits_mode, bytes_mode, threads;
   uint32_t numBuf = 2;
-  size_t bgChunkSize;
+  size_t bgChunkSize, origSize;
 
-  if (!PyArg_ParseTuple(args, "y*iini", &data, &bits_mode, &bytes_mode, &bgChunkSize,
+  if (!PyArg_ParseTuple(args, "y*iinni", &data, &bits_mode, &bytes_mode, &bgChunkSize, &origSize, 
                         &threads)) {
     return NULL;
   }
@@ -461,11 +461,125 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
   printf("bits_mode %zu\n", bits_mode);				    
   printf("bytes_mode %zu\n", bytes_mode);				    
   printf("data.len %zu\n", data.len);				    
-  printf("numChunks %zu\n", numChunks);				    
+  printf("numChunks %zu\n", numChunks);				   
+
+  u_int8_t *ptrChunksType = (u_int8_t*)data.buf;
+  size_t *ptrChunksCumulative = (size_t*)(ptrChunksType+numBuf*numChunks);
+  size_t ptrCompressData[] = {0, 0};
+  ptrCompressData[0] = ptrChunksCumulative + numBuf*numChunks;
+  printf ("ptrCompressData[0] %zu\n", (size_t)ptrCompressData[0] - (size_t)data.buf);
+  printf ("-> %zu\n", (size_t)ptrChunksCumulative+numBuf*numChunks*sizeof(size_t)-(size_t)data.buf);
+  size_t cumulativeChunksSize[numBuf][numChunks]; 
+  uint32_t compChunksType[numBuf][numChunks]; 
+  size_t compCumulativeChunksPos[numBuf][numChunks+1];
+  size_t CompChunksLen[numBuf][numChunks];
+  u_int8_t* resultBuf = NULL; 
+  clock_t startTime, endTime;
+  u_int8_t* deCompressedData[numBuf][numChunks];
+  size_t decompLen[numChunks];
+  startTime = clock();
+  
+  // Preparation for decompression  
+  compCumulativeChunksPos[0][0] = 0;
+  compCumulativeChunksPos[1][0] = 0;
+
+  for (uint32_t b = 0; b < numBuf; b++) {
+    for (uint32_t c = 0; c < numChunks; c++) {
+      compChunksType[b][c] = (*ptrChunksType++);
+      cumulativeChunksSize[b][c] = (*ptrChunksCumulative++);
+    }
+  }
+
+  for (uint32_t c = 0; c < numChunks; c++) {
+    for (uint32_t b = 0; b < numBuf; b++) {
+      compCumulativeChunksPos[b][c+1] = cumulativeChunksSize[b][c];
+      CompChunksLen[b][c] = compCumulativeChunksPos[b][c+1]-compCumulativeChunksPos[b][c];
+    }
+  }
+
+  for (size_t c = 0; c < numChunks; c++) {
+    for (uint32_t b = 0; b < numBuf; b++) {
+      if (compChunksType[b][c] == 0) { // no compression is needed
+      } 
+      else{
+        if (compChunksType[b][c] == 1) { // open with Huffman compression 
+	}
+	else {
+	  PyErr_SetString(PyExc_MemoryError, "Compress Type is not correct in Decompression function");
+	  return NULL;
+	}
+      }
+    }
+  }
+
+  ptrCompressData[1] = ptrCompressData[0] + cumulativeChunksSize[0][numChunks-1];
+  printf("cumulativeChunksSize[0][numChunks-1] %zu\n", cumulativeChunksSize[0][numChunks-1]); 
+  for (uint32_t c = 0; c < numChunks; c++) {
+    if (c < numChunks-1) {	  
+      decompLen[c] = chunkSize;  	    
+    }
+    else {
+      decompLen[c] = (size_t)(origSize/numBuf - chunkSize*(numChunks-1));  	    
+    }
+    printf ("decompLen[%d] ", decompLen[c]);
+  }
+  
+  resultBuf = PyMem_Malloc(origSize);	
+  if (!resultBuf) {
+    PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory for result buffer in split function");
+    PyMem_Free(resultBuf);
+    return NULL;
+  }
+ 
+  endTime = clock();
+  double decompressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+  printf("decompressTime %f\n", decompressTime);
+
+
+  ////////////// Multi threading /////////////////////////////
+
+  for (size_t c = 0; c < numChunks; c++) {
+    // decompress	  
+    for (uint32_t b = 0; b < numBuf; b++) {
+      if (compChunksType[b][c] == 0) {// No Need to compression
+	  deCompressedData[b][c] = ptrCompressData[b] + compCumulativeChunksPos[b][c];
+      }
+      else if (compChunksType[b][c] == 1) {  // decompress using Huffman
+         deCompressedData[b][c] = PyMem_Malloc(CompChunksLen[b][c]);
+	 if (deCompressedData[b][c] == NULL) {
+            PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory - Function during decompression");
+            free(deCompressedData[b][c]);
+	    return NULL;
+	 }
+	 size_t decompressedSize = HUF_decompress(
+            deCompressedData[b][c], decompLen[c],
+            ptrCompressData[b] + compCumulativeChunksPos[b][c], CompChunksLen[b][c]);
+
+         if (HUF_isError(decompressedSize)) {
+             printf("Decompression failed for [buf][chunk] [%d][%zu]: %s\n", b, c,
+             HUF_getErrorName(decompressedSize));
+             return 0;
+	 }
+
+         if (decompressedSize != decompLen[c]) {
+             printf("Decompression size is not correct for [buf][chunk] [%d][%zu] decompress size %zu  expected size %zu : %s\n", b, c, decompressedSize, decompLen[c], HUF_getErrorName(decompressedSize));
+             return 0;
+	 }
+
+         printf("\n\ndecompressedSize %zu\n ", decompressedSize);
+         printf("deCompressedData[%d][%d] %zu\n ", b, c, deCompressedData[b][c]);
+         printf("decompLen[%d] %zu\n ", c, decompLen[c]);
+         printf("ptrCompressData %zu\n ", ptrCompressData[b] + compCumulativeChunksPos[b][c]);
+         printf("data.buf diff %zu\n ", ptrCompressData[b] + compCumulativeChunksPos[b][c] - (size_t)data.buf);
+	 printf("compCumulativeChunksPos[%d][%d] %zu\n ", b, c, compCumulativeChunksPos[b][c]);
+         printf("CompChunksLen[%d][%d] %zu\n ", b, c, CompChunksLen[b][c]);
+      }
+    }
+  }
+ 
+
   exit(0); 
   /*
-  clock_t startTime, endTime;
-  uint32_t header_offset = 0;
   uint32_t compChunksSize_offset[] = {0, 0};
   uint32_t data_offset[] = {0, 0};
 
