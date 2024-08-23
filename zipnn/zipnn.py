@@ -1,4 +1,4 @@
-import time
+self._header_extimpor time
 import os
 import numpy as np
 import torch
@@ -197,6 +197,8 @@ class ZipNN:
 
         HEADER_LEN=32
         self._header = bytearray(HEADER_LEN)
+        self._ext_header = b''
+        self._shape_size = 0
         self._update_header()
 
     def _import_dependencies(self, zstd_level):
@@ -275,6 +277,7 @@ class ZipNN:
     # [15] = self.dtype
     # [16-23] = original size
     # [24-32] = compressed file size
+    # In case the input_format is TORCH or NUMPY we add to self._ext_header the shape of the data in zipnn_pack format
 
     # byte order for 64bit
     # Not implemented yet
@@ -309,6 +312,13 @@ class ZipNN:
         self._header[5] = byte_reorder
         self._header[6] = bit_reorder
         self._header[15] = dtype_code
+
+    def _update_data_shape(self, shape):
+        """
+        Updates the shpae of the data add to the and of the header
+        """
+        self._ext_header = zipnn_pack_shape(shape)
+       
 
     #
     #        Parameters
@@ -388,11 +398,10 @@ class ZipNN:
         self.compression_chunk = 2 ** header[14]
         self.dtype = int(header[15])
         self.original_len = int.from_bytes(header[16:24], byteorder="little")
-
+        
         if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-            self.shape_bytes, shape_size = zipnn_unpack_shape(mv[len(self._header) :])
-            header_length += shape_size
-        return header_length
+            self.shape_bytes, self._shape_size = zipnn_unpack_shape(mv[header_length:])
+        return header_length + self._shape_size
 
     #################
     ## compression ##
@@ -549,10 +558,9 @@ class ZipNN:
                 if is_print:
                     start_time = time.time()
                 self._update_header_original_len(len(ba)) 
-                python_header = self._header
                 if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-                    shape_bytes = zipnn_pack_shape(shape)
-                    python_header += shape_bytes 
+                    self._update_data_shape(shape)
+                python_header = self._header + self._ext_header
                 ba_comp = split_dtype.split_dtype16(
                     python_header, ba, bit_reorder, byte_reorder, is_review, self.compression_chunk, self.compression_threshold, self.check_th_after_percent, self.threads
                 )
@@ -864,8 +872,7 @@ class ZipNN:
         Returns a byte array of the decompressed data.
         """
         is_print = 0
-        header_length = self._retrieve_header(ba_compress)
-        after_header = header_length
+        after_header = self._retrieve_header(ba_compress)
 
         dtype_size = 0  # Need to implement
 
