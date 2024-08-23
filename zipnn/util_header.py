@@ -4,8 +4,8 @@ from enum import Enum
 
 class EnumMethod(Enum):
     AUTO = 0
-    ZSTD = 1
-    HUFFMAN = 2
+    HUFFMAN = 1
+    ZSTD = 2
     LZ4 = 3
     SNAPPY = 4
 
