@@ -70,13 +70,10 @@ print (f'Original size:  {file_size_before/GB:.02f}GB size after compression: {f
 start_time = time.time()
 with open(output_path, 'rb') as infile, open(output_decomp_path, 'wb') as outfile:
     d_data=b''
-    while header:= infile.read(20):
+    while header:= infile.read(32):
         mv_header=memoryview(header)
-        mid_chunk_len=int.from_bytes(mv_header[16:20], byteorder="little")-20
-        ##mid_chunk_len=int.from_bytes(header[16:20], byteorder="little")-20
-        #chunk=header+infile.read(mid_chunk_len)
+        mid_chunk_len=int.from_bytes(mv_header[24:32], byteorder="little")-32
         chunk_data = infile.read(mid_chunk_len)
-        #decompressed_chunk = zipnn.decompress(chunk)
         decompressed_chunk = zipnn.decompress(header + chunk_data)
         if decompressed_chunk:
             d_data+=decompressed_chunk
