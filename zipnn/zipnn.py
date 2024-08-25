@@ -172,10 +172,8 @@ class ZipNN:
         self.lossy_compressed_factor = lossy_compressed_factor
 
         self.compression_chunk = compression_chunk
-
+        self.streaming_chunk_kb=streaming_chunk_kb # how wasnt this here
         self.is_streaming = is_streaming
-        if is_streaming == 0:
-            self.streaming_chunk_kb = 0
 
         self.input_file = input_file
         self.compressed_file = compressed_file
@@ -345,7 +343,10 @@ class ZipNN:
         #        self._header[10] = self.lossy_compressed_type
         #        self._header[11] = self.lossy_compressed_factor
         #        self._header[12] = self._lossy_is_int
-        #        self._header[13] = self.is_streaming + self.streaming_chunk_kb
+        if(self.is_streaming): # MSB is streaming, unsigned & is stremaing
+            self._header[13] = 128 + int(math.log(self.streaming_chunk_kb, 2))
+        else:
+            self._header[13]=0
         self._header[14] = int(math.log(self.compression_chunk, 2))
         #        self._header[15] = dtype
 
@@ -378,7 +379,12 @@ class ZipNN:
         self.lossy_compressed_type = int(header[10])
         self.lossy_compressed_factor = int(header[11])
         self._lossy_is_int = int(header[12])
-        #        self.is_streaming = int(header[13]
+        streaming_vals=int(header[13])
+        if(streaming_vals>127):
+            self.is_streaming=1
+            self.streaming_chunk_kb=2**(128-streaming_vals)
+        else:
+            self.is_streaming=0
         self.compression_chunk = 2 ** header[14]
         self.dtype = int(header[15])
 
@@ -427,9 +433,31 @@ class ZipNN:
         in the format chosen in the ZipNN class instance configuration.
         """
 
+        mv_data=memoryview(data)
+        rnd=0
+        if(self.is_streaming):
+            CHUNK_SIZE = self.streaming_chunk_kb
+            
+            # Compression into bytearray
+            compressed_buffer = bytearray()
+            remaining_bytes = len(data)
+            offset = 0
+
+            while remaining_bytes > 0:
+                rnd=rnd+1
+                chunk_size = min(CHUNK_SIZE, remaining_bytes)
+                chunk = mv_data[offset:offset + chunk_size]
+                compressed_chunk = self.compress_torch_numpy_byte(chunk, lossy_compressed_type, lossy_compressed_factor)
+                if compressed_chunk:
+                    compressed_buffer.extend(compressed_chunk)
+                offset += chunk_size
+                remaining_bytes -= chunk_size
+            return compressed_buffer
+            
+        else:
         #        if self.delta_compressed_type is not None:
         #            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
-        return self.compress_torch_numpy_byte(data, lossy_compressed_type, lossy_compressed_factor)
+            return self.compress_torch_numpy_byte(data, lossy_compressed_type, lossy_compressed_factor)
 
     def compress_method(self, data: bytes):
         """
@@ -847,7 +875,26 @@ class ZipNN:
         Returns the output of decompress_bin or decompress_read_file (depends on the type of the data compressed),
         which will be the compressed file, in the format chosen in the ZipNN class instance configuration.
         """
-        return self.decompress_bin(data)
+
+        mv_data=memoryview(data)
+        comp_chunk_size=mv_data[13] #0 if no streaming > 127
+        if(comp_chunk_size>127):
+            decompressed_buffer = bytearray()
+            offset = 0
+            compressed_length = len(data)
+
+            while offset < compressed_length:
+                header = mv_data[offset:offset + 20]  
+                mid_chunk_len = int.from_bytes(header[16:20], byteorder="little") - 20  
+                chunk = mv_data[offset:offset + mid_chunk_len+20] 
+                decompressed_chunk = self.decompress_bin(chunk)
+                print(len(decompressed_chunk))
+                if decompressed_chunk:
+                    decompressed_buffer.extend(decompressed_chunk)
+                offset += mid_chunk_len+20
+            return decompressed_buffer
+        else:
+            return self.decompress_bin(data)
 
     def decompress_method(self, data):
         """

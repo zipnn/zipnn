@@ -43,6 +43,20 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
     
     # Init ZipNN
     #streaming_chunk_size=1048576 #1MB
+    #
+    import time
+    start_time = time.time()
+    zpn=zipnn.ZipNN(is_streaming=True,streaming_chunk_kb=int(1024*1024))
+    with open(input_file, 'rb') as infile, open(output_file, 'wb') as outfile:
+        while chunk := infile.read(int(1024*1024*1024*4)):
+            compressed_chunk = zpn.compress(chunk)
+            if compressed_chunk:
+                outfile.write(compressed_chunk)
+    print(f"Compressed {input_file} to {output_file}")
+    print(time.time()-start_time)
+    return
+    #
+    
     if dtype:
         zpn = zipnn.ZipNN(bytearray_dtype='float32')
     else:

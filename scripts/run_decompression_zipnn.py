@@ -69,7 +69,7 @@ def decompress_file(input_file,dtype=""):
     if dtype:
         zpn = zipnn.ZipNN(bytearray_dtype='float32')
     else:
-        zpn = zipnn.ZipNN()
+        zpn = zipnn.ZipNN(is_streaming=True,streaming_chunk_kb=int(1024*1024))
     
     # Decompress
     with open(input_file, 'rb') as infile, open(output_file, 'wb') as outfile:
