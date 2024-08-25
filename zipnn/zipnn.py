@@ -433,9 +433,8 @@ class ZipNN:
         in the format chosen in the ZipNN class instance configuration.
         """
 
-        mv_data=memoryview(data)
-        rnd=0
-        if(self.is_streaming):
+        if(self.is_streaming and input_format!="torch"):
+            mv_data=memoryview(data)
             CHUNK_SIZE = self.streaming_chunk_kb
             
             # Compression into bytearray
@@ -878,7 +877,7 @@ class ZipNN:
 
         mv_data=memoryview(data)
         comp_chunk_size=mv_data[13] #0 if no streaming > 127
-        if(comp_chunk_size>127):
+        if(comp_chunk_size>127 and input_format!="torch"):
             decompressed_buffer = bytearray()
             offset = 0
             compressed_length = len(data)
