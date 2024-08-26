@@ -190,8 +190,8 @@ class ZipNN:
         self.lz4_compression_level = lz4_compression_level
 
         self._version_major = 0
-        self._version_minor = 2
-        self._version_tiny = 4
+        self._version_minor = 3
+        self._version_tiny = 0
         self._import_dependencies(zstd_level)
 
         HEADER_LEN=32

@@ -199,6 +199,13 @@ We welcome and value all contributions to the project!
 
 ## Change Log
 
+##### v0.3.0
+
+* Prepare dtype16 (BF16 and FP16) for multi-threading by changing its C logic. For each chunk, byte ordering, bit ordering, and compression are processed separately.
+
+* Integrate the Streaming support into zipnn python code.
+
+
 ##### v0.2.4
 
 * Add support for Streaming when using outside scripts
