@@ -101,11 +101,11 @@ num_elements = 1024*1024*1024 // element_size
 tensor_bytes = original_bytes
     
 if (is_torch_numpy_byte == 2): # Tensor
-    zipnn = ZipNN(input_format="torch", threads = threads)
+    zipnn = ZipNN(input_format="torch", threads = threads, is_streaming=True)
 elif (is_torch_numpy_byte == 1): # Numpy   
-    zipnn = ZipNN(input_format="numpy", threads = threads)
+    zipnn = ZipNN(input_format="numpy", threads = threads, is_streaming=True)
 elif (is_torch_numpy_byte == 0): # Byte 
-    zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = bytearray_dtype)
+    zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = bytearray_dtype, is_streaming=True)
 else: 
     raise ValueError("Unsupported input_format")
 
