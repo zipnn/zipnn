@@ -43,6 +43,20 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
     
     # Init ZipNN
     #streaming_chunk_size=1048576 #1MB
+    #
+    import time
+    start_time = time.time()
+    zpn=zipnn.ZipNN(is_streaming=True,streaming_chunk_kb=int(1024*1024))
+    with open(input_file, 'rb') as infile, open(output_file, 'wb') as outfile:
+        while chunk := infile.read(int(1024*1024*1024*4)):
+            compressed_chunk = zpn.compress(chunk)
+            if compressed_chunk:
+                outfile.write(compressed_chunk)
+    print(f"Compressed {input_file} to {output_file}")
+    print(time.time()-start_time)
+    return
+    #
+    
     if dtype:
         zpn = zipnn.ZipNN(bytearray_dtype='float32',is_streaming=True,streaming_chunk_kb=int(1024*1024))
     else:
@@ -52,6 +66,7 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
     file_size_before=0
     file_size_after=0
     with open(input_file, 'rb') as infile, open(output_file, 'wb') as outfile:
+<<<<<<< HEAD
         chunk = infile.read()
         file_size_before+=len(chunk)
         compressed_chunk = zpn.compress(chunk)
@@ -60,10 +75,27 @@ def compress_file(input_file,dtype="",streaming_chunk_size=1048576):
             outfile.write(compressed_chunk)
     print(f"Compressed {input_file} to {output_file}")
     print (f'Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original')
-
+=======
+        while chunk := infile.read(streaming_chunk_size):
+            file_size_before+=len(chunk)
+            compressed_chunk = zpn.compress(chunk)
+            if compressed_chunk:
+                file_size_after+=len(compressed_chunk)
+                outfile.write(compressed_chunk)
+        print(f"Compressed {input_file} to {output_file}")
+        if file_size_before > 0:
+            print (f'Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original')
+        else:
+            print("File size was 0 bytes before compression")
+>>>>>>> origin/main
 
 def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path=".",delete=False,r=False,force=False):
 
+<<<<<<< HEAD
+def compress_files_with_suffix(suffix,dtype="",streaming_chunk_size=1048576,path=".",delete=False,r=False,force=False):
+
+=======
+>>>>>>> origin/main
     # Handle streaming chunk size`
     streaming_chunk_size=parse_streaming_chunk_size(streaming_chunk_size)
     directories_to_search = os.walk(path) if r else [(path, [], os.listdir(path))]

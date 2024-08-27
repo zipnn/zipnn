@@ -450,6 +450,7 @@ class ZipNN:
         if self.is_streaming:
             mv_data = memoryview(data)
             CHUNK_SIZE = self.streaming_chunk_kb
+            
             # Compression into bytearray
             compressed_buffer = bytearray()
             remaining_bytes = len(data)
@@ -464,7 +465,6 @@ class ZipNN:
                 offset += chunk_size
                 remaining_bytes -= chunk_size
             return compressed_buffer
-
         else:
             #        if self.delta_compressed_type is not None:
             #            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
