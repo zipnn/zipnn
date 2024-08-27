@@ -1,6 +1,5 @@
 #define PY_SSIZE_T_CLEAN
 #include "huf.h"
-#include "huf_wrapper.h"
 #include "split_dtype_functions.h"
 #include <Python.h>
 #include <assert.h>
