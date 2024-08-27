@@ -67,13 +67,22 @@ def decompress_file(input_file,dtype=""):
 
     # Init ZipNN
     if dtype:
+<<<<<<< HEAD
+        zpn = zipnn.ZipNN(is_streaming=True,streaming_chunk_kb=int(1024*1024),bytearray_dtype='float32')
+=======
         zpn = zipnn.ZipNN(bytearray_dtype='float32')
+>>>>>>> origin/main
     else:
         zpn = zipnn.ZipNN(is_streaming=True,streaming_chunk_kb=int(1024*1024))
     
     # Decompress
     with open(input_file, 'rb') as infile, open(output_file, 'wb') as outfile:
         d_data=b''
+<<<<<<< HEAD
+        chunk= infile.read()
+        d_data += zpn.decompress(chunk)
+        outfile.write(d_data)
+=======
         while header:= infile.read(20):
             mv_header=memoryview(header)
             mid_chunk_len=int.from_bytes(mv_header[16:20], byteorder="little")-20
@@ -83,6 +92,7 @@ def decompress_file(input_file,dtype=""):
                 d_data+=decompressed_chunk
                 outfile.write(d_data)
                 d_data=b''
+>>>>>>> origin/main
         print(f"Decompressed {input_file} to {output_file}")
 
 

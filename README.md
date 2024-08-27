@@ -155,7 +155,9 @@ The default configuration is ByteGrouping of 4 with vanilla ZSTD (running wit
 * ```input_format```: The input data format, can be one of the following: torch, numpy, byte (default value = 'byte').
 * ```bytearray_dtype```: The data type of the byte array, if input_format is 'byte'. If input_format is torch or numpy, the dtype will be derived from the data automatically (default value = 'float32').
 * ```threads```: The maximum threads for the compression and the bit manipulation. If 0, the code decides according to the dataset length (default value = 1).
-* ```compression_threshold```: Only relevant for a compression that uses byte grouping. Compression threshhold for the byte grouping (default value = 0.95).
+* ```compression_threshold```: Save original buffer if not compress above the threshold (default value = 0.95).
+* ```check_th_after_percent```: Check the compression threshhold after % from the number of chunk and stop compressing if not pass the compression_threshold. (default value = 10[%]).
+                 
 * ```byte_reorder```: Number of grouping. The format is the following:
   - Bit Format:
     - `[7]` - Group 0/1: 4th Byte
@@ -196,6 +198,13 @@ For issues and feature requests, please open a GitHub issue.
 We welcome and value all contributions to the project!
 
 ## Change Log
+
+##### v0.3.0
+
+* Prepare dtype16 (BF16 and FP16) for multi-threading by changing its C logic. For each chunk, byte ordering, bit ordering, and compression are processed separately.
+
+* Integrate the Streaming support into zipnn python code.
+
 
 ##### v0.2.4
 
