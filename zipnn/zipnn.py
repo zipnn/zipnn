@@ -1,5 +1,6 @@
 import time
 import os
+import math
 import numpy as np
 import torch
 import zstandard as zstd
@@ -14,8 +15,6 @@ from zipnn.util_torch import (
     zipnn_unpack_shape,
     zipnn_is_floating_point,
 )
-import math
-import gc
 
 
 class ZipNN:
@@ -194,8 +193,8 @@ class ZipNN:
         self._version_tiny = 0
         self._import_dependencies(zstd_level)
 
-        HEADER_LEN = 32
-        self._header = bytearray(HEADER_LEN)
+        self.header_length = 32
+        self._header = bytearray(self.header_length)
         self._ext_header = b""
         self._shape_size = 0
         self._update_header()
@@ -380,8 +379,7 @@ class ZipNN:
         The header length.
         """
         mv = memoryview(ba_compress)
-        header_length = len(self._header)
-        header = mv[:header_length]
+        header = mv[:self.header_length]
         if header[0:2].tobytes().decode("ascii") != "ZN":
             raise ValueError("Header should start with ZN")
         self.version_major = int(header[2])
@@ -406,8 +404,8 @@ class ZipNN:
         self.original_len = int.from_bytes(header[16:24], byteorder="little")
 
         if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-            self.shape_bytes, self._shape_size = zipnn_unpack_shape(mv[header_length:])
-        return header_length + self._shape_size
+            self.shape_bytes, self._shape_size = zipnn_unpack_shape(mv[self.header_length:])
+        return self.header_length + self._shape_size
 
     #################
     ## compression ##
@@ -840,8 +838,7 @@ class ZipNN:
                     decompressed_buffer.extend(decompressed_chunk)
                 offset += mid_chunk_len + 32
             return decompressed_buffer
-        else:
-            return self.decompress_bin(data)
+        return self.decompress_bin(data)
 
     def decompress_method(self, data):
         """
@@ -931,6 +928,7 @@ class ZipNN:
             ba_decom = self.decompress_method(mv[after_header:])
             if self.input_format == EnumFormat.BYTE.value:
                 return ba_decom
+            raise ValueError(f"Unsupported Torch with byte_reorder 0b1_01_01_001 or 0b0_00_01_001")
         else:
             float32 = 0
             bfloat16 = 0
@@ -976,7 +974,6 @@ class ZipNN:
                             print(f"the time of this byte is: {time.time()-btime}")
 
                     if float32:
-                        start_time = time.time()
                         ba_decom = split_dtype.combine_dtype32(
                             ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads
                         )
@@ -990,8 +987,6 @@ class ZipNN:
                     ba_decom = split_dtype.combine_dtype16(
                         mv[after_header:], self._bit_reorder, self._byte_reorder, self.compression_chunk, self.original_len, self.threads
                     )
-                if is_print:
-                    print("combine using c ", time.time() - start_time)
             else:
                 ba_decom = ba_bg[0]
 
