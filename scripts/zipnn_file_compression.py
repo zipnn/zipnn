@@ -3,7 +3,6 @@ import subprocess
 import sys
 import argparse
 import time
-import zipnn
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -58,6 +57,7 @@ def compress_file(
     delete=False,
     force=False,
 ):
+    import zipnn    
     streaming_chunk_size = parse_streaming_chunk_size(streaming_chunk_size)
     full_path = input_file
     if not os.path.exists(full_path):

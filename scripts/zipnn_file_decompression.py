@@ -2,10 +2,8 @@ import os
 import subprocess
 import sys
 import argparse
-import zipnn
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 
 def check_and_install_zipnn():
     try:
@@ -17,6 +15,7 @@ def check_and_install_zipnn():
 
 
 def decompress_file(input_file, dtype="", delete=False, force=False):
+    import zipnn
     if not input_file.endswith(".zpn"):
         raise ValueError("Input file does not have the '.zpn' suffix")
 
