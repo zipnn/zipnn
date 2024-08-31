@@ -1,0 +1,3 @@
+include csrc/*.c
+include csrc/*.h
+recursive-include include *
