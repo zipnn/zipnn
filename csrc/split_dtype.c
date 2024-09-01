@@ -11,7 +11,7 @@
 //////////////////////////////////
 
 // Reordering function for float bits
-static uint32_t reorder_float_bits(float number) {
+static uint32_t reorder_float_bits_dtype16(float number) {
   union {
     float f;
     uint32_t u;
@@ -24,20 +24,20 @@ static uint32_t reorder_float_bits(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void reorder_all_floats(u_int8_t *src, Py_ssize_t len) {
+static void reorder_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
-    uint_array[i] = reorder_float_bits(*(float *)&uint_array[i]);
+    uint_array[i] = reorder_float_bits_dtype16(*(float *)&uint_array[i]);
   }
 }
 
 // Helper function to split a bytearray into groups
-static int split_bytearray(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
+static int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
                            int bits_mode, int bytes_mode, int is_review,
                            int threads) {
   if (bits_mode == 1) {  // reoreder exponent
-    reorder_all_floats(src, len);
+    reorder_all_floats_dtype16(src, len);
   }
 
   Py_ssize_t half_len = len / 2;
@@ -98,7 +98,7 @@ static int split_bytearray(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
 ///////////////////////////////////
 
 // Reordering function for float bits
-static uint32_t revert_float_bits(float number) {
+static uint32_t revert_float_bits_dtype16(float number) {
   union {
     float f;
     uint32_t u;
@@ -111,16 +111,16 @@ static uint32_t revert_float_bits(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void revert_all_floats(u_int8_t *src, Py_ssize_t len) {
+static void revert_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
-    uint_array[i] = revert_float_bits(*(float *)&uint_array[i]);
+    uint_array[i] = revert_float_bits_dtype16(*(float *)&uint_array[i]);
   }
 }
 
 // Helper function to combine four buffers into a single bytearray
-static int combine_buffers(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr,
+static int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr,
                            Py_ssize_t half_len, int bits_mode, int bytes_mode,
                            int threads) {
   Py_ssize_t total_len = half_len * 2;
@@ -162,7 +162,7 @@ static int combine_buffers(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr,
   // printf("dst %zu\n ", dst);
   //  Revert the reordering of all floats if needed
   if (bits_mode == 1) {
-    revert_all_floats(combinePtr, total_len);
+    revert_all_floats_dtype16(combinePtr, total_len);
   }
   return 0;
 }
@@ -285,7 +285,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     unCompChunksSize[curChunk] = curCompChunkSize;
     // Byte Grouping + Byte Ordering
 
-    if (split_bytearray(data.buf + offset, curBgChunkSize, buffers[curChunk],
+    if (split_bytearray_dtype16(data.buf + offset, curBgChunkSize, buffers[curChunk],
                         bits_mode, bytes_mode, is_redata, threads) != 0) {
       PyBuffer_Release(&data);
       PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
@@ -512,7 +512,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
     // Combine
     u_int8_t *combinePtr = resultBuf + bgChunkSize * c;
-    if (combine_buffers(deCompressedData[0][c], deCompressedData[1][c],
+    if (combine_buffers_dtype16(deCompressedData[0][c], deCompressedData[1][c],
                         combinePtr, decompLen[c], bits_mode, bytes_mode,
                         threads) != 0) {
       return NULL;
