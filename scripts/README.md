@@ -4,6 +4,10 @@ Below is a brief overview of each script available in the `scripts` folder:
 
 ### `zipnn_file_compression.py`
 
+Usage example:
+```
+python zipnn_file_compression.py model_name
+```
 - **Purpose**: Compresses a single file, using ZipNN.
 - **Arguments**:
   - **Required**: The path of the file to compress.
@@ -17,6 +21,11 @@ Below is a brief overview of each script available in the `scripts` folder:
    
 ### `zipnn_file_decompression.py`
 
+Usage example:
+```
+python zipnn_file_decompression.py model_name.zpn
+```
+
 - **Purpose**: Decompresses the input file, removing the `.zpn` extension from the output file name, using ZipNN.
 - **Arguments**: 
   - **Required**: The path of the file to decompress.
@@ -26,6 +35,11 @@ Below is a brief overview of each script available in the `scripts` folder:
     - `--force`: Flag that forces overwriting when decompressing.
 
 ### `run_zipnn_compression.py`
+
+Usage example:
+```
+python run_compression_zipnn.py safetensors  --path data/
+```
 
 - **Purpose**: Compresses all files with a specified suffix using ZipNN.
 - **Arguments**:
@@ -42,6 +56,11 @@ Below is a brief overview of each script available in the `scripts` folder:
     - `--max_processes`: Amount of max processes that can be used during the compression. The default is 1.
 
 ### `run_zipnn_decompression.py`
+
+Usage example:
+```
+python run_decompression_zipnn.py --path data/
+```
 
 - **Purpose**: Decompresses all files with a `.zpn` suffix, removing the `.zpn` extension from the output file name, using ZipNN.
 - **Arguments**: 
