@@ -239,17 +239,16 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
 //     0 - No review, take the bit_mode and byte_mode
 //     1 - the finction can change the Bytes_mode
 
-PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
-  const uint32_t numBuf = 2;
+PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   Py_buffer header, data;
-  int bits_mode, bytes_mode, is_redata, checkThAfterPercent, threads;
+  int numBuf, bits_mode, bytes_mode, is_redata, checkThAfterPercent, threads;
   size_t bgChunkSize;
   float compThreshold;
   // u_int8_t isPrint = 0;
   // clock_t startTime, endTime, startBGTime, endBGTime;
   // startTime = clock();
 
-  if (!PyArg_ParseTuple(args, "y*y*iiinfii", &header, &data, &bits_mode,
+  if (!PyArg_ParseTuple(args, "y*y*iiiinfii", &header, &data, &numBuf, &bits_mode,
                         &bytes_mode, &is_redata, &bgChunkSize, &compThreshold,
                         &checkThAfterPercent, &threads)) {
     return NULL;
@@ -394,14 +393,13 @@ PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
 }
 
 // Python callable function to combine four buffers into a single bytearray
-PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
+PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   Py_buffer data;
 
-  int bits_mode, bytes_mode, threads;
-  uint32_t numBuf = 2;
+  int numBuf, bits_mode, bytes_mode, threads;
   size_t bgChunkSize, origSize;
 
-  if (!PyArg_ParseTuple(args, "y*iinni", &data, &bits_mode, &bytes_mode,
+  if (!PyArg_ParseTuple(args, "y*iiinni", &data, &numBuf, &bits_mode, &bytes_mode,
                         &bgChunkSize, &origSize, &threads)) {
     return NULL;
   }

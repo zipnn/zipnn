@@ -19,7 +19,7 @@ split_dtype_extension = Extension(
     sources=[
         "csrc/split_dtype_module.c",
         "csrc/split_dtype32.c",
-        "csrc/split_dtype16.c",
+        "csrc/split_dtype.c",
         "include/FiniteStateEntropy/lib/fse_compress.c",
         "include/FiniteStateEntropy/lib/fse_decompress.c",
         "include/FiniteStateEntropy/lib/huf_compress.c",

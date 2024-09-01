@@ -578,15 +578,17 @@ class ZipNN:
                 ba_comp = b"".join([self._header] + buf_is_comp + bg_len + bg_ret)
 
             if dtype_size == 16:
+                num_buf = 2
                 if is_print:
                     start_time = time.time()
                 self._update_header_original_len(len(ba))
                 if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                     self._update_data_shape(shape)
                 python_header = self._header + self._ext_header
-                ba_comp = split_dtype.split_dtype16(
+                ba_comp = split_dtype.split_dtype(
                     python_header,
                     ba,
+                    num_buf,
                     bit_reorder,
                     byte_reorder,
                     is_review,
@@ -983,9 +985,10 @@ class ZipNN:
                             ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
                         )
                 elif bfloat16 or float16:
+                    num_buf = 2
                     mv = memoryview(ba_compress)
-                    ba_decom = split_dtype.combine_dtype16(
-                        mv[after_header:], self._bit_reorder, self._byte_reorder, self.compression_chunk, self.original_len, self.threads
+                    ba_decom = split_dtype.combine_dtype(
+                        mv[after_header:], num_buf, self._bit_reorder, self._byte_reorder, self.compression_chunk, self.original_len, self.threads
                     )
             else:
                 ba_decom = ba_bg[0]
