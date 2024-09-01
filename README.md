@@ -85,6 +85,17 @@ You can integrate zipnn compression and decompression into your own projects by 
 * ```run_compression_zipnn.py```: For compressing multiple files at once.
 * ```run_decompression_zipnn.py```: For decompressing multiple files at once.
 
+Compress one file:
+```
+python zipnn_file_compression.py model_name
+```
+
+Decompress one file:
+```
+python zipnn_file_decompression.py model_name.zpn
+```
+
+
 For detailed information on how to use these scripts, [please refer to the README.md file located in the scripts folder](./scripts/README.md).
 
 
