@@ -34,14 +34,14 @@ python zipnn_decompress_file.py compressed_model_name.zpn
     - `--delete`: Flag that specifies to delete the files instead of compressing them.
     - `--force`: Flag that forces overwriting when decompressing.
 
-### `run_zipnn_compression.py`
+### `zipnn_compress_path.py`
 
 Usage example:
 ```
-python run_compression_zipnn.py safetensors  --path data/
+python zipnn_compress_path.py safetensors  --path data/
 ```
 
-- **Purpose**: Compresses all files with a specified suffix using ZipNN.
+- **Purpose**: Compresses all files with a specified suffix using ZipNN under a path.
 - **Arguments**:
   - **Required**: Suffix of the files to compress (e.g., `.bin` to compress all `.bin` files).
   - **Optional**:
@@ -55,14 +55,14 @@ python run_compression_zipnn.py safetensors  --path data/
     - `--force`: Flag that forces overwriting when compressing.
     - `--max_processes`: Amount of max processes that can be used during the compression. The default is 1.
 
-### `run_zipnn_decompression.py`
+### `zipnn_decompress_path.py`
 
 Usage example:
 ```
-python run_decompression_zipnn.py --path data/
+python zipnn_decompress_path.py --path data/
 ```
 
-- **Purpose**: Decompresses all files with a `.zpn` suffix, removing the `.zpn` extension from the output file name, using ZipNN.
+- **Purpose**: Decompresses all files with a `.zpn` suffix under a path, removing the `.zpn` extension from the output file name, using ZipNN.
 - **Arguments**: 
   - **Optional**:
     - `--float32`: Flag that specifies that the data type is `float32`. If not provided, the default is `bfloat16`.

@@ -105,8 +105,8 @@ This project requires the following Python packages:
 You can integrate zipnn compression and decompression into your own projects by utilizing the scripts available in the scripts folder. This folder contains the following scripts:
 * ```zipnn_compress_file.py```: For compressing an individual file.
 * ```zipnn_decompress_file.py```: For decompressing an individual file.
-* ```run_compression_zipnn.py```: For compressing multiple files at once.
-* ```run_decompression_zipnn.py```: For decompressing multiple files at once.
+* ```zipnn_compress_path.py```: For compressing all files under a path.
+* ```zipnn_decompress_path.py```: For decompressing all files under a path.
 
 Compress one file:
 ```
