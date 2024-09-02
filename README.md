@@ -2,7 +2,7 @@
 
 ## tl;dr
 
-For compressing/decompressing AI Models download the scripts from here:
+For compressing/decompressing AI Models download the scripts from here[https://github.com/zipnn/zipnn/tree/main/scripts]
 ```
 wget https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_compress_file.py
 ```
@@ -19,6 +19,8 @@ To decompress a file:
 ```
 python3 zipnn_decompress_file compressed_model_name.zpn
 ```
+
+There are also scripts to compress/decompress all files in a folder.
 
 ## Introduction
 
@@ -114,7 +116,6 @@ Decompress one file:
 ```
 python zipnn_decompress_file.py model_name.zpn
 ```
-
 
 For detailed information on how to use these scripts, [please refer to the README.md file located in the scripts folder](./scripts/README.md).
 
