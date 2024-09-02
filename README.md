@@ -1,7 +1,9 @@
 # ZipNN - A Lossless Compression Library for AI pipelines
+
 **TL;DR - simple, fast and effective model compression**
 ## Getting started (fast)
 Download the scripts for compressing/decompressing AI Models:
+
 ```
 wget https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_compress_file.py
 ```
@@ -18,6 +20,8 @@ To decompress a file:
 ```
 python3 zipnn_decompress_file compressed_model_name.zpn
 ```
+
+There are also scripts to compress/decompress all files in a folder.
 
 ## Introduction
 
@@ -113,7 +117,6 @@ Decompress one file:
 ```
 python zipnn_decompress_file.py model_name.zpn
 ```
-
 
 For detailed information on how to use these scripts, [please refer to the README.md file located in the scripts folder](./scripts/README.md).
 
