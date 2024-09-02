@@ -396,7 +396,7 @@ class ZipNN:
         streaming_vals = int(header[13])
         if streaming_vals > 127:
             self.is_streaming = 1
-            self.streaming_chunk_kb = 2 ** (128 - streaming_vals)
+            #self.streaming_chunk_kb = 2 ** (128 - streaming_vals)
         else:
             self.is_streaming = 0
         self.compression_chunk = 2 ** header[14]
@@ -450,7 +450,6 @@ class ZipNN:
         if self.is_streaming:
             mv_data = memoryview(data)
             CHUNK_SIZE = self.streaming_chunk_kb
-            
             # Compression into bytearray
             compressed_buffer = bytearray()
             remaining_bytes = len(data)
