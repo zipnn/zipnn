@@ -17,7 +17,7 @@ python3 zipnn_compress_file model_name
 
 To decompress a file:
 ```
-python3 zipnn_decompress_file compressed_model_name
+python3 zipnn_decompress_file compressed_model_name.zpn
 ```
 
 ## Introduction
