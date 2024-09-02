@@ -1,5 +1,25 @@
 # ZipNN - A Lossless Compression Library for AI pipelines
 
+## tl;dr
+
+For compressing/decompressing AI Models download the scripts from here:
+```
+wget https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_compress_file.py
+```
+```
+wget https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_decompress_file.py
+```
+
+To compress a file:
+```
+python3 zipnn_compress_file model_name
+```
+
+To decompress a file:
+```
+python3 zipnn_decompress_file compressed_model_name
+```
+
 ## Introduction
 
 In the realm of data compression, achieving a high compression/decompression ratio often requires careful consideration of the data types and the nature of the datasets being compressed. For instance, different strategies may be optimal for floating-point numbers compared to integers, and datasets in monotonic order may benefit from distinct preparations.
@@ -80,19 +100,19 @@ This project requires the following Python packages:
 ### Ready Made Scripts for file Compression/ Decompression
 
 You can integrate zipnn compression and decompression into your own projects by utilizing the scripts available in the scripts folder. This folder contains the following scripts:
-* ```zipnn_compression_file.py```: For compressing an individual file.
-* ```zipnn_decompression_file.py```: For decompressing an individual file.
+* ```zipnn_compress_file.py```: For compressing an individual file.
+* ```zipnn_decompress_file.py```: For decompressing an individual file.
 * ```run_compression_zipnn.py```: For compressing multiple files at once.
 * ```run_decompression_zipnn.py```: For decompressing multiple files at once.
 
 Compress one file:
 ```
-python zipnn_file_compression.py model_name
+python zipnn_compress_file.py model_name
 ```
 
 Decompress one file:
 ```
-python zipnn_file_decompression.py model_name.zpn
+python zipnn_decompress_file.py model_name.zpn
 ```
 
 
