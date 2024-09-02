@@ -5,6 +5,7 @@ import argparse
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+
 def check_and_install_zipnn():
     try:
         import zipnn
@@ -16,6 +17,7 @@ def check_and_install_zipnn():
 
 def decompress_file(input_file, dtype="", delete=False, force=False):
     import zipnn
+
     if not input_file.endswith(".zpn"):
         raise ValueError("Input file does not have the '.zpn' suffix")
 
@@ -35,7 +37,6 @@ def decompress_file(input_file, dtype="", delete=False, force=False):
                     print(f"Skipping {input_file}...")
                     return
             print(f"Decompressing {input_file}...")
-            
 
             output_file = input_file[:-4]
 
@@ -51,7 +52,6 @@ def decompress_file(input_file, dtype="", delete=False, force=False):
                 outfile.write(d_data)
                 print(f"Decompressed {input_file} to {output_file}")
 
-            
     else:
         print(f"Error: The file {input_file} does not exist.")
 

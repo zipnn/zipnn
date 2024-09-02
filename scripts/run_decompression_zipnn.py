@@ -7,7 +7,7 @@ from concurrent.futures import (
     ProcessPoolExecutor,
     as_completed,
 )
-from zipnn_file_decompression import (
+from zipnn_decompress_file import (
     decompress_file,
 )
 
@@ -62,14 +62,23 @@ def decompress_zpn_files(
         for file_name in files:
             if file_name.endswith(".zpn"):
                 decompressed_path = file_name[:-4]
-                if not force and os.path.exists(decompressed_path):
+                if not force and os.path.exists(
+                    decompressed_path
+                ):
                     user_input = (
-                        input(f"{decompressed_path} already exists; overwrite (y/n)? ")
+                        input(
+                            f"{decompressed_path} already exists; overwrite (y/n)? "
+                        )
                         .strip()
                         .lower()
                     )
-                    if user_input not in ("y", "yes"):
-                        print(f"Skipping {file_name}...")
+                    if user_input not in (
+                        "y",
+                        "yes",
+                    ):
+                        print(
+                            f"Skipping {file_name}..."
+                        )
                         continue
                 full_path = os.path.join(
                     root,
@@ -77,7 +86,9 @@ def decompress_zpn_files(
                 )
                 file_list.append(full_path)
 
-    with ProcessPoolExecutor(max_workers=max_processes) as executor:
+    with ProcessPoolExecutor(
+        max_workers=max_processes
+    ) as executor:
         for file in file_list[:max_processes]:
             future_to_file = {
                 executor.submit(
@@ -87,21 +98,31 @@ def decompress_zpn_files(
                     delete,
                     True,
                 ): file
-                for file in file_list[:max_processes]
+                for file in file_list[
+                    :max_processes
+                ]
             }
 
-            file_list = file_list[max_processes:] 
+            file_list = file_list[max_processes:]
             while future_to_file:
 
-                for future in as_completed(future_to_file):
-                    file = future_to_file.pop(future)
+                for future in as_completed(
+                    future_to_file
+                ):
+                    file = future_to_file.pop(
+                        future
+                    )
                     try:
-                        future.result()  
+                        future.result()
                     except Exception as exc:
-                        print(f"File {file} generated an exception: {exc}")
+                        print(
+                            f"File {file} generated an exception: {exc}"
+                        )
 
                     if file_list:
-                        next_file = file_list.pop(0)
+                        next_file = file_list.pop(
+                            0
+                        )
                         future_to_file[
                             executor.submit(
                                 decompress_file,
@@ -117,7 +138,9 @@ def decompress_zpn_files(
 if __name__ == "__main__":
     check_and_install_zipnn()
 
-    parser = argparse.ArgumentParser(description="Compresses all .zpn files. (optional) dtype.")
+    parser = argparse.ArgumentParser(
+        description="Compresses all .zpn files. (optional) dtype."
+    )
     parser.add_argument(
         "--float32",
         action="store_true",
@@ -154,6 +177,8 @@ if __name__ == "__main__":
     if args.force:
         optional_kwargs["force"] = args.force
     if args.max_processes:
-        optional_kwargs["max_processes"] = args.max_processes
+        optional_kwargs["max_processes"] = (
+            args.max_processes
+        )
 
     decompress_zpn_files(**optional_kwargs)

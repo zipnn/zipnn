@@ -33,7 +33,7 @@ def parse_streaming_chunk_size(
     streaming_chunk_size,
 ):
     if str(streaming_chunk_size).isdigit():
-        final = int(streaming_chunk_size)  
+        final = int(streaming_chunk_size)
     else:
         size_value = int(streaming_chunk_size[:-2])
         size_unit = streaming_chunk_size[-2].lower()
@@ -57,7 +57,8 @@ def compress_file(
     delete=False,
     force=False,
 ):
-    import zipnn    
+    import zipnn
+
     streaming_chunk_size = parse_streaming_chunk_size(streaming_chunk_size)
     full_path = input_file
     if not os.path.exists(full_path):
@@ -104,7 +105,6 @@ def compress_file(
         print(
             f"Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}"
         )
-
 
 
 if __name__ == "__main__":
