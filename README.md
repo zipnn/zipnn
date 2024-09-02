@@ -1,8 +1,7 @@
 # ZipNN - A Lossless Compression Library for AI pipelines
-
-## tl;dr
-
-For compressing/decompressing AI Models download the scripts from here:
+**TL;DR - simple, fast and effective model compression**
+## Getting started (fast)
+Download the scripts for compressing/decompressing AI Models:
 ```
 wget https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_compress_file.py
 ```
@@ -261,3 +260,12 @@ We welcome and value all contributions to the project!
 * Python implementation of compressing Models, float32, float15, bfloat16 with byte ordering and ZSTD.
 
 
+## Cite
+```
+@article{hershcovitch2024lossless,
+  title={Lossless and Near-Lossless Compression for Foundation Models},
+  author={Hershcovitch, Moshik and Choshen, Leshem and Wood, Andrew and Enmouri, Ilias and Chin, Peter and Sundararaman, Swaminathan and Harnik, Danny},
+  journal={arXiv preprint arXiv:2404.15198},
+  year={2024}
+}
+```
