@@ -2,11 +2,11 @@
 
 Below is a brief overview of each script available in the `scripts` folder:
 
-### `zipnn_file_compression.py`
+### `zipnn_compress_file.py`
 
 Usage example:
 ```
-python zipnn_file_compression.py model_name
+python zipnn_compress_file.py model_name
 ```
 - **Purpose**: Compresses a single file, using ZipNN.
 - **Arguments**:
@@ -19,11 +19,11 @@ python zipnn_file_compression.py model_name
     - `--delete`: Flag that specifies to delete the files instead of compressing them.
     - `--force`: Flag that forces overwriting when compressing.
    
-### `zipnn_file_decompression.py`
+### `zipnn_decompress_file.py`
 
 Usage example:
 ```
-python zipnn_file_decompression.py model_name.zpn
+python zipnn_decompress_file.py compressed_model_name.zpn
 ```
 
 - **Purpose**: Decompresses the input file, removing the `.zpn` extension from the output file name, using ZipNN.
