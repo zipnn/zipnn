@@ -4,11 +4,7 @@
 #include <time.h>
 #include <data_manipulation_dtype32.h>
 
-///////////////////////////////////
-/// Review Helpe Funcation  //////
-//////////////////////////////////
-
-// Helper function ithat count zero bytes
+// Helper function that count zero bytes
 static void count_zero_bytes(const u_int8_t *src, Py_ssize_t len,
                              Py_ssize_t *msb_zeros, Py_ssize_t *mid_high,
                              Py_ssize_t *mid_low, Py_ssize_t *lsb_zeros) {
