@@ -151,7 +151,7 @@ class ZipNN:
          zstd_level: int
                  Compression level for ‘zstd’ compression.
                  Only relevant if method is ‘zstd’.
-                 Default is 3.
+                 Default is 3.``
 
          lz4_compression_level: int
                  Compression level for ‘lz4’ compression.
@@ -178,8 +178,21 @@ class ZipNN:
         self.lossy_compressed_type = EnumLossy.NONE if lossy_compressed_type is None else EnumLossy(lossy_compressed_type)
         self.lossy_compressed_factor = lossy_compressed_factor
 
-        self.compression_chunk = compression_chunk
-        self.is_streaming = is_streaming
+        if (compression_chunk & (compression_chunk - 1)) == 0:
+            self.compression_chunk = compression_chunk
+        else:
+            raise ValueError("compression_chunk must be a number that is a power of 2.")
+
+        if self.input_format!=EnumFormat.BYTE.value and is_streaming:
+            raise ValueError("Streaming is currently implemented only for bytes data type.")
+        else:
+            self.is_streaming=is_streaming
+        
+        if (streaming_chunk_kb & (streaming_chunk_kb - 1)) == 0:
+            self.streaming_chunk_kb = streaming_chunk_kb
+        else:
+            raise ValueError("streaming_chunk_kb must be a number that is a power of 2.")
+        
         self.streaming_chunk_kb = streaming_chunk_kb
 
         self.input_file = input_file
@@ -446,8 +459,9 @@ class ZipNN:
         (depends on the type of the data compressed), which will be the compressed file,
         in the format chosen in the ZipNN class instance configuration.
         """
-
-        if self.is_streaming:
+        if len(data) % 2 != 0:
+            data += b'\x00'
+        if self.is_streaming and self.input_format == EnumFormat.BYTE.value:
             mv_data = memoryview(data)
             CHUNK_SIZE = self.streaming_chunk_kb
             # Compression into bytearray
@@ -823,7 +837,7 @@ class ZipNN:
         """
         mv_data = memoryview(data)
         comp_chunk_size = mv_data[13]  # 0 if no streaming > 127
-        if comp_chunk_size > 127:
+        if self.input_format == EnumFormat.BYTE.value and comp_chunk_size > 127:
             decompressed_buffer = bytearray()
             offset = 0
             compressed_length = len(data)
