@@ -13,15 +13,18 @@ wget https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_decompress
 
 To compress a file:
 ```
-python3 zipnn_compress_file model_name
+python3 zipnn_compress_file.py model_name
 ```
 
 To decompress a file:
 ```
-python3 zipnn_decompress_file compressed_model_name.zpn
+python3 zipnn_decompress_file.py compressed_model_name.zpn
 ```
 
-There are also scripts to compress/decompress all files in a folder.
+There are also scripts to compress/decompress all files in a folder:
+```
+wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt
+```
 
 ## Introduction
 
@@ -181,6 +184,31 @@ The script reads the file and compresses and decompresses in Byte format.
 ...
 Are the original and decompressed byte strings the same [BYTE]?  True
 ```
+
+
+### Example of compressing a hosted model
+In this example, ZipNN compresses a full model hosted on the Hugging Face AI-Hub. We compress [AI21Labs Jamba-v0.1](https://huggingface.co/ai21labs/Jamba-v0.1) by 33% - which could save ~1PB on monthly downloads.
+
+From the model's directory (which [can be forked locally](https://huggingface.co/docs/hub/en/repositories-next-steps#duplicating-with-the-git-history-fork)) run:
+```
+python3 zipnn_compress_path.py safetensors
+```
+
+Add the compressed weights to git-lfs tracking
+```
+git lfs track "*.zpn"
+git add .gitattributes
+```
+
+Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up).
+
+To use the model simply clone the model and decompress the weights using:
+```
+python3 zipnn_decompress_path.py
+```
+And then load all the models from the local version.
+
+You can test [Jamba-v0.1-ZipNN-Compressed](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed) yourself.
 
 ## Configuration
 
