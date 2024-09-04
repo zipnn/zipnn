@@ -31,17 +31,19 @@ static void reorder_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
 
 // Helper function to split a bytearray into groups
 int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
-                           int bits_mode, int bytes_mode, int is_review,
+                           size_t *unCompChunksSizeCurChunk, int bits_mode, int bytes_mode, int is_review,
                            int threads) {
   if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats_dtype16(src, len);
   }
-
   Py_ssize_t half_len = len / 2;
+
   switch (bytes_mode) {
   case 10:  // 2b01_010 - Byte Group to two different groups
     buffers[0] = PyMem_Malloc(half_len);
     buffers[1] = PyMem_Malloc(half_len);
+    unCompChunksSizeCurChunk[0] = half_len; 
+    unCompChunksSizeCurChunk[1] = half_len;
 
     if (buffers[0] == NULL || buffers[1] == NULL) {
       PyMem_Free(buffers[0]);
@@ -64,6 +66,8 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
     // We are refering to the LSByte  as a little endian, thus we omit buf1
     buffers[0] = PyMem_Malloc(half_len);
     buffers[1] = NULL;
+    unCompChunksSizeCurChunk[0] = half_len; 
+    unCompChunksSizeCurChunk[1] = 0;
 
     if (buffers[0] == NULL) {
       PyMem_Free(buffers[0]);
@@ -164,3 +168,24 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr
   return 0;
 }
 
+/////////////// Helper Function for the Byte ratio /////////////
+
+int buffer_ratio_dtype16 (int bytes_mode, uint32_t *buf_ratio){
+  switch (bytes_mode) {
+  case 10:  // 2b01_010 - Byte Group to two different groups 
+    buf_ratio[0] = 2;
+    buf_ratio[1] = 2;
+    break;
+
+  case 8:  // 4b1000 - Truncate MSByte
+  case 1:  // 4b1000 - Truncate LSByte
+    buf_ratio[0] = 1;
+    buf_ratio[1] = 0;
+    break;
+
+  default:
+    // we are not support this splitting bytes_mode
+    return -1;
+  }
+  return 0;
+}
