@@ -1,0 +1,4 @@
+https://raw.githubusercontent.com/royleibov/zipnn/main/scripts/zipnn_compress_file.py
+https://raw.githubusercontent.com/royleibov/zipnn/main/scripts/zipnn_compress_path.py
+https://raw.githubusercontent.com/royleibov/zipnn/main/scripts/zipnn_decompress_file.py
+https://raw.githubusercontent.com/royleibov/zipnn/main/scripts/zipnn_decompress_path.py
