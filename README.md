@@ -234,6 +234,11 @@ We welcome and value all contributions to the project!
 
 ## Change Log
 
+##### v0.3.2
+
+* Change ZipNN suffix from .zpn to .znn 
+
+
 ##### v0.3.1
 
 * Prepare dtype16 (BF16 and FP16) for multi-threading by changing its C logic. For each chunk, byte ordering, bit ordering, and compression are processed separately.
