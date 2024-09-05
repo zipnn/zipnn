@@ -5,10 +5,7 @@
 Download the scripts for compressing/decompressing AI Models:
 
 ```
-wget https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_compress_file.py
-```
-```
-wget https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_decompress_file.py
+wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt
 ```
 
 To compress a file:
@@ -18,13 +15,11 @@ python3 zipnn_compress_file.py model_name
 
 To decompress a file:
 ```
-python3 zipnn_decompress_file.py compressed_model_name.zpn
+python3 zipnn_decompress_file.py compressed_model_name.znn
 ```
 
 There are also scripts to compress/decompress all files in a folder:
-```
-wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt
-```
+
 
 ## Introduction
 
@@ -118,7 +113,7 @@ python zipnn_compress_file.py model_name
 
 Decompress one file:
 ```
-python zipnn_decompress_file.py model_name.zpn
+python zipnn_decompress_file.py model_name.znn
 ```
 
 For detailed information on how to use these scripts, [please refer to the README.md file located in the scripts folder](./scripts/README.md).
@@ -191,12 +186,12 @@ In this example, ZipNN compresses a full model hosted on the Hugging Face AI-Hub
 
 From the model's directory (which [can be forked locally](https://huggingface.co/docs/hub/en/repositories-next-steps#duplicating-with-the-git-history-fork)) run:
 ```
-python3 zipnn_compress_path.py safetensors
+python3 zipnn_compress_path.py safetensors --path .
 ```
 
 Add the compressed weights to git-lfs tracking
 ```
-git lfs track "*.zpn"
+git lfs track "*.znn"
 git add .gitattributes
 ```
 
@@ -261,6 +256,11 @@ For issues and feature requests, please open a GitHub issue.
 We welcome and value all contributions to the project!
 
 ## Change Log
+
+##### v0.3.2
+
+* Change ZipNN suffix from .zpn to .znn 
+
 
 ##### v0.3.1
 

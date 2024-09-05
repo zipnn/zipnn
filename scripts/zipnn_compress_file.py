@@ -68,7 +68,7 @@ def compress_file(
         print(f"Deleting {full_path}...")
         os.remove(full_path)
     else:
-        compressed_path = full_path + ".zpn"
+        compressed_path = full_path + ".znn"
         if not force and os.path.exists(compressed_path):
             user_input = (
                 input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
@@ -78,7 +78,7 @@ def compress_file(
                 return
         print(f"Compressing {full_path}...")
         #
-        output_file = input_file + ".zpn"
+        output_file = input_file + ".znn"
         if dtype:
             zpn = zipnn.ZipNN(
                 bytearray_dtype="float32",

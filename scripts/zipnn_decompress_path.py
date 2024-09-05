@@ -60,7 +60,7 @@ def decompress_zpn_files(
         files,
     ) in directories_to_search:
         for file_name in files:
-            if file_name.endswith(".zpn"):
+            if file_name.endswith(".znn"):
                 decompressed_path = file_name[:-4]
                 if not force and os.path.exists(
                     decompressed_path
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     check_and_install_zipnn()
 
     parser = argparse.ArgumentParser(
-        description="Compresses all .zpn files. (optional) dtype."
+        description="Compresses all .znn files. (optional) dtype."
     )
     parser.add_argument(
         "--float32",
