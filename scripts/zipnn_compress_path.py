@@ -95,7 +95,7 @@ def compress_files_with_suffix(
         for file_name in files:
             if file_name.endswith(suffix):
                 compressed_path = (
-                    file_name + ".zpn"
+                    file_name + ".znn"
                 )
                 if not force and os.path.exists(
                     compressed_path

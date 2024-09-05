@@ -18,8 +18,8 @@ def check_and_install_zipnn():
 def decompress_file(input_file, dtype="", delete=False, force=False):
     import zipnn
 
-    if not input_file.endswith(".zpn"):
-        raise ValueError("Input file does not have the '.zpn' suffix")
+    if not input_file.endswith(".znn"):
+        raise ValueError("Input file does not have the '.znn' suffix")
 
     if os.path.exists(input_file):
         if delete:
