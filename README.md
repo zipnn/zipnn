@@ -18,7 +18,7 @@ python3 zipnn_compress_file model_name
 
 To decompress a file:
 ```
-python3 zipnn_decompress_file compressed_model_name.zpn
+python3 zipnn_decompress_file compressed_model_name.znn
 ```
 
 There are also scripts to compress/decompress all files in a folder.
@@ -115,7 +115,7 @@ python zipnn_compress_file.py model_name
 
 Decompress one file:
 ```
-python zipnn_decompress_file.py model_name.zpn
+python zipnn_decompress_file.py model_name.znn
 ```
 
 For detailed information on how to use these scripts, [please refer to the README.md file located in the scripts folder](./scripts/README.md).
