@@ -23,10 +23,10 @@ python zipnn_compress_file.py model_name
 
 Usage example:
 ```
-python zipnn_decompress_file.py compressed_model_name.zpn
+python zipnn_decompress_file.py compressed_model_name.znn
 ```
 
-- **Purpose**: Decompresses the input file, removing the `.zpn` extension from the output file name, using ZipNN.
+- **Purpose**: Decompresses the input file, removing the `.znn` extension from the output file name, using ZipNN.
 - **Arguments**: 
   - **Required**: The path of the file to decompress.
   - **Optional**:
@@ -62,7 +62,7 @@ Usage example:
 python zipnn_decompress_path.py --path data/
 ```
 
-- **Purpose**: Decompresses all files with a `.zpn` suffix under a path, removing the `.zpn` extension from the output file name, using ZipNN.
+- **Purpose**: Decompresses all files with a `.znn` suffix under a path, removing the `.znn` extension from the output file name, using ZipNN.
 - **Arguments**: 
   - **Optional**:
     - `--float32`: Flag that specifies that the data type is `float32`. If not provided, the default is `bfloat16`.
