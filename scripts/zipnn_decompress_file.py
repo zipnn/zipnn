@@ -15,7 +15,7 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def decompress_file(input_file, dtype="", delete=False, force=False):
+def decompress_file(input_file, delete=False, force=False):
     import zipnn
 
     if not input_file.endswith(".znn"):
@@ -39,11 +39,7 @@ def decompress_file(input_file, dtype="", delete=False, force=False):
             print(f"Decompressing {input_file}...")
 
             output_file = input_file[:-4]
-
-            if dtype:
-                zpn = zipnn.ZipNN(is_streaming=True, bytearray_dtype="float32")
-            else:
-                zpn = zipnn.ZipNN(is_streaming=True)
+            zpn = zipnn.ZipNN(is_streaming=True)
 
             with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
                 d_data = b""
@@ -62,9 +58,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Enter a file path to decompress.")
     parser.add_argument("input_file", type=str, help="Specify the path to the file to decompress.")
     parser.add_argument(
-        "--float32", action="store_true", help="A flag that triggers float32 compression."
-    )
-    parser.add_argument(
         "--delete",
         action="store_true",
         help="A flag that triggers deletion of a single compressed file instead of decompression",
@@ -74,8 +67,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     optional_kwargs = {}
-    if args.float32:
-        optional_kwargs["dtype"] = 32
     if args.delete:
         optional_kwargs["delete"] = args.delete
     if args.force:

@@ -2,7 +2,6 @@ import os
 import sys
 import argparse
 import subprocess
-import zipnn
 from concurrent.futures import (
     ProcessPoolExecutor,
     as_completed,
@@ -38,14 +37,15 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def decompress_zpn_files(
-    dtype="",
+def decompress_znn_files(
     path=".",
     delete=False,
     force=False,
     max_processes=1,
 ):
+    import zipnn
 
+    overwrite_first=True
     file_list = []
     directories_to_search = [
         (
@@ -65,21 +65,46 @@ def decompress_zpn_files(
                 if not force and os.path.exists(
                     decompressed_path
                 ):
-                    user_input = (
-                        input(
-                            f"{decompressed_path} already exists; overwrite (y/n)? "
+                    #
+                    if overwrite_first:
+                        overwrite_first=False
+                        user_input = (
+                            input(
+                                f"Decompressed files already exists; Would you like to overwrite them all (y/n)? "
+                            )
+                            .strip()
+                            .lower()
                         )
-                        .strip()
-                        .lower()
-                    )
-                    if user_input not in (
-                        "y",
-                        "yes",
-                    ):
-                        print(
-                            f"Skipping {file_name}..."
+                        if user_input not in (
+                            "y",
+                            "yes",
+                        ):
+                            print(
+                                f"No forced overwriting."
+                            )
+                        else:
+                            print(
+                                f"Overwriting all decompressed files."
+                            )
+                            force=True
+                        
+                    #
+                    if not force:
+                        user_input = (
+                            input(
+                                f"{decompressed_path} already exists; overwrite (y/n)? "
+                            )
+                            .strip()
+                            .lower()
                         )
-                        continue
+                        if user_input not in (
+                            "y",
+                            "yes",
+                        ):
+                            print(
+                                f"Skipping {file_name}..."
+                            )
+                            continue
                 full_path = os.path.join(
                     root,
                     file_name,
@@ -94,7 +119,6 @@ def decompress_zpn_files(
                 executor.submit(
                     decompress_file,
                     file,
-                    dtype,
                     delete,
                     True,
                 ): file
@@ -127,7 +151,6 @@ def decompress_zpn_files(
                             executor.submit(
                                 decompress_file,
                                 next_file,
-                                dtype,
                                 delete,
                                 True,
                             )
@@ -139,12 +162,7 @@ if __name__ == "__main__":
     check_and_install_zipnn()
 
     parser = argparse.ArgumentParser(
-        description="Compresses all .znn files. (optional) dtype."
-    )
-    parser.add_argument(
-        "--float32",
-        action="store_true",
-        help="A flag that triggers float32 compression.",
+        description="Compresses all .znn files."
     )
     parser.add_argument(
         "--path",
@@ -168,8 +186,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     optional_kwargs = {}
-    if args.float32:
-        optional_kwargs["dtype"] = 32
     if args.path is not None:
         optional_kwargs["path"] = args.path
     if args.delete:
@@ -181,4 +197,4 @@ if __name__ == "__main__":
             args.max_processes
         )
 
-    decompress_zpn_files(**optional_kwargs)
+    decompress_znn_files(**optional_kwargs)

@@ -7,7 +7,6 @@ from concurrent.futures import (
     as_completed,
 )
 from zipnn_compress_file import compress_file
-import zipnn
 
 sys.path.append(
     os.path.abspath(
@@ -78,7 +77,9 @@ def compress_files_with_suffix(
     force=False,
     max_processes=1,
 ):
+    import zipnn
 
+    overwrite_first=True
     file_list = []
     streaming_chunk_size = (
         parse_streaming_chunk_size(
@@ -100,21 +101,45 @@ def compress_files_with_suffix(
                 if not force and os.path.exists(
                     compressed_path
                 ):
-                    user_input = (
-                        input(
-                            f"{compressed_path} already exists; overwrite (y/n)? "
+                    #
+                    if overwrite_first:
+                        overwrite_first=False
+                        user_input = (
+                            input(
+                                f"Compressed files already exists; Would you like to overwrite them all (y/n)? "
+                            )
+                            .strip()
+                            .lower()
                         )
-                        .strip()
-                        .lower()
-                    )
-                    if user_input not in (
-                        "y",
-                        "yes",
-                    ):
-                        print(
-                            f"Skipping {file_name}..."
+                        if user_input not in (
+                            "y",
+                            "yes",
+                        ):
+                            print(
+                                f"No forced overwriting."
+                            )
+                        else:
+                            print(
+                                f"Overwriting all compressed files."
+                            )
+                            force=True
+                    #
+                    if not force:
+                        user_input = (
+                            input(
+                                f"{compressed_path} already exists; overwrite (y/n)? "
+                            )
+                            .strip()
+                            .lower()
                         )
-                        continue
+                        if user_input not in (
+                            "y",
+                            "yes",
+                        ):
+                            print(
+                                f"Skipping {file_name}..."
+                            )
+                            continue
                 files_found = True
                 full_path = os.path.join(
                     root, file_name
