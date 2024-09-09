@@ -1058,6 +1058,52 @@ class ZipNN:
             ba = in_file_handler.read()
         return self.decompress_bin(ba)
 
+def zipnn_hf_patch():
+    """
+    Patches the Hugging Face Transformers library to use ZipNN compression.
+
+    Parameters
+    -------------------------------------
+    None.
+
+    Returns
+    -------------------------------------
+    None.
+    """
+    try:
+        from transformers import modeling_utils
+    except ImportError as exc:
+        raise ImportError("Hugging Face Transformers library is not installed. Please install it to use ZipNN compression.") from exc
+
+    from typing import Union
+
+    # Save the original load_state_dict method
+    original_load_state_dict = modeling_utils.load_state_dict
+
+    # Define a monkey-patched version of load_state_dict
+    def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False):
+        if checkpoint_file.endswith(".znn"):
+            print(f"Decompressing {checkpoint_file.split('/')[-1]}")
+            output_file = checkpoint_file.replace(".znn", "")
+            if not os.path.exists(output_file):
+                znn = ZipNN(is_streaming=True)
+                with open(checkpoint_file, "rb") as infile, open(output_file, "wb") as outfile:
+                    d_data = b""
+                    chunk = infile.read()
+                    d_data += znn.decompress(chunk)
+                    outfile.write(d_data)
+                snapshot_path = os.path.dirname(checkpoint_file)
+                blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
+                os.rename(output_file, blob_name)
+                os.symlink(blob_name, output_file)
+            os.remove(checkpoint_file)
+            checkpoint_file = output_file
+
+        # Call the original load_state_dict method
+        return original_load_state_dict(checkpoint_file, is_quantized)
+
+    # Monkey patch the load_state_dict method in the transformers library
+    modeling_utils.load_state_dict = custom_load_state_dict
 
 #    def decompress_delta(self, base_path, delta_file):
 #        return 0
