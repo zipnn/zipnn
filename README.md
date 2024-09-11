@@ -184,7 +184,7 @@ Are the original and decompressed byte strings the same [BYTE]?  True
 ### Example of compressing a model hosted on Hugging Face
 In this example, ZipNN compresses a full model hosted on the Hugging Face AI-Hub.
 
-From the model's directory (which [can be forked locally](https://huggingface.co/docs/hub/en/repositories-next-steps#duplicating-with-the-git-history-fork)) run:
+From the model's directory (which [can be forked locally](https://huggingface.co/docs/hub/en/repositories-next-steps#duplicating-with-the-git-history-fork). Make sure you `git lfs pull upstream` before continuing) run:
 ```
 python3 zipnn_compress_path.py safetensors --path .
 ```
@@ -193,7 +193,8 @@ Add the compressed weights to git-lfs tracking
 ```
 git lfs track "*.znn" &&
 sed -i 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json &&
-git add .gitattributes model.safetensors.index.json
+git add *.znn .gitattributes model.safetensors.index.json
+git rm *.safetensors
 ```
 
 Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up).

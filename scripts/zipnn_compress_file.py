@@ -56,6 +56,7 @@ def compress_file(
     streaming_chunk_size=1048576,
     delete=False,
     force=False,
+    hf_cache=False,
 ):
     import zipnn
 
@@ -64,7 +65,7 @@ def compress_file(
     if not os.path.exists(full_path):
         print("File not found")
         return
-    if delete:
+    if delete and not hf_cache:
         print(f"Deleting {full_path}...")
         os.remove(full_path)
     else:
@@ -106,6 +107,18 @@ def compress_file(
             f"Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}"
         )
 
+        if hf_cache:
+            # If the file is in the Hugging Face cache, fix the symlinks
+            print("Reorganizing Hugging Face cache...")
+            try:
+                snapshot_path = os.path.dirname(input_file)
+                blob_name = os.path.join(snapshot_path, os.readlink(input_file))
+                os.rename(output_file, blob_name)
+                os.symlink(blob_name, output_file)
+                if os.path.exists(input_file):
+                    os.remove(input_file)
+            except Exception as e:
+                raise Exception(f"Error reorganizing Hugging Face cache: {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -139,6 +152,11 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag that forces overwriting when compressing.",
     )
+    parser.add_argument(
+        "--hf_cache",
+        action="store_true",
+        help="A flag that indicates if the file is in the Hugging Face cache.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.float32:
@@ -149,6 +167,8 @@ if __name__ == "__main__":
         optional_kwargs["delete"] = args.delete
     if args.force:
         optional_kwargs["force"] = args.force
+    if args.hf_cache:
+        optional_kwargs["hf_cache"] = args.hf_cache
 
     check_and_install_zipnn()
     compress_file(args.input_file, **optional_kwargs)

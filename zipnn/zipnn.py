@@ -1072,6 +1072,9 @@ def zipnn_hf_patch():
     """
     try:
         from transformers import modeling_utils
+        from typing import Union, Optional
+        from transformers.utils import SAFE_WEIGHTS_INDEX_NAME, WEIGHTS_INDEX_NAME
+        import subprocess
     except ImportError as exc:
         raise ImportError("Hugging Face Transformers library is not installed. Please install it to use ZipNN compression.") from exc
 
@@ -1085,6 +1088,7 @@ def zipnn_hf_patch():
         if checkpoint_file.endswith(".znn"):
             print(f"Decompressing {checkpoint_file.split('/')[-1]}")
             output_file = checkpoint_file.replace(".znn", "")
+            snapshot_path = os.path.dirname(checkpoint_file)
             if not os.path.exists(output_file):
                 znn = ZipNN(is_streaming=True)
                 with open(checkpoint_file, "rb") as infile, open(output_file, "wb") as outfile:
@@ -1092,12 +1096,35 @@ def zipnn_hf_patch():
                     chunk = infile.read()
                     d_data += znn.decompress(chunk)
                     outfile.write(d_data)
-                snapshot_path = os.path.dirname(checkpoint_file)
                 blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
                 os.rename(output_file, blob_name)
                 os.symlink(blob_name, output_file)
             os.remove(checkpoint_file)
             checkpoint_file = output_file
+
+            # Change index name to the decompressed file
+            if os.path.exists(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)):
+                file_name = os.path.basename(output_file)
+                blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
+                subprocess.check_call(
+                    [
+                        'sed',
+                        '-i',
+                        f's/{file_name}.znn/{file_name}/g',
+                        blob_name,
+                    ]
+                )
+            elif os.path.exists(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)):
+                file_name = os.path.basename(output_file)
+                blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
+                subprocess.check_call(
+                    [
+                        'sed',
+                        '-i',
+                        f's/{file_name}.znn/{file_name}/g',
+                        blob_name,
+                    ]
+                )
 
         # Call the original load_state_dict method
         return original_load_state_dict(checkpoint_file, is_quantized)
