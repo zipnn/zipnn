@@ -18,6 +18,7 @@ python zipnn_compress_file.py model_name
       - A string with a unit suffix (e.g., `4KB`, `2MB`, `1GB`), where the unit is interpreted as kilobytes, megabytes, or gigabytes.
     - `--delete`: Flag that specifies to delete the files instead of compressing them.
     - `--force`: Flag that forces overwriting when compressing.
+    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
    
 ### `zipnn_decompress_file.py`
 
@@ -32,6 +33,7 @@ python zipnn_decompress_file.py compressed_model_name.znn
   - **Optional**:
     - `--delete`: Flag that specifies to delete the files instead of compressing them.
     - `--force`: Flag that forces overwriting when decompressing.
+    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
 
 ### `zipnn_compress_path.py`
 
@@ -53,6 +55,9 @@ python zipnn_compress_path.py safetensors  --path data/
     - `-r`,`--recursive`: Both flags operate the same: they specify to look recursively in all subdirectories (of current folder or of the path given) for files with the specified suffix.
     - `--force`: Flag that forces overwriting when compressing.
     - `--max_processes`: Amount of max processes that can be used during the compression. The default is 1.
+    - `--model`: Only when using --hf_cache, specify the model name or path. E.g. 'ibm-granite/granite-7b-instruct'.
+    - `--model_branch`: Only when using --model, specify the model branch. Default is 'main'.
+    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache. Must either specify --model or --path to the model's snapshot cache.
 
 ### `zipnn_decompress_path.py`
 
@@ -68,5 +73,8 @@ python zipnn_decompress_path.py --path data/
     - `--delete`: Flag that specifies to delete the files instead of compressing them.
     - `--force`: Flag that forces overwriting when decompressing.
     - `--max_processes`: Amount of max processes that can be used during the decompression. The default is 1.
+    - `--model`: Only when using --hf_cache, specify the model name or path. E.g. 'ibm-granite/granite-7b-instruct'.
+    - `--model_branch`: Only when using --model, specify the model branch. Default is 'main'.
+    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache. Must either specify --model or --path to the model's snapshot cache.
 
 To use these scripts, simply copy the desired file to your project directory and run it as needed.

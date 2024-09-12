@@ -185,29 +185,36 @@ Are the original and decompressed byte strings the same [BYTE]?  True
 ```
 
 
-### Example of compressing a hosted model
-In this example, ZipNN compresses a full model hosted on the Hugging Face AI-Hub. We compress [AI21Labs Jamba-v0.1](https://huggingface.co/ai21labs/Jamba-v0.1) by 33% - which could save ~1PB of monthly downloads.
+### Example of compressing a model hosted on Hugging Face
+In this example, ZipNN compresses a full model hosted on the Hugging Face AI-Hub.
 
-From the model's directory (which [can be forked locally](https://huggingface.co/docs/hub/en/repositories-next-steps#duplicating-with-the-git-history-fork)) run:
+From the model's directory (which [can be forked locally](https://huggingface.co/docs/hub/en/repositories-next-steps#duplicating-with-the-git-history-fork). Make sure you `git lfs pull upstream` before continuing) run:
 ```
 python3 zipnn_compress_path.py safetensors --path .
 ```
 
 Add the compressed weights to git-lfs tracking
 ```
-git lfs track "*.znn"
-git add .gitattributes
+git lfs track "*.znn" &&
+sed -i 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json &&
+git add *.znn .gitattributes model.safetensors.index.json
+git rm *.safetensors
 ```
 
 Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up).
 
-To use the model simply clone its repository and decompress the weights by running:
-```
-python3 zipnn_decompress_path.py
-```
-Finally, load the model from the local version.
+To use the model simply run our ZipNN Hugging Face patch before proceeding as normal:
+```python
+from zipnn import zipnn_hf_patch
 
-You can test [Jamba-v0.1-ZipNN-Compressed](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed) yourself.
+zipnn_hf_patch()
+
+# Load the model from your compressed Hugging Face model card as you normally would
+...
+```
+
+You can test [Jamba-v0.1-ZipNN-Compressed](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed) and [granite-7b-instruct-ZipNN-Compressed](https://huggingface.co/royleibov/granite-7b-instruct-ZipNN-Compressed) yourself (both compressed to 67% their original sizes - which could save ~1PB for [ai21labs Jamba-v0.1](https://huggingface.co/ai21labs/Jamba-v0.1) and ~30TB for 
+[ibm-granite granite-7b-instruct](https://huggingface.co/ibm-granite/granite-7b-instruct) of monthly downloads).
 
 ## Configuration
 

@@ -42,10 +42,41 @@ def decompress_znn_files(
     delete=False,
     force=False,
     max_processes=1,
+    hf_cache=False,
+    model="",
+    branch="main",
 ):
     import zipnn
 
     overwrite_first=True
+
+    if model:
+        if not hf_cache:
+            raise ValueError(
+                "Must specify --hf_cache when using --model"
+            )
+        try:
+            from huggingface_hub import scan_cache_dir
+        except ImportError:
+            raise ImportError(
+                "huggingface_hub not found. Please pip install huggingface_hub."
+            )  
+        cache = scan_cache_dir()
+        repo = next((repo for repo in cache.repos if repo.repo_id == model), None)
+
+        if repo is not None:
+            print(f"Found repo {model} in cache")
+            
+            # Get the latest revision path
+            hash = ''
+            try:
+                with open(os.path.join(repo.repo_path, 'refs', branch), "r") as ref:
+                    hash = ref.read()
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Branch {branch} not found in repo {model}")
+            
+            path = os.path.join(repo.repo_path, 'snapshots', hash)
+
     file_list = []
     directories_to_search = [
         (
@@ -110,6 +141,42 @@ def decompress_znn_files(
                     file_name,
                 )
                 file_list.append(full_path)
+
+    if file_list and hf_cache:
+        try:
+            from transformers.utils import (
+                SAFE_WEIGHTS_INDEX_NAME,
+                WEIGHTS_INDEX_NAME
+            )
+        except ImportError:
+            raise ImportError(
+                "Transformers not found. Please pip install transformers."
+            )
+            
+        suffix = file_list[0].split('/')[-1].split('.')[-2] # get the one before .znn
+
+        if os.path.exists(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)):
+            print("Fixing Hugging Face model json...")
+            blob_name = os.path.join(path, os.readlink(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)))
+            subprocess.check_call(
+            [
+                'sed',
+                '-i',
+                f's/{suffix}.znn/{suffix}/g',
+                blob_name,
+            ]
+            )
+        elif os.path.exists(os.path.join(path, WEIGHTS_INDEX_NAME)):
+            print("Fixing Hugging Face model json...")
+            blob_name = os.path.join(path, os.readlink(os.path.join(path, WEIGHTS_INDEX_NAME)))
+            subprocess.check_call(
+            [
+                'sed',
+                '-i',
+                f's/{suffix}.znn/{suffix}/g',
+                blob_name,
+            ]
+            )
 
     with ProcessPoolExecutor(
         max_workers=max_processes
@@ -184,6 +251,22 @@ if __name__ == "__main__":
         type=int,
         help="The amount of maximum processes.",
     )
+    parser.add_argument(
+        "--hf_cache",
+        action="store_true",
+        help="A flag that indicates if the file is in the Hugging Face cache. Must either specify --model or --path to the model's snapshot cache.",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        help="Only when using --hf_cache, specify the model name or path. E.g. 'ibm-granite/granite-7b-instruct'",
+    )
+    parser.add_argument(
+        "--model_branch",
+        type=str,
+        default="main",
+        help="Only when using --model, specify the model branch. Default is 'main'",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.path is not None:
@@ -196,5 +279,13 @@ if __name__ == "__main__":
         optional_kwargs["max_processes"] = (
             args.max_processes
         )
+    if args.hf_cache:
+        optional_kwargs["hf_cache"] = args.hf_cache
+    if args.model:
+        optional_kwargs["model"] = args.model
+    if args.model_branch:
+        optional_kwargs[
+            "branch"
+        ] = args.model_branch
 
     decompress_znn_files(**optional_kwargs)
