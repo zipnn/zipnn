@@ -183,16 +183,16 @@ class ZipNN:
         else:
             raise ValueError("compression_chunk must be a number that is a power of 2.")
 
-        if self.input_format!=EnumFormat.BYTE.value and is_streaming:
+        if self.input_format != EnumFormat.BYTE.value and is_streaming:
             raise ValueError("Streaming is currently implemented only for bytes data type.")
         else:
-            self.is_streaming=is_streaming
-        
+            self.is_streaming = is_streaming
+
         if (streaming_chunk_kb & (streaming_chunk_kb - 1)) == 0:
             self.streaming_chunk_kb = streaming_chunk_kb
         else:
             raise ValueError("streaming_chunk_kb must be a number that is a power of 2.")
-        
+
         self.streaming_chunk_kb = streaming_chunk_kb
 
         self.input_file = input_file
@@ -392,7 +392,7 @@ class ZipNN:
         The header length.
         """
         mv = memoryview(ba_compress)
-        header = mv[:self.header_length]
+        header = mv[: self.header_length]
         if header[0:2].tobytes().decode("ascii") != "ZN":
             raise ValueError("Header should start with ZN")
         self.version_major = int(header[2])
@@ -409,7 +409,7 @@ class ZipNN:
         streaming_vals = int(header[13])
         if streaming_vals > 127:
             self.is_streaming = 1
-            #self.streaming_chunk_kb = 2 ** (128 - streaming_vals)
+            # self.streaming_chunk_kb = 2 ** (128 - streaming_vals)
         else:
             self.is_streaming = 0
         self.compression_chunk = 2 ** header[14]
@@ -417,7 +417,7 @@ class ZipNN:
         self.original_len = int.from_bytes(header[16:24], byteorder="little")
 
         if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-            self.shape_bytes, self._shape_size = zipnn_unpack_shape(mv[self.header_length:])
+            self.shape_bytes, self._shape_size = zipnn_unpack_shape(mv[self.header_length :])
         return self.header_length + self._shape_size
 
     #################
@@ -460,7 +460,7 @@ class ZipNN:
         in the format chosen in the ZipNN class instance configuration.
         """
         if len(data) % 2 != 0:
-            data += b'\x00'
+            data += b"\x00"
         if self.is_streaming and self.input_format == EnumFormat.BYTE.value:
             mv_data = memoryview(data)
             CHUNK_SIZE = self.streaming_chunk_kb
@@ -1058,9 +1058,10 @@ class ZipNN:
             ba = in_file_handler.read()
         return self.decompress_bin(ba)
 
-def zipnn_hf_patch():
+
+def zipnn_hf():
     """
-    Patches the Hugging Face Transformers library to use ZipNN compression.
+    Pluging for the Hugging Face Transformers library to use ZipNN compression.
 
     Parameters
     -------------------------------------
@@ -1108,9 +1109,9 @@ def zipnn_hf_patch():
                 blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
                 subprocess.check_call(
                     [
-                        'sed',
-                        '-i',
-                        f's/{file_name}.znn/{file_name}/g',
+                        "sed",
+                        "-i",
+                        f"s/{file_name}.znn/{file_name}/g",
                         blob_name,
                     ]
                 )
@@ -1119,9 +1120,9 @@ def zipnn_hf_patch():
                 blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
                 subprocess.check_call(
                     [
-                        'sed',
-                        '-i',
-                        f's/{file_name}.znn/{file_name}/g',
+                        "sed",
+                        "-i",
+                        f"s/{file_name}.znn/{file_name}/g",
                         blob_name,
                     ]
                 )
@@ -1131,6 +1132,7 @@ def zipnn_hf_patch():
 
     # Monkey patch the load_state_dict method in the transformers library
     modeling_utils.load_state_dict = custom_load_state_dict
+
 
 #    def decompress_delta(self, base_path, delta_file):
 #        return 0
