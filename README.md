@@ -25,17 +25,21 @@ There are also scripts to compress/decompress all files in a folder:
 
 In the realm of data compression, achieving a high compression/decompression ratio often requires careful consideration of the data types and the nature of the datasets being compressed. For instance, different strategies may be optimal for floating-point numbers compared to integers, and datasets in monotonic order may benefit from distinct preparations.
 
-ZipNN is a lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment, designed to automatically prepare the data for compression according to its type. By simply calling zipnn.compress(data), users can rely on the package to apply the most effective compression technique under the hood.
+ZipNN is a lossless compression library optimized for numbers/tensors in the Foundation Models environment, designed to automatically prepare the data for compression according to its type. By simply calling zipnn.compress(data), users can rely on the package to apply the most effective compression technique under the hood.
 
 [Click here to explore the options we use for different datasets and data types](./docs/UTH.md)
 
-With zipnn, users can focus on their core tasks without worrying about the complexities of data compression, confident that the package will deliver the best possible results for their specific data types and structures.
+Given a specific data set, ZipNN automatically rearranges the data according to it's type, and applies the most effective techniques for the given instance to improve compression ratios and speed.
+It is especially effective for BF16 models, typically saving 33% of the model size, whereas with models of type FP32 it usually reduces the model size by 17%.
+<!-- With zipnn, users can focus on their core tasks without worrying about the complexities of data compression, confident that the package will deliver the best possible results for their specific data types and structures. --> 
 
-For more details, please see our paper: [Lossless and Near-Lossless Compression for Foundation Models](https://arxiv.org/pdf/2404.15198)
+
+Some of the techniques employed in ZipNN are described in our paper: [Lossless and Near-Lossless Compression for Foundation Models](https://arxiv.org/pdf/2404.15198)
+A follow up version with a more complete description is under preparation. 
 
 Currently, ZipNN compression methods are implemented on CPUs, and GPU implementations are on the way. 
 
-Given a specific data set, ZipNN Automatically rearranges the data according to it's type, and applies the most effective techniques for the given instance to improve compression ratios and rates.
+
 
 <p align="center">
   <img src="./images/updated_flow.png" alt="Flow Image" style="display: block; margin: 0 auto;">
