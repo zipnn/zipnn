@@ -1131,7 +1131,7 @@ def zipnn_hf():
     modeling_utils.load_state_dict = custom_load_state_dict
 
 def replace_in_file(file_path: Path | str, old: str, new: str) -> None:
-    """Given a file_path, replace all occurences of `old` with `new` inpalce."""
+    """Given a file_path, replace all occurrences of `old` with `new` inpalce."""
 
     with open(file_path, 'r') as file:
         file_data = file.read()
