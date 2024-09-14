@@ -94,10 +94,6 @@ ipython_config.py
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
 # SageMath parsed files
 *.sage.py
 
@@ -130,16 +126,6 @@ dmypy.json
 
 .idea
 volumes
-ccc_data_files*
-ccc_results_files*
-ccc_jobs_manager_data*.json
-
-sandbox_benjamin
-**/dmf_datasets
-**/dmf_models
-**/dmf_tokenizers
 
 .DS_Store
 *venv*
-output
-cache
