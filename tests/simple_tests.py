@@ -2,6 +2,7 @@ from zipnn import ZipNN
 import torch
 import os
 import copy
+import numpy as np
 
 
 
@@ -135,6 +136,62 @@ def test_byte_torch_streaming():
         print("Are the original and decompressed byte strings the same [DELTA FILE STREAMING]? ", copy_bytes == decompressed_data)
         if not copy_bytes == decompressed_data:
             raise ValueError("Error - original file and decompressed file are NOT equal.") 
+
+    # Float32
+    for size in [int(1024*8)]:  # Size in number of float32 elements
+        zpn_streaming_delta = ZipNN(bytearray_dtype="float32")
+        original_bytes = np.random.rand(size).astype(np.float32)
+        copy_bytes = bytearray(original_bytes)
+        compressed_data = zpn_streaming_delta.compress(original_bytes)
+        decompressed_data = zpn_streaming_delta.decompress(compressed_data)
+        decompressed_array = np.frombuffer(decompressed_data, dtype=np.float32)
+        print("Are the original and decompressed float32 arrays the same [FLOAT32]? ", np.array_equal(np.frombuffer(copy_bytes, dtype=np.float32), decompressed_array))
+        
+        if not np.array_equal(np.frombuffer(copy_bytes, dtype=np.float32), decompressed_array):
+            raise ValueError("Error - original and decompressed float32 arrays are NOT equal.")
+
+    # Streaming float32
+    for size in [int(1024*8)]:  # Size in number of float32 elements
+        zpn_streaming_delta = ZipNN(bytearray_dtype="float32",is_streaming=True)
+        original_bytes = np.random.rand(size).astype(np.float32)
+        copy_bytes = bytearray(original_bytes)
+        compressed_data = zpn_streaming_delta.compress(original_bytes)
+        decompressed_data = zpn_streaming_delta.decompress(compressed_data)
+        decompressed_array = np.frombuffer(decompressed_data, dtype=np.float32)
+        print("Are the original and decompressed float32 arrays the same [STREAMING FLOAT32]? ", np.array_equal(np.frombuffer(copy_bytes, dtype=np.float32), decompressed_array))
+        
+        if not np.array_equal(np.frombuffer(copy_bytes, dtype=np.float32), decompressed_array):
+            raise ValueError("Error - original and decompressed float32 arrays are NOT equal.")
+
+    # Streaming delta float32
+    for size in [int(1024*8)]:  # Size in number of float32 elements
+        zpn_streaming_delta = ZipNN(bytearray_dtype="float32", is_streaming=True,delta_compressed_type="byte")
+        
+        # Create random float32 arrays
+        a = np.random.rand(size).astype(np.float32)
+        b = np.random.rand(size).astype(np.float32)
+        c = np.random.rand(size).astype(np.float32)
+        
+        # Convert arrays to byte format for compression
+        original_bytes = np.concatenate([a, b]).tobytes()
+        second_data = np.concatenate([a, c]).tobytes()
+        copy_bytes = bytearray(original_bytes)
+        
+        # Compress and decompress
+        compressed_data = zpn_streaming_delta.compress(original_bytes, delta_second_data=second_data)
+        decompressed_data = zpn_streaming_delta.decompress(compressed_data, delta_second_data=second_data)
+        
+        # Convert decompressed data back to float32
+        decompressed_array = np.frombuffer(decompressed_data, dtype=np.float32)
+        
+        print("Are the original and decompressed float32 arrays the same [STREAMING DELTA FLOAT32]? ", np.array_equal(np.frombuffer(copy_bytes, dtype=np.float32), decompressed_array))
+        
+        if not np.array_equal(np.frombuffer(copy_bytes, dtype=np.float32), decompressed_array):
+            raise ValueError("Error - original and decompressed float32 arrays are NOT equal.")
+
+
+
+
 
     if os.path.exists(file_path):
         os.remove(file_path)
