@@ -1,23 +1,8 @@
 # ZipNN - A Lossless Compression Library for AI pipelines
 
 **TL;DR - simple, fast, and effective model compression**
-## Getting started (fast)
-Download the scripts for compressing/decompressing AI Models:
 
-```
-wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt
-```
-
-To compress a file:
-```
-python3 zipnn_compress_file.py model_name
-```
-
-To decompress a file:
-```
-python3 zipnn_decompress_file.py compressed_model_name.znn
-```
-
+## Download compressed models from Hugging Face
 Try out yourself the [compressed ibm-granite granite-7b-instruct](https://huggingface.co/royleibov/granite-7b-instruct-ZipNN-Compressed) hosted on Hugging Face:
 ```bash
 pip install zipnn
@@ -46,6 +31,24 @@ python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Comp
 ```
 You can try other compressed models, like [compressed ai21labs/Jamba-v0.1](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed),...
 [Click here to explore other examples of compressed models hosted on Hugging Face](./examples/README.md)
+
+## Getting started (fast)
+Download the scripts for compressing/decompressing AI Models:
+
+```
+wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt
+```
+
+To compress a file:
+```
+python3 zipnn_compress_file.py model_name
+```
+
+To decompress a file:
+```
+python3 zipnn_decompress_file.py compressed_model_name.znn
+```
+
 
 ## Introduction
 
@@ -121,11 +124,6 @@ This project requires the following Python packages:
 * zstandard
 * torch
 
-### For specific Compression methods other than ZSTD
-
-* For lz4 method: ```pip install lz4```
-* For snappy method: ```pip install python-snappy```
-
 ## Usage
 
 ### Ready Made Scripts for file Compression/ Decompression
@@ -190,15 +188,6 @@ torch.equal(original_tensor, decompressed_data)
 ```
 
 ## Example
-
-### Example of synthetic data
-In this example, ZipNN compresses and decompresses 1MB of a random number between -1 to 1 in a torch.tensor format. 
-```
-> python3 simple_example.py
-...
-Are the original and decompressed byte strings the same [TORCH]?  True
-``` 
-
 
 ### Example of a real module
 In this example, ZipNN and ZSTD compress and decompress 1GB of the Granite model and validate that the original file and the decompressed file are equal. <br>
