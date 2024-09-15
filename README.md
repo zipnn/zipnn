@@ -38,7 +38,7 @@ To compress the cached model, simply run:
 python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```
 
-The model will be decompressed automatically and safely as long as `zipnn_hf()` is added at the top of the file like in the [example above](#L25).
+The model will be decompressed automatically and safely as long as `zipnn_hf()` is added at the top of the file like in the [example above](./README.md#L25).
 
 To decompress manualy, simply run:
 ```bash
