@@ -1164,7 +1164,6 @@ def zipnn_hf():
             cached_file,
         )
         from transformers.modeling_utils import _add_variant, PreTrainedModel
-        import subprocess
     except ImportError as exc:
         raise ImportError("Hugging Face Transformers library is not installed. Please install it to use ZipNN compression.") from exc
 
