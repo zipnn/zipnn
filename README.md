@@ -283,9 +283,9 @@ We welcome and value all contributions to the project!
 
 ## Change Log
 
-##### v0.3.3
+##### v0.3.4
 
-* Patch for Hugging Face transformers to allow using from_pretrained and decompressing the model after downloading it from Hugging Face.
+* Plugin for Hugging Face transformers to allow using from_pretrained and decompressing the model after downloading it from Hugging Face.
 
 * Add Delta compression support in python -> save Xor between two models and compress them).  
 

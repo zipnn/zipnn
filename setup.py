@@ -34,8 +34,8 @@ split_dtype_extension = Extension(
 
 setup(
     name="zipnn",
-    version="0.3.3",
-    author="Moshik Hershcovitch",
+    version="0.3.4",
+    author="ZipNN Contributors",
     author_email="moshik1@gmail.com",
     description="A lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment",
     long_description=open("README.md").read(),

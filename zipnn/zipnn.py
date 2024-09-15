@@ -205,7 +205,7 @@ class ZipNN:
 
         self._version_major = 0
         self._version_minor = 3
-        self._version_tiny = 3
+        self._version_tiny = 4
         self._import_dependencies(zstd_level)
 
         self.header_length = 32
