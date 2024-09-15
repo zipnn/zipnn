@@ -1,6 +1,8 @@
 import time
 import os
 import math
+from pathlib import Path
+
 import numpy as np
 import torch
 import zstandard as zstd
@@ -1118,24 +1120,19 @@ def zipnn_hf():
             if os.path.exists(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)):
                 file_name = os.path.basename(output_file)
                 blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
-                subprocess.check_call(
-                    [
-                        "sed",
-                        "-i",
-                        f"s/{file_name}.znn/{file_name}/g",
-                        blob_name,
-                    ]
+                replace_in_file(
+                    file_path=blob_name,
+                    old=f"{file_name}.znn",
+                    new=f"{file_name}"
                 )
+
             elif os.path.exists(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)):
                 file_name = os.path.basename(output_file)
                 blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
-                subprocess.check_call(
-                    [
-                        "sed",
-                        "-i",
-                        f"s/{file_name}.znn/{file_name}/g",
-                        blob_name,
-                    ]
+                replace_in_file(
+                    file_path=blob_name,
+                    old=f"{file_name}.znn",
+                    new=f"{file_name}"
                 )
 
         # Call the original load_state_dict method
@@ -1242,6 +1239,17 @@ def zipnn_hf():
     
     # Monkey patch the from_pretrained method in the transformers library
     PreTrainedModel.from_pretrained = classmethod(custom_from_pretrained)
+
+def replace_in_file(file_path: Path | str, old: str, new: str) -> None:
+    """Given a file_path, replace all occurrences of `old` with `new` inpalce."""
+
+    with open(file_path, 'r') as file:
+        file_data = file.read()
+
+    file_data = file_data.replace(old, new)
+
+    with open(file_path, 'w') as file:
+        file.write(file_data)
 
 #    def decompress_delta(self, base_path, delta_file):
 #        return 0
