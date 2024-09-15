@@ -197,7 +197,7 @@ Add the compressed weights to git-lfs tracking
 ```
 git lfs track "*.znn" &&
 sed -i 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json &&
-git add *.znn .gitattributes model.safetensors.index.json
+git add *.znn .gitattributes model.safetensors.index.json &&
 git rm *.safetensors
 ```
 
@@ -205,9 +205,9 @@ Done! Now push the changes as per [the documentation](https://huggingface.co/doc
 
 To use the model simply run our ZipNN Hugging Face patch before proceeding as normal:
 ```python
-from zipnn import zipnn_hf_patch
+from zipnn import zipnn_hf
 
-zipnn_hf_patch()
+zipnn_hf()
 
 # Load the model from your compressed Hugging Face model card as you normally would
 ...

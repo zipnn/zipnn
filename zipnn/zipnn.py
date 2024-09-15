@@ -1074,7 +1074,18 @@ def zipnn_hf():
     try:
         from transformers import modeling_utils
         from typing import Union, Optional
-        from transformers.utils import SAFE_WEIGHTS_INDEX_NAME, WEIGHTS_INDEX_NAME
+        from transformers.configuration_utils import PretrainedConfig
+        from transformers.utils import (
+            FLAX_WEIGHTS_NAME,
+            SAFE_WEIGHTS_INDEX_NAME,
+            SAFE_WEIGHTS_NAME,
+            TF2_WEIGHTS_NAME,
+            TF_WEIGHTS_NAME,
+            WEIGHTS_INDEX_NAME,
+            WEIGHTS_NAME,
+            cached_file,
+        )
+        from transformers.modeling_utils import _add_variant, PreTrainedModel
         import subprocess
     except ImportError as exc:
         raise ImportError("Hugging Face Transformers library is not installed. Please install it to use ZipNN compression.") from exc
@@ -1133,6 +1144,104 @@ def zipnn_hf():
     # Monkey patch the load_state_dict method in the transformers library
     modeling_utils.load_state_dict = custom_load_state_dict
 
+    # save original from_pretrained
+    original_from_pretrained = PreTrainedModel.from_pretrained
+
+    # class CustomPreTrainedModel(PreTrainedModel):
+    def custom_from_pretrained(cls,
+            pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
+            *model_args,
+            config: Optional[Union[PretrainedConfig, str, os.PathLike]] = None,
+            cache_dir: Optional[Union[str, os.PathLike]] = None,
+            ignore_mismatched_sizes: bool = False,
+            force_download: bool = False,
+            local_files_only: bool = False,
+            token: Optional[Union[str, bool]] = None,
+            revision: str = "main",
+            use_safetensors: bool = None,
+            **kwargs,):
+
+        subfolder = kwargs.get("subfolder", "")
+        variant = kwargs.get("variant", None)
+        proxies = kwargs.get("proxies", None)
+        resume_download = kwargs.get("resume_download", None)
+        commit_hash = kwargs.get("_commit_hash", None)
+        from_pipeline = kwargs.get("_from_pipeline", None)
+        from_auto_class = kwargs.get("_from_auto", False)
+
+        # Skipping user_agent["quant"]! Could be a problem
+        user_agent = {"file_type": "model", "framework": "pytorch", "from_auto_class": from_auto_class}
+        if from_pipeline is not None:
+            user_agent["using_pipeline"] = from_pipeline
+
+        test_paths = [
+            TF_WEIGHTS_NAME + ".index",
+            TF2_WEIGHTS_NAME,
+            FLAX_WEIGHTS_NAME,
+            _add_variant(SAFE_WEIGHTS_NAME, variant),
+            _add_variant(SAFE_WEIGHTS_INDEX_NAME, variant),
+            _add_variant(WEIGHTS_NAME, variant),
+            _add_variant(WEIGHTS_INDEX_NAME, variant),
+            FLAX_WEIGHTS_NAME,
+            pretrained_model_name_or_path,
+            pretrained_model_name_or_path + ".index",
+        ]
+
+        test_paths = [path + ".znn" for path in test_paths]
+
+        cached_file_kwargs = {
+                        "cache_dir": cache_dir,
+                        "force_download": force_download,
+                        "proxies": proxies,
+                        "resume_download": resume_download,
+                        "local_files_only": local_files_only,
+                        "token": token,
+                        "user_agent": user_agent,
+                        "revision": revision,
+                        "subfolder": subfolder,
+                        "_raise_exceptions_for_gated_repo": False,
+                        "_raise_exceptions_for_missing_entries": False,
+                        "_commit_hash": commit_hash,
+                }
+
+        for filename in test_paths:
+            resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
+            if resolved_archive_file is not None:
+                print(f"Decompressing {resolved_archive_file.split('/')[-1]}")
+                output_file = resolved_archive_file.replace(".znn", "")
+                if not os.path.exists(output_file):
+                    znn = ZipNN(is_streaming=True)
+                    with open(resolved_archive_file, "rb") as infile, open(output_file, "wb") as outfile:
+                        d_data = b""
+                        chunk = infile.read()
+                        d_data += znn.decompress(chunk)
+                        outfile.write(d_data)
+                    snapshot_path = os.path.dirname(resolved_archive_file)
+                    blob_name = os.path.join(snapshot_path, os.readlink(resolved_archive_file))
+                    os.rename(output_file, blob_name)
+                    os.symlink(blob_name, output_file)
+                os.remove(resolved_archive_file)
+        # pack config, cache_dir, etc. into kwargs
+        kwargs.update({
+            "config": config,
+            "cache_dir": cache_dir,
+            "ignore_mismatched_sizes": ignore_mismatched_sizes,
+            "force_download": force_download,
+            "local_files_only": local_files_only,
+            "token": token,
+            "revision": revision,
+            "use_safetensors": use_safetensors,
+        })
+
+        # Call the original from_pretrained method with the updated kwargs
+        return original_from_pretrained.__func__(cls,
+            pretrained_model_name_or_path,
+            *model_args,
+            **kwargs,
+        )
+    
+    # Monkey patch the from_pretrained method in the transformers library
+    PreTrainedModel.from_pretrained = classmethod(custom_from_pretrained)
 
 #    def decompress_delta(self, base_path, delta_file):
 #        return 0

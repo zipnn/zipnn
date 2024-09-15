@@ -10,6 +10,10 @@ KB = 1024
 MB = 1024 * 1024
 GB = 1024 * 1024 * 1024
 
+RED = "\033[91m"
+YELLOW = "\033[93m"
+GREEN = "\033[92m"
+RESET = "\033[0m"
 
 def check_and_install_zipnn():
     try:
@@ -63,7 +67,7 @@ def compress_file(
     streaming_chunk_size = parse_streaming_chunk_size(streaming_chunk_size)
     full_path = input_file
     if not os.path.exists(full_path):
-        print("File not found")
+        print(f"{RED}File not found{RESET}")
         return
     if delete and not hf_cache:
         print(f"Deleting {full_path}...")
@@ -104,12 +108,12 @@ def compress_file(
         end_time = time.time() - start_time
         print(f"Compressed {input_file} to {output_file}")
         print(
-            f"Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}"
+            f"{GREEN}Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}{RESET}"
         )
 
         if hf_cache:
             # If the file is in the Hugging Face cache, fix the symlinks
-            print("Reorganizing Hugging Face cache...")
+            print(f"{YELLOW}Reorganizing Hugging Face cache...{RESET}")
             try:
                 snapshot_path = os.path.dirname(input_file)
                 blob_name = os.path.join(snapshot_path, os.readlink(input_file))
