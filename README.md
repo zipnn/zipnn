@@ -18,8 +18,34 @@ To decompress a file:
 python3 zipnn_decompress_file.py compressed_model_name.znn
 ```
 
-There are also scripts to compress/decompress all files in a folder:
+Try out yourself the [compressed ibm-granite granite-7b-instruct](https://huggingface.co/royleibov/granite-7b-instruct-ZipNN-Compressed) hosted on Hugging Face:
+```bash
+pip install zipnn
+```
+```python
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from zipnn import zipnn_hf
 
+zipnn_hf()
+
+tokenizer = AutoTokenizer.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
+model = AutoModelForCausalLM.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
+```
+ZipNN also allows you to seemlessly save local disk space in your cache after the model is downloaded.
+
+To compress the cached model, simply run:
+```bash
+python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
+```
+
+The model will be decompressed automatically and safely as long as `zipnn_hf()` is added at the top of the file like in the [example above](#L25).
+
+To decompress manualy, simply run:
+```bash
+python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
+```
+You can try other compressed models, like [compressed ai21labs/Jamba-v0.1](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed),...
+[Click here to explore other examples of compressed models hosted on Hugging Face](./examples/README.md)
 
 ## Introduction
 

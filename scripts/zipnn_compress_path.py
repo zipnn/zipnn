@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import argparse
+from pathlib import Path
 from concurrent.futures import (
     ProcessPoolExecutor,
     as_completed,
@@ -71,6 +72,16 @@ def parse_streaming_chunk_size(
 
     return final
 
+def replace_in_file(file_path: Path | str, old: str, new: str) -> None:
+    """Given a file_path, replace all occurrences of `old` with `new` inpalce."""
+
+    with open(file_path, 'r') as file:
+        file_data = file.read()
+
+    file_data = file_data.replace(old, new)
+
+    with open(file_path, 'w') as file:
+        file.write(file_data)
 
 def compress_files_with_suffix(
     suffix,
@@ -195,25 +206,19 @@ def compress_files_with_suffix(
         if os.path.exists(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)):
             print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
             blob_name = os.path.join(path, os.readlink(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)))
-            subprocess.check_call(
-            [
-                'sed',
-                '-i',
-                f's/{suffix}/{suffix}.znn/g',
-                blob_name,
-            ]
-            )
+            replace_in_file(
+                    file_path=blob_name,
+                    old=f"{suffix}",
+                    new=f"{suffix}.znn"
+                )
         elif os.path.exists(os.path.join(path, WEIGHTS_INDEX_NAME)):
             print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
             blob_name = os.path.join(path, os.readlink(os.path.join(path, WEIGHTS_INDEX_NAME)))
-            subprocess.check_call(
-            [
-                'sed',
-                '-i',
-                f's/{suffix}/{suffix}.znn/g',
-                blob_name,
-            ]
-            )
+            replace_in_file(
+                    file_path=blob_name,
+                    old=f"{suffix}",
+                    new=f"{suffix}.znn"
+                )
 
     with ProcessPoolExecutor(
         max_workers=max_processes
