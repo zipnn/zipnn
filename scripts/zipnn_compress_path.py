@@ -21,6 +21,11 @@ KB = 1024
 MB = 1024 * 1024
 GB = 1024 * 1024 * 1024
 
+RED = "\033[91m"
+YELLOW = "\033[93m"
+GREEN = "\033[92m"
+RESET = "\033[0m"
+
 
 def check_and_install_zipnn():
     try:
@@ -188,7 +193,7 @@ def compress_files_with_suffix(
             )
         
         if os.path.exists(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)):
-            print("Fixing Hugging Face model json...")
+            print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
             blob_name = os.path.join(path, os.readlink(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)))
             subprocess.check_call(
             [
@@ -199,7 +204,7 @@ def compress_files_with_suffix(
             ]
             )
         elif os.path.exists(os.path.join(path, WEIGHTS_INDEX_NAME)):
-            print("Fixing Hugging Face model json...")
+            print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
             blob_name = os.path.join(path, os.readlink(os.path.join(path, WEIGHTS_INDEX_NAME)))
             subprocess.check_call(
             [
@@ -236,7 +241,7 @@ def compress_files_with_suffix(
                     future.result()
                 except Exception as exc:
                     print(
-                        f"File {file} generated an exception: {exc}"
+                        f"{RED}File {file} generated an exception: {exc}{RESET}"
                     )
 
                 if file_list:
@@ -255,8 +260,10 @@ def compress_files_with_suffix(
 
     if not files_found:
         print(
-            f"No files with the suffix '{suffix}' found."
+            f"{RED}No files with the suffix '{suffix}' found.{RESET}"
         )
+
+    print(f"{GREEN}All files compressed{RESET}")
 
 
 if __name__ == "__main__":

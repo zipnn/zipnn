@@ -5,6 +5,11 @@ import argparse
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+RED = "\033[91m"
+YELLOW = "\033[93m"
+GREEN = "\033[92m"
+RESET = "\033[0m"
+
 
 def check_and_install_zipnn():
     try:
@@ -15,7 +20,7 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def decompress_file(input_file, delete=False, force=False, hf_cache=False,):
+def decompress_file(input_file, delete=False, force=False, hf_cache=False):
     import zipnn
 
     if not input_file.endswith(".znn"):
@@ -50,15 +55,14 @@ def decompress_file(input_file, delete=False, force=False, hf_cache=False,):
 
             if hf_cache:
                 # If the file is in the Hugging Face cache, fix the symlinks
-                print("Reorganizing Hugging Face cache...")
+                print(f"{YELLOW}Reorganizing Hugging Face cache...{RESET}")
                 try:
                     snapshot_path = os.path.dirname(input_file)
                     blob_name = os.path.join(snapshot_path, os.readlink(input_file))
                     os.rename(output_file, blob_name)
                     os.symlink(blob_name, output_file)
                     
-                    print("To delete the original compressed file, run the script with the --delete flag.")
-                    if os.path.exists(input_file) and delete:
+                    if os.path.exists(input_file):
                         os.remove(input_file)
                 except Exception as e:
                     raise Exception(f"Error reorganizing Hugging Face cache: {e}")

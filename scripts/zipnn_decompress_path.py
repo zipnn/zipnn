@@ -19,6 +19,10 @@ sys.path.append(
     )
 )
 
+RED = "\033[91m"
+YELLOW = "\033[93m"
+GREEN = "\033[92m"
+RESET = "\033[0m"
 
 def check_and_install_zipnn():
     try:
@@ -156,7 +160,7 @@ def decompress_znn_files(
         suffix = file_list[0].split('/')[-1].split('.')[-2] # get the one before .znn
 
         if os.path.exists(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)):
-            print("Fixing Hugging Face model json...")
+            print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
             blob_name = os.path.join(path, os.readlink(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)))
             subprocess.check_call(
             [
@@ -167,7 +171,7 @@ def decompress_znn_files(
             ]
             )
         elif os.path.exists(os.path.join(path, WEIGHTS_INDEX_NAME)):
-            print("Fixing Hugging Face model json...")
+            print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
             blob_name = os.path.join(path, os.readlink(os.path.join(path, WEIGHTS_INDEX_NAME)))
             subprocess.check_call(
             [
@@ -188,6 +192,7 @@ def decompress_znn_files(
                     file,
                     delete,
                     True,
+                    hf_cache,
                 ): file
                 for file in file_list[
                     :max_processes
@@ -207,7 +212,7 @@ def decompress_znn_files(
                         future.result()
                     except Exception as exc:
                         print(
-                            f"File {file} generated an exception: {exc}"
+                            f"{RED}File {file} generated an exception: {exc}{RESET}"
                         )
 
                     if file_list:
@@ -220,9 +225,11 @@ def decompress_znn_files(
                                 next_file,
                                 delete,
                                 True,
+                                hf_cache,
                             )
                         ] = next_file
                         #
+    print(f"{GREEN}All files decompressed{RESET}")
 
 
 if __name__ == "__main__":
