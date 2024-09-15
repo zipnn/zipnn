@@ -369,7 +369,9 @@ class ZipNN:
         #        self._header[6] = bit_reorder
         self._header[7] = self.method
         self._header[8] = self.input_format
-        self._header[9] = 0 if self.delta_compressed_type is None else self.delta_compressed_type
+        self._header[9] = (0 if self.delta_compressed_type is None else
+                   1 if self.delta_compressed_type == "byte" else
+                   2 if self.delta_compressed_type == "file" else 0)
         #        self._header[10] = self.lossy_compressed_type
         #        self._header[11] = self.lossy_compressed_factor
         #        self._header[12] = self._lossy_is_int
@@ -404,7 +406,11 @@ class ZipNN:
         self._bit_reorder = int(header[6])
         self.method = int(header[7])
         self.input_format = int(header[8])
-        self.delta_compressed_type = int(header[9])
+        self.delta_compressed_type = (
+            0 if self._header[9] == 0 else
+            "byte" if self._header[9] == 1 else
+            "file" if self._header[9] == 2 else 0
+        )
         self.lossy_compressed_type = int(header[10])
         self.lossy_compressed_factor = int(header[11])
         self._lossy_is_int = int(header[12])
@@ -461,10 +467,29 @@ class ZipNN:
         (depends on the type of the data compressed), which will be the compressed file,
         in the format chosen in the ZipNN class instance configuration.
         """
+        if self.delta_compressed_type=="byte":
+            if len(data)!=len(delta_second_data):
+                raise ValueError("Length of delta file has to match the length of the original file.")
+        elif self.delta_compressed_type=="file":
+            try:
+                with open(delta_second_data, 'rb') as file:
+                    file_data = file.read()
+                delta_second_data = file_data
+            except Exception:
+                raise FileNotFoundError("Encountered an error when reading the delta file")
+            if len(data)!=len(file_data):
+                raise ValueError("Length of delta file has to match the length of the original file.")
+            delta_second_data=file_data
+        else: #self.delta_compressed_type="0"
+            if delta_second_data!=None:
+                raise ValueError("ZipNN isn't set for delta compression, but delta_second_data is not null.")
+
         if len(data) % 2 != 0:
             data += b"\x00"
         if self.is_streaming and self.input_format == EnumFormat.BYTE.value:
             mv_data = memoryview(data)
+            if delta_second_data:
+                mv_delta=memoryview(delta_second_data)
             CHUNK_SIZE = self.streaming_chunk_kb
             # Compression into bytearray
             compressed_buffer = bytearray()
@@ -474,6 +499,11 @@ class ZipNN:
             while remaining_bytes > 0:
                 chunk_size = min(CHUNK_SIZE, remaining_bytes)
                 chunk = mv_data[offset : offset + chunk_size]
+                if delta_second_data:
+                    chunk_delta=mv_delta[offset : offset + chunk_size]
+                    array1 = np.frombuffer(chunk, dtype=np.uint8)
+                    array2 = np.frombuffer(chunk_delta, dtype=np.uint8)
+                    chunk = np.bitwise_xor(array1, array2).tobytes()
                 compressed_chunk = self.compress_torch_numpy_byte(chunk, lossy_compressed_type, lossy_compressed_factor)
                 if compressed_chunk:
                     compressed_buffer.extend(compressed_chunk)
@@ -481,6 +511,10 @@ class ZipNN:
                 remaining_bytes -= chunk_size
             return compressed_buffer
         else:
+            if delta_second_data:
+                array1 = np.frombuffer(data, dtype=np.uint8)
+                array2 = np.frombuffer(delta_second_data, dtype=np.uint8)
+                data = np.bitwise_xor(array1, array2).tobytes()
             #        if self.delta_compressed_type is not None:
             #            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
             return self.compress_torch_numpy_byte(data, lossy_compressed_type, lossy_compressed_factor)
@@ -818,7 +852,7 @@ class ZipNN:
     # decompression #
     #################
 
-    def decompress(self, data, decompress_cpu_gpu="cpu"):
+    def decompress(self, data, decompress_cpu_gpu="cpu",delta_second_data=None):
         """
         Decompress is the ZipNN function used for decompression.
 
@@ -837,22 +871,64 @@ class ZipNN:
         Returns the output of decompress_bin or decompress_read_file (depends on the type of the data compressed),
         which will be the compressed file, in the format chosen in the ZipNN class instance configuration.
         """
+        if self.delta_compressed_type=="byte":
+            if delta_second_data is None:
+                raise ValueError("delta_second_data is None or not set for delta copression")
+        elif self.delta_compressed_type=="file":
+            try:
+                with open(delta_second_data, 'rb') as file:
+                    file_data = file.read()
+                delta_second_data = file_data
+            except Exception:
+                raise FileNotFoundError("Encountered an error when reading the delta file")
+        else: #self.delta_compressed_type==0
+            if delta_second_data!=None:
+                raise ValueError("ZipNN isn't set for delta compression, but delta_second_data is not null.")
+            
         mv_data = memoryview(data)
+
+        was_data_delta_compressed=mv_data[9]
+        if was_data_delta_compressed==0 and self.delta_compressed_type!=0:
+            raise ValueError("The data wasn't compressed using delta compression and you're trying to delta-decompress it.")
+        if was_data_delta_compressed!=0 and self.delta_compressed_type==0:    
+            raise ValueError("The data was compressed using delta compression and you're trying to decompress it normally.")
+        if delta_second_data:
+            mv_delta=memoryview(delta_second_data)
+        
         comp_chunk_size = mv_data[13]  # 0 if no streaming > 127
-        if self.input_format == EnumFormat.BYTE.value and comp_chunk_size > 127:
+        if self.input_format == EnumFormat.BYTE.value and comp_chunk_size > 127: #xor inside streaming
             decompressed_buffer = bytearray()
             offset = 0
             compressed_length = len(data)
-
+            offset_delta=0
             while offset < compressed_length:
                 header = mv_data[offset : offset + 32]
                 mid_chunk_len = int.from_bytes(header[24:32], byteorder="little") - 32
                 chunk = mv_data[offset : offset + mid_chunk_len + 32]
                 decompressed_chunk = self.decompress_bin(chunk)
                 if decompressed_chunk:
+                    if delta_second_data:
+                        if(offset_delta + len(decompressed_chunk)>len(mv_delta)):
+                            raise ValueError("Length of delta file has to match the length of the decompressed file.")
+                        chunk_delta=mv_delta[offset_delta : offset_delta + len(decompressed_chunk)]
+                        array1 = np.frombuffer(decompressed_chunk, dtype=np.uint8)
+                        array2 = np.frombuffer(chunk_delta, dtype=np.uint8)
+                        decompressed_chunk = np.bitwise_xor(array1, array2).tobytes()
+                        offset_delta+=len(decompressed_chunk)
                     decompressed_buffer.extend(decompressed_chunk)
                 offset += mid_chunk_len + 32
+            if delta_second_data and offset_delta!=len(mv_delta):
+                raise ValueError("Length of delta file has to match the length of the decompressed file.")
             return decompressed_buffer
+        
+        if delta_second_data:
+            decompressed_buffer=self.decompress_bin(data)
+            if len(decompressed_buffer)!=len(delta_second_data):
+                raise ValueError("Length of delta file has to match the length of the decompressed file.")
+            array1 = np.frombuffer(decompressed_buffer, dtype=np.uint8)
+            array2 = np.frombuffer(delta_second_data, dtype=np.uint8)
+            final_data = np.bitwise_xor(array1, array2).tobytes()
+            return final_data
         return self.decompress_bin(data)
 
     def decompress_method(self, data):
