@@ -30,7 +30,7 @@ To decompress manualy, simply run:
 python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```
 You can try other compressed models, like [compressed ai21labs/Jamba-v0.1](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed),...
-[Click here to explore other examples of compressed models hosted on Hugging Face](./examples/README.md)
+[Click here to explore other examples of compressed models hosted on Hugging Face](./examples)
 
 ## Getting started (fast)
 Download the scripts for compressing/decompressing AI Models:
