@@ -83,4 +83,4 @@ python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Comp
 ```
 
 You can try other compressed models, like [compressed meta-llama/Meta-Llama-3.1-8B-Instruct](https://huggingface.co/royleibov/Llama-3.1-8B-ZipNN-Compressed), [compressed Qwen/Qwen2-VL-7B-Instruct](https://huggingface.co/royleibov/Qwen2-VL-7B-Instruct-ZipNN-Compressed), [compressed ai21labs/Jamba-v0.1](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed).  
-[Click here](../examples/README.md) to explore other examples of compressed models hosted on Hugging Face
+[Click here](../examples) to explore other examples of compressed models hosted on Hugging Face
