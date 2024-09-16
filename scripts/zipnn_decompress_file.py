@@ -27,45 +27,45 @@ def decompress_file(input_file, delete=False, force=False, hf_cache=False):
         raise ValueError("Input file does not have the '.znn' suffix")
 
     if os.path.exists(input_file):
+        decompressed_path = input_file[:-4]
+        if not force and os.path.exists(decompressed_path):
+
+            user_input = (
+                input(f"{decompressed_path} already exists; overwrite (y/n)? ").strip().lower()
+            )
+
+            if user_input not in ("yes", "y"):
+                print(f"Skipping {input_file}...")
+                return
+        print(f"Decompressing {input_file}...")
+
+        output_file = input_file[:-4]
+        zpn = zipnn.ZipNN(is_streaming=True)
+
+        with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
+            d_data = b""
+            chunk = infile.read()
+            d_data += zpn.decompress(chunk)
+            outfile.write(d_data)
+            print(f"Decompressed {input_file} to {output_file}")
+
         if delete and not hf_cache:
             print(f"Deleting {input_file}...")
             os.remove(input_file)
-        else:
-            decompressed_path = input_file[:-4]
-            if not force and os.path.exists(decompressed_path):
 
-                user_input = (
-                    input(f"{decompressed_path} already exists; overwrite (y/n)? ").strip().lower()
-                )
-
-                if user_input not in ("yes", "y"):
-                    print(f"Skipping {input_file}...")
-                    return
-            print(f"Decompressing {input_file}...")
-
-            output_file = input_file[:-4]
-            zpn = zipnn.ZipNN(is_streaming=True)
-
-            with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
-                d_data = b""
-                chunk = infile.read()
-                d_data += zpn.decompress(chunk)
-                outfile.write(d_data)
-                print(f"Decompressed {input_file} to {output_file}")
-
-            if hf_cache:
-                # If the file is in the Hugging Face cache, fix the symlinks
-                print(f"{YELLOW}Reorganizing Hugging Face cache...{RESET}")
-                try:
-                    snapshot_path = os.path.dirname(input_file)
-                    blob_name = os.path.join(snapshot_path, os.readlink(input_file))
-                    os.rename(output_file, blob_name)
-                    os.symlink(blob_name, output_file)
-                    
-                    if os.path.exists(input_file):
-                        os.remove(input_file)
-                except Exception as e:
-                    raise Exception(f"Error reorganizing Hugging Face cache: {e}")
+        if hf_cache:
+            # If the file is in the Hugging Face cache, fix the symlinks
+            print(f"{YELLOW}Reorganizing Hugging Face cache...{RESET}")
+            try:
+                snapshot_path = os.path.dirname(input_file)
+                blob_name = os.path.join(snapshot_path, os.readlink(input_file))
+                os.rename(output_file, blob_name)
+                os.symlink(blob_name, output_file)
+                
+                if os.path.exists(input_file):
+                    os.remove(input_file)
+            except Exception as e:
+                raise Exception(f"Error reorganizing Hugging Face cache: {e}")
 
     else:
         print(f"Error: The file {input_file} does not exist.")
