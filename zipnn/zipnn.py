@@ -1315,7 +1315,7 @@ def zipnn_hf():
     # Monkey patch the from_pretrained method in the transformers library
     PreTrainedModel.from_pretrained = classmethod(custom_from_pretrained)
 
-def replace_in_file(file_path: Path | str, old: str, new: str) -> None:
+def replace_in_file(file_path, old: str, new: str) -> None:
     """Given a file_path, replace all occurrences of `old` with `new` inpalce."""
 
     with open(file_path, 'r') as file:
