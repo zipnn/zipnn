@@ -15,6 +15,7 @@ YELLOW = "\033[93m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
 
+
 def check_and_install_zipnn():
     try:
         import zipnn
@@ -64,6 +65,7 @@ def compress_file(
     hf_cache=False,
 ):
     import zipnn
+
     streaming_chunk_size = parse_streaming_chunk_size(streaming_chunk_size)
     full_path = input_file
     if not os.path.exists(full_path) or not os.path.exists(delta_file):
@@ -75,39 +77,29 @@ def compress_file(
     else:
         compressed_path = full_path + ".znn"
         if not force and os.path.exists(compressed_path):
-            user_input = (
-                input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
-            )
+            user_input = input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
             if user_input not in ("yes", "y"):
                 print(f"Skipping {full_path}...")
                 return
         print(f"Compressing {full_path}...")
         #
-        output_file = input_file[:-4] + "_delta_"+delta_file+".znn"
+        output_file = input_file[:-4] + "_delta_" + delta_file + ".znn"
         if dtype:
             zpn = zipnn.ZipNN(
-                bytearray_dtype="float32",
-                is_streaming=True,
-                streaming_chunk_kb=streaming_chunk_size,
-                delta_compressed_type="file"
-                
+                bytearray_dtype="float32", is_streaming=True, streaming_chunk_kb=streaming_chunk_size, delta_compressed_type="file"
             )
         else:
-            zpn = zipnn.ZipNN(
-                is_streaming=True,
-                streaming_chunk_kb=streaming_chunk_size,
-                delta_compressed_type="file"
-            )
+            zpn = zipnn.ZipNN(is_streaming=True, streaming_chunk_kb=streaming_chunk_size, delta_compressed_type="file")
         start_time = time.time()
-        with open(input_file, 'rb') as f:
+        with open(input_file, "rb") as f:
             file_data = f.read()
-        compressed_data = zpn.compress(file_data,delta_second_data=delta_file)
-        with open(output_file, 'wb') as f_out:
+        compressed_data = zpn.compress(file_data, delta_second_data=delta_file)
+        with open(output_file, "wb") as f_out:
             f_out.write(compressed_data)
         end_time = time.time() - start_time
         print(f"Compressed {input_file} to {output_file}")
-        file_size_before=len(file_data)
-        file_size_after=len(compressed_data)
+        file_size_before = len(file_data)
+        file_size_after = len(compressed_data)
         print(
             f"{GREEN}Original size:  {file_size_before/GB:.05f}GB size after compression: {file_size_after/GB:.05f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}{RESET}"
         )
@@ -124,6 +116,7 @@ def compress_file(
                     os.remove(input_file)
             except Exception as e:
                 raise Exception(f"Error reorganizing Hugging Face cache: {e}")
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -180,4 +173,4 @@ if __name__ == "__main__":
         optional_kwargs["hf_cache"] = args.hf_cache
 
     check_and_install_zipnn()
-    compress_file(args.input_file,args.delta_file, **optional_kwargs)
+    compress_file(args.input_file, args.delta_file, **optional_kwargs)

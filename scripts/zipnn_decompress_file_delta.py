@@ -24,7 +24,7 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def decompress_file(input_file,delta_file, delete=False, force=False, hf_cache=False):
+def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=False):
     import zipnn
 
     if not input_file.endswith(".znn"):
@@ -38,28 +38,26 @@ def decompress_file(input_file,delta_file, delete=False, force=False, hf_cache=F
             decompressed_path = input_file[:-4]
             if not force and os.path.exists(decompressed_path):
 
-                user_input = (
-                    input(f"{decompressed_path} already exists; overwrite (y/n)? ").strip().lower()
-                )
+                user_input = input(f"{decompressed_path} already exists; overwrite (y/n)? ").strip().lower()
 
                 if user_input not in ("yes", "y"):
                     print(f"Skipping {input_file}...")
                     return
             print(f"Decompressing {input_file}...")
 
-            output_file = input_file.split('_delta_')[0] + '.bin'
-            zpn = zipnn.ZipNN(is_streaming=True,delta_compressed_type="file") ##
-            
+            output_file = input_file.split("_delta_")[0] + ".bin"
+            zpn = zipnn.ZipNN(is_streaming=True, delta_compressed_type="file")  ##
+
             #
-            with open(input_file, 'rb') as f:
+            with open(input_file, "rb") as f:
                 file_data = f.read()
-            decompressed_data = zpn.decompress(file_data,delta_second_data=delta_file)
-            with open(output_file, 'wb') as f_out:
+            decompressed_data = zpn.decompress(file_data, delta_second_data=delta_file)
+            with open(output_file, "wb") as f_out:
                 f_out.write(decompressed_data)
             #
             print(f"Decompressed {input_file} to {output_file}")
-            file_size_before=len(file_data)
-            file_size_after=len(decompressed_data)
+            file_size_before = len(file_data)
+            file_size_after = len(decompressed_data)
             print(
                 f"{GREEN}Original size:  {file_size_before/GB:.05f}GB size after decompression: {file_size_after/GB:.05f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original"
             )
@@ -72,7 +70,7 @@ def decompress_file(input_file,delta_file, delete=False, force=False, hf_cache=F
                     blob_name = os.path.join(snapshot_path, os.readlink(input_file))
                     os.rename(output_file, blob_name)
                     os.symlink(blob_name, output_file)
-                    
+
                     if os.path.exists(input_file):
                         os.remove(input_file)
                 except Exception as e:
@@ -97,9 +95,7 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag that triggers deletion of a single compressed file instead of decompression",
     )
-    parser.add_argument(
-        "--force", action="store_true", help="A flag that forces overwriting when decompressing."
-    )
+    parser.add_argument("--force", action="store_true", help="A flag that forces overwriting when decompressing.")
     parser.add_argument(
         "--hf_cache",
         action="store_true",
@@ -114,4 +110,4 @@ if __name__ == "__main__":
     if args.hf_cache:
         optional_kwargs["hf_cache"] = args.hf_cache
 
-    decompress_file(args.input_file,args.delta_file, **optional_kwargs)
+    decompress_file(args.input_file, args.delta_file, **optional_kwargs)
