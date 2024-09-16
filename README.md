@@ -284,7 +284,7 @@ We welcome and value all contributions to the project!
 
 ## Change Log
 
-##### v0.3.4
+##### v0.3.5
 
 * Plugin for Hugging Face transformers to allow using from_pretrained and decompressing the model after downloading it from Hugging Face.
 
