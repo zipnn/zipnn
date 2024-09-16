@@ -32,6 +32,7 @@ def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=
 
     if os.path.exists(input_file) and os.path.exists(delta_file):
         if delete and not hf_cache:
+            raise ValueError(f"{RED}Delete not supported yet for delta decompression.{RESET}")
             print(f"Deleting {input_file}...")
             os.remove(input_file)
         else:

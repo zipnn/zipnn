@@ -69,60 +69,61 @@ def compress_file(
     if not os.path.exists(full_path):
         print(f"{RED}File not found{RESET}")
         return
+
+    compressed_path = full_path + ".znn"
+    if not force and os.path.exists(compressed_path):
+        user_input = (
+            input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
+        )
+        if user_input not in ("yes", "y"):
+            print(f"Skipping {full_path}...")
+            return
+    print(f"Compressing {full_path}...")
+    #
+    output_file = input_file + ".znn"
+    if dtype:
+        zpn = zipnn.ZipNN(
+            bytearray_dtype="float32",
+            is_streaming=True,
+            streaming_chunk_kb=streaming_chunk_size,
+        )
+    else:
+        zpn = zipnn.ZipNN(
+            is_streaming=True,
+            streaming_chunk_kb=streaming_chunk_size,
+        )
+    file_size_before = 0
+    file_size_after = 0
+    start_time = time.time()
+    with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
+        chunk = infile.read()
+        file_size_before += len(chunk)
+        compressed_chunk = zpn.compress(chunk)
+        if compressed_chunk:
+            file_size_after += len(compressed_chunk)
+            outfile.write(compressed_chunk)
+    end_time = time.time() - start_time
+    print(f"Compressed {input_file} to {output_file}")
+    print(
+        f"{GREEN}Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}{RESET}"
+    )
+
     if delete and not hf_cache:
         print(f"Deleting {full_path}...")
         os.remove(full_path)
-    else:
-        compressed_path = full_path + ".znn"
-        if not force and os.path.exists(compressed_path):
-            user_input = (
-                input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
-            )
-            if user_input not in ("yes", "y"):
-                print(f"Skipping {full_path}...")
-                return
-        print(f"Compressing {full_path}...")
-        #
-        output_file = input_file + ".znn"
-        if dtype:
-            zpn = zipnn.ZipNN(
-                bytearray_dtype="float32",
-                is_streaming=True,
-                streaming_chunk_kb=streaming_chunk_size,
-            )
-        else:
-            zpn = zipnn.ZipNN(
-                is_streaming=True,
-                streaming_chunk_kb=streaming_chunk_size,
-            )
-        file_size_before = 0
-        file_size_after = 0
-        start_time = time.time()
-        with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
-            chunk = infile.read()
-            file_size_before += len(chunk)
-            compressed_chunk = zpn.compress(chunk)
-            if compressed_chunk:
-                file_size_after += len(compressed_chunk)
-                outfile.write(compressed_chunk)
-        end_time = time.time() - start_time
-        print(f"Compressed {input_file} to {output_file}")
-        print(
-            f"{GREEN}Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}{RESET}"
-        )
 
-        if hf_cache:
-            # If the file is in the Hugging Face cache, fix the symlinks
-            print(f"{YELLOW}Reorganizing Hugging Face cache...{RESET}")
-            try:
-                snapshot_path = os.path.dirname(input_file)
-                blob_name = os.path.join(snapshot_path, os.readlink(input_file))
-                os.rename(output_file, blob_name)
-                os.symlink(blob_name, output_file)
-                if os.path.exists(input_file):
-                    os.remove(input_file)
-            except Exception as e:
-                raise Exception(f"Error reorganizing Hugging Face cache: {e}")
+    if hf_cache:
+        # If the file is in the Hugging Face cache, fix the symlinks
+        print(f"{YELLOW}Reorganizing Hugging Face cache...{RESET}")
+        try:
+            snapshot_path = os.path.dirname(input_file)
+            blob_name = os.path.join(snapshot_path, os.readlink(input_file))
+            os.rename(output_file, blob_name)
+            os.symlink(blob_name, output_file)
+            if os.path.exists(input_file):
+                os.remove(input_file)
+        except Exception as e:
+            raise Exception(f"Error reorganizing Hugging Face cache: {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

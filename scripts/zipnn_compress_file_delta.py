@@ -72,6 +72,7 @@ def compress_file(
         print(f"{RED}File not found{RESET}")
         return
     if delete and not hf_cache:
+        raise ValueError(f"{RED}Delete not supported yet for delta compression.{RESET}")
         print(f"Deleting {full_path}...")
         os.remove(full_path)
     else:
