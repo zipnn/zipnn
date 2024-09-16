@@ -16,7 +16,7 @@ zipnn_hf()
 tokenizer = AutoTokenizer.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
 model = AutoModelForCausalLM.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
 ```
-ZipNN also allows you to seemlessly save local disk space in your cache after the model is downloaded.
+ZipNN also allows you to seamlessly save local disk space in your cache after the model is downloaded.
 
 To compress the cached model, simply run:
 ```bash
@@ -29,9 +29,10 @@ To decompress manualy, simply run:
 ```bash
 python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```
-You can try other compressed models, like [compressed ai21labs/Jamba-v0.1](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed),...
-[Click here to explore other examples of compressed models hosted on Hugging Face](./examples)
 
+You can try other compressed models, like [compressed meta-llama/Meta-Llama-3.1-8B-Instruct](https://huggingface.co/royleibov/Llama-3.1-8B-ZipNN-Compressed), [compressed Qwen/Qwen2-VL-7B-Instruct](https://huggingface.co/royleibov/Qwen2-VL-7B-Instruct-ZipNN-Compressed), [compressed ai21labs/Jamba-v0.1](https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed).  
+[Click here](/examples) to explore other examples of compressed models hosted on Hugging Face  
+[Click here](/docs/HuggingFace.md) to see full Hugging Face integration documentation
 ## Getting started (fast)
 Download the scripts for compressing/decompressing AI Models:
 
@@ -218,7 +219,7 @@ git rm *.safetensors
 
 Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up).
 
-To use the model simply run our ZipNN Hugging Face patch before proceeding as normal:
+To use the model simply run our ZipNN Hugging Face method before proceeding as normal:
 ```python
 from zipnn import zipnn_hf
 

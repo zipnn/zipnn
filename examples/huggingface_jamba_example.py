@@ -10,6 +10,7 @@ def main():
 
     # Load the model
     model = AutoModelForCausalLM.from_pretrained(model)
+    print("Model loaded")
     model.eval()
 
     # change input text as desired
