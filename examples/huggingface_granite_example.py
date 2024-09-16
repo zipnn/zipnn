@@ -10,6 +10,7 @@ def main():
 
     # Load the model
     model = AutoModelForCausalLM.from_pretrained(model)
+    print("Model loaded")
 
     # Example text
     input_text = "Hello, how are you?"
