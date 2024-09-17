@@ -1316,7 +1316,7 @@ def zipnn_hf():
     PreTrainedModel.from_pretrained = classmethod(custom_from_pretrained)
 
 def replace_in_file(file_path, old: str, new: str) -> None:
-    """Given a file_path, replace all occurrences of `old` with `new` inpalce."""
+    """Given a file_path, replace all occurrences of `old` with `new` inplace."""
 
     with open(file_path, 'r') as file:
         file_data = file.read()
