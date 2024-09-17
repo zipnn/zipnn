@@ -503,11 +503,11 @@ PyObject *py_combine_dtype16(PyObject *self, PyObject *args) {
 
         if (HUF_isError(decompressedSize)) {
           HUF_getErrorName(decompressedSize);
-          return 0;
+          return NULL;
         }
 
         if (decompressedSize != decompLen[c]) {
-          return 0;
+          return NULL;
         }
       }
     }
