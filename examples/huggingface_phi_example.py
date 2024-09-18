@@ -1,4 +1,5 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from torch import random
 
 from zipnn import zipnn_hf
 
@@ -6,10 +7,18 @@ def main():
     zipnn_hf()
     # Load the tokenizer
     model = "royleibov/Phi-3.5-mini-instruct-ZipNN-Compressed"
-    tokenizer = AutoTokenizer.from_pretrained(model)
 
-    # Load the model
-    model = AutoModelForCausalLM.from_pretrained(model)
+    random.manual_seed(0)
+
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
+
+    model = AutoModelForCausalLM.from_pretrained(
+        "microsoft/Phi-3.5-mini-instruct", 
+        device_map="cuda", 
+        torch_dtype="auto", 
+        trust_remote_code=True, 
+    )
+
     print("Model loaded")
 
     messages = [
