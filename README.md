@@ -274,6 +274,10 @@ Run tests for Byte/File input types, Byte/File compression types, Byte/File deco
 python3 -m unittest discover -s tests/ -p test_suit.py
 ```
 
+## Statistics
+
+[![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/week)](https://pepy.tech/project/zipnn)
+
 ## Support and Questions
 We are excited to hear your feedback!
 
