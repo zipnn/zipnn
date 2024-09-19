@@ -10,13 +10,13 @@ def main():
 
     random.manual_seed(0)
 
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
+    tokenizer = AutoTokenizer.from_pretrained(model)
 
     model = AutoModelForCausalLM.from_pretrained(
-        "microsoft/Phi-3.5-mini-instruct", 
+        model, 
         device_map="cuda", 
         torch_dtype="auto", 
-        trust_remote_code=True, 
+        trust_remote_code=True,
     )
 
     print("Model loaded")
