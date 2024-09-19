@@ -4,8 +4,6 @@
 // Declare functions from other source files
 extern PyObject *py_split_dtype(PyObject *, PyObject *);
 extern PyObject *py_combine_dtype(PyObject *, PyObject *);
-extern PyObject *py_split_dtype32(PyObject *, PyObject *);
-extern PyObject *py_combine_dtype32(PyObject *, PyObject *);
 
 // Method definitions
 static PyMethodDef SplitMethods[] = {
@@ -13,11 +11,6 @@ static PyMethodDef SplitMethods[] = {
      "Split a bytearray into four buffers using dtype16"},
     {"combine_dtype", py_combine_dtype, METH_VARARGS,
      "Combine four buffers into a single bytearray using dtype16"},
-    {"split_dtype32", py_split_dtype32, METH_VARARGS,
-     "Split a bytearray into four buffers using dtype32"},
-    {"combine_dtype32", py_combine_dtype32, METH_VARARGS,
-     "Combine four buffers into a single bytearray using dtype32"},
-    {NULL, NULL, 0, NULL}
 };
 
 // Module definition

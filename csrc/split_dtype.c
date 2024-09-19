@@ -6,6 +6,7 @@
 #include "huf.h"
 #include "split_dtype_functions.h"
 #include "data_manipulation_dtype16.h" 
+#include "data_manipulation_dtype32.h" 
 
 //////////////////////// Help function /////////////
 u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
@@ -120,12 +121,22 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         (data.len - offset > origChunkSize) ? origChunkSize : (data.len - offset);
 
     // Byte Grouping + Byte Ordering
-
-    if (split_bytearray_dtype16(data.buf + offset, curOrigChunkSize, buffers[curChunk], 
+    
+    if (numBuf == 2) {
+      if (split_bytearray_dtype16(data.buf + offset, curOrigChunkSize, buffers[curChunk], 
                         unCompChunksSize[curChunk], bits_mode, bytes_mode, is_redata, threads) != 0) {
-      PyBuffer_Release(&data);
-      PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
-      return NULL;
+        PyBuffer_Release(&data);
+        PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
+        return NULL;
+      }
+      else { // numBuf == 4
+        if (split_bytearray_dtype32(data.buf + offset, curOrigChunkSize, buffers[curChunk], 
+                        unCompChunksSize[curChunk], bits_mode, bytes_mode, is_redata, threads) != 0) {
+          PyBuffer_Release(&data);
+          PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
+          return NULL;
+	} 
+      }	
     }
     //    if (isPrint) {
     //      endBGTime = clock();
@@ -247,7 +258,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   uint32_t oneUnCompChunkSize[numBuf];
   
   if (1) { // TBD when support auto byte_reorder
-if (buffer_ratio_dtype16(bytes_mode, oneBufRatio) == -1) {
+    if (buffer_ratio_dtype16(bytes_mode, oneBufRatio) == -1) {
       PyErr_SetString(PyExc_MemoryError, "Failed to calculate bufffer ratio");
       return NULL;
     }
