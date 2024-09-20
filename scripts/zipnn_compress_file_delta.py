@@ -83,8 +83,11 @@ def compress_file(
                 print(f"Skipping {full_path}...")
                 return
         print(f"Compressing {full_path}...")
-        #
-        output_file = input_file[:-4] + "_delta_" + delta_file + ".znn"
+        # Make appropriate output file name
+        folder_path = os.path.dirname(input_file)
+        input_filename = os.path.basename(input_file)
+        delta_filename = os.path.basename(delta_file)
+        output_file = os.path.join(folder_path, input_filename[:-4] + "_delta_" + delta_filename + ".znn")
         if dtype:
             zpn = zipnn.ZipNN(
                 bytearray_dtype="float32", is_streaming=True, streaming_chunk_kb=streaming_chunk_size, delta_compressed_type="file"
