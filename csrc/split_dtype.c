@@ -18,6 +18,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                 size_t *totalCompressedSize,
                                 size_t *resBufSize) {
   *resBufSize = header_len;
+
   size_t compChunksTypeLen =
       numBuf * numChunks * (sizeof(compChunksType[numBuf][numChunks]));
   size_t cumulativeChunksSizeLen =
@@ -40,6 +41,8 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
     return NULL;
   }
 
+  printf ("*resBufSize %zu", *resBufSize);
+  
   // Copy data to result buffer
   size_t offset = 0;
   memcpy(resultBuf + offset, header, header_len);
@@ -56,7 +59,9 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
       offset += compChunksSize[b][c];
     }
   }
+  
 
+   
   return resultBuf;
 }
 
@@ -102,17 +107,25 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   u_int8_t *compressedData[numBuf][numChunks];
   uint32_t compChunksSize[numBuf][numChunks];
   size_t unCompChunksSize[numChunks][numBuf];
-  size_t totalCompressedSize[] = {0, 0};
-  size_t totalUnCompressedSize[] = {0, 0};
+  size_t totalCompressedSize[numBuf];
+  size_t totalUnCompressedSize[numBuf];
   u_int8_t compChunksType[numBuf][numChunks];
   size_t cumulativeChunksSize[numBuf][numChunks];
-  u_int8_t isThCheck[] = {0, 0};
-  u_int8_t noNeedToCompress[] = {0, 0};
+  u_int8_t isThCheck[numBuf];
+  u_int8_t noNeedToCompress[numBuf];
   uint32_t checkCompTh =
       (uint32_t)ceil((double)numChunks / checkThAfterPercent);
   // if (isPrint) {
   //     startBGTime = clock();
   //  }
+  
+   // initialize:
+   for (int b = 0; b < numBuf; b++) {
+     totalCompressedSize[b] = 0;
+     totalUnCompressedSize[b] = 0;
+     isThCheck[b] = 0;
+     noNeedToCompress[b] = 0; 
+   }
 
   /////////// start multi Threading - Each chunk to different thread
   //////////////////
@@ -121,7 +134,10 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         (data.len - offset > origChunkSize) ? origChunkSize : (data.len - offset);
 
     // Byte Grouping + Byte Ordering
+    printf ("curOrigChunkSize %zu \n", curOrigChunkSize);
+    printf ("offset %zu \n", offset);
     
+    printf("141 noNeedToCompress[%d] %d\n", 0, noNeedToCompress[0]);
     if (numBuf == 2) {
       if (split_bytearray_dtype16(data.buf + offset, curOrigChunkSize, buffers[curChunk], 
                         unCompChunksSize[curChunk], bits_mode, bytes_mode, is_redata, threads) != 0) {
@@ -129,15 +145,20 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
         return NULL;
       }
-      else { // numBuf == 4
+    }
+    else { // numBuf == 4
         if (split_bytearray_dtype32(data.buf + offset, curOrigChunkSize, buffers[curChunk], 
                         unCompChunksSize[curChunk], bits_mode, bytes_mode, is_redata, threads) != 0) {
           PyBuffer_Release(&data);
           PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
           return NULL;
-	} 
-      }	
+	}
     }
+    printf("148 noNeedToCompress[%d] %d\n",0, noNeedToCompress[0]);
+    printf("unCompChunksSize %zu\n", unCompChunksSize[curChunk][0]);
+    printf("unCompChunksSize %zu\n", unCompChunksSize[curChunk][1]);
+    printf("buffers[0] %zu\n", buffers[curChunk][0]);
+    printf("buffers[1] %zu\n", buffers[curChunk][1]);
     //    if (isPrint) {
     //      endBGTime = clock();
     //      bgTime = (double)(endBGTime - startBGTime) / CLOCKS_PER_SEC;
@@ -148,13 +169,15 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
       if (isThCheck[b] == 0 &&
           curChunk >=
               checkCompTh) {  // check that we really need to compress this buf
+        isThCheck[b] = 1;
+        printf ("totalCompressedSize[%d] %zu ", b, totalCompressedSize[b]);	
+        printf ("totalUnCompressedSize[%d] %zu ", b, totalUnCompressedSize[b]);	
         if (totalCompressedSize[b] * 1.0 >
             totalUnCompressedSize[b] * compThreshold) {
-          isThCheck[b] = 1;
           noNeedToCompress[b] = 1;
         }
       }
-
+      
       compressedData[b][curChunk] = PyMem_Malloc(origChunkSize);
       if (!compressedData[b][curChunk]) {
         PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
@@ -178,6 +201,13 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
           compChunksSize[b][curChunk] = 0;
         }
 
+	printf(" numBuf %d\n", numBuf);
+	printf(" curChunk %d\n", curChunk);
+	printf(" b %d\n", b);
+	printf(" noNeedToCompress[%d] %d\n", b, noNeedToCompress[b]);
+    
+	printf(" compChunksSize[%d][%d] %zu \n", b, curChunk, compChunksSize[b][curChunk]);
+
         if (compChunksSize[b][curChunk] != 0 &&
             (compChunksSize[b][curChunk] <
              unCompChunksSize[curChunk][b] * compThreshold)) {
@@ -192,10 +222,10 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         totalUnCompressedSize[b] += unCompChunksSize[curChunk][b];
         cumulativeChunksSize[b][curChunk] = totalCompressedSize[b];
       }
-
     }  // end for loop -> compression
     curChunk++;
   }  // end for loop - chunk
+  
   ////////////// The end of multi Threading part 1
   /////////////////////////////////
 
@@ -205,10 +235,10 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   PyObject *result;
   u_int8_t *resultBuf;
   size_t resBufSize;
-
   resultBuf = prepare_split_results(
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
       compChunksType, cumulativeChunksSize, totalCompressedSize, &resBufSize);
+  
   if (resultBuf == NULL) {
     // Free all Mallocs
     // print Error
@@ -236,6 +266,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   PyBuffer_Release(&header);
   PyBuffer_Release(&data);
   PyMem_Free(resultBuf);
+  exit(0);
   return result;
 }
 

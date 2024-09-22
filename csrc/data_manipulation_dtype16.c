@@ -30,7 +30,7 @@ static void reorder_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
 }
 
 // Helper function to split a bytearray into groups
-int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
+int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buffs,
                            size_t *unCompChunksSizeCurChunk, int bits_mode, int bytes_mode, int is_review,
                            int threads) {
   if (bits_mode == 1) {  // reoreder exponent
@@ -40,19 +40,19 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
 
   switch (bytes_mode) {
   case 10:  // 2b01_010 - Byte Group to two different groups
-    buffers[0] = PyMem_Malloc(half_len);
-    buffers[1] = PyMem_Malloc(half_len);
+    chunk_buffs[0] = PyMem_Malloc(half_len);
+    chunk_buffs[1] = PyMem_Malloc(half_len);
     unCompChunksSizeCurChunk[0] = half_len; 
     unCompChunksSizeCurChunk[1] = half_len;
 
-    if (buffers[0] == NULL || buffers[1] == NULL) {
-      PyMem_Free(buffers[0]);
-      PyMem_Free(buffers[1]);
+    if (chunk_buffs[0] == NULL || chunk_buffs[1] == NULL) {
+      PyMem_Free(chunk_buffs[0]);
+      PyMem_Free(chunk_buffs[1]);
       return -1;
     }
 
-    u_int8_t *dst0 = buffers[0];
-    u_int8_t *dst1 = buffers[1];
+    u_int8_t *dst0 = chunk_buffs[0];
+    u_int8_t *dst1 = chunk_buffs[1];
 
     for (Py_ssize_t i = 0; i < len; i += 2) {
       *dst0++ = src[i];
@@ -64,17 +64,17 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
            // We are refering to the MSBbyte as little endian, thus we omit buf2
   case 1:  // 4b1000 - Truncate LSByte
     // We are refering to the LSByte  as a little endian, thus we omit buf1
-    buffers[0] = PyMem_Malloc(half_len);
-    buffers[1] = NULL;
+    chunk_buffs[0] = PyMem_Malloc(half_len);
+    chunk_buffs[1] = NULL;
     unCompChunksSizeCurChunk[0] = half_len; 
     unCompChunksSizeCurChunk[1] = 0;
 
-    if (buffers[0] == NULL) {
-      PyMem_Free(buffers[0]);
+    if (chunk_buffs[0] == NULL) {
+      PyMem_Free(chunk_buffs[0]);
       return -1;
     }
 
-    dst0 = buffers[0];
+    dst0 = chunk_buffs[0];
 
     if (bytes_mode == 1) {
       for (Py_ssize_t i = 0; i < len; i += 2) {
@@ -120,7 +120,7 @@ static void revert_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
   }
 }
 
-// Helper function to combine four buffers into a single bytearray
+// Helper function to combine four chunk_buffs into a single bytearray
 int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr,
                            Py_ssize_t half_len, int bits_mode, int bytes_mode,
                            int threads) {

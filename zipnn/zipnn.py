@@ -306,7 +306,6 @@ class ZipNN:
         """
         Updates header with byte_reorder, bit_reorder, dtype_value
         """
-
         self._header[5] = byte_reorder
         self._header[6] = bit_reorder
         self._header[15] = dtype_code
@@ -494,7 +493,7 @@ class ZipNN:
         raise ValueError(f"Unsupported method {self.method}")
 
     def compress_bin(
-        self, ba: bytes, bit_reorder: int, byte_reorder: int, is_review: int, is_float: int, dtype_size: int, shape, skip_split: bool
+            self, ba: bytes, bit_reorder: int, byte_reorder: int, is_review: int, is_float: int, dtype_size: int, num_buf : int, shape, skip_split: bool
     ):
         """
         Compresses byte data.
@@ -524,81 +523,26 @@ class ZipNN:
             bg_len = []
             buf_is_comp = []
 
-            if dtype_size == 32:
-                start_time = time.time()
-
-                if skip_split == 0:
-                    buf1, buf2, buf3, buf4 = split_dtype.split_dtype32(ba, bit_reorder, byte_reorder, is_review, self.threads)
-                else:
-                    buf1 = ba
-                    buf2 = None
-                    buf3 = None
-                    buf4 = None
-
-                if is_print:
-                    print("reorder ", time.time() - start_time)
-                stime = time.time()
-                for b in buf1, buf2, buf3, buf4:
-                    if b is None:
-                        continue
-                    start_time = time.time()
-                    bg_comp = self.compress_method(b)
-
-                    if len(bg_comp) / (len(b)) < self.compression_threshold:
-                        # Save this byte group compressed
-                        buf_is_comp.append((1).to_bytes(1, byteorder="little"))
-                        bg_len.append(len(bg_comp).to_bytes(length=8, byteorder="little"))
-                        bg_ret.append(bg_comp)
-                        if is_print:
-                            print(f"We compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
-                    else:
-                        if is_print:
-                            print(f"We did't compress this byte: {len(bg_comp)/len(b)} time {time.time()-stime}")
-                        # Save the byte group not compressed
-                        buf_is_comp.append((0).to_bytes(1, byteorder="little"))
-                        bg_len.append(len(b).to_bytes(length=8, byteorder="little"))
-                        bg_ret.append(b)
+            if is_print:
+               start_time = time.time()
+            self._update_header_original_len(len(ba))
             if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-                shape_bytes = zipnn_pack_shape(shape)
-                #
-                total_length = len(shape_bytes)
-                total_length += sum(len(buf) for buf in buf_is_comp)
-                total_length += sum(len(bg) for bg in bg_len)
-                total_length += sum(len(ret) for ret in bg_ret)
-                self._update_header_comp_len(total_length)
-                #
-                ba_comp = b"".join([self._header] + [shape_bytes] + buf_is_comp + bg_len + bg_ret)
-            else:
-                #
-                total_length = sum(len(buf) for buf in buf_is_comp)
-                total_length += sum(len(bg) for bg in bg_len)
-                total_length += sum(len(ret) for ret in bg_ret)
-                self._update_header_comp_len(total_length)
-                #
-                ba_comp = b"".join([self._header] + buf_is_comp + bg_len + bg_ret)
-
-            if dtype_size == 16:
-                num_buf = 2
-                if is_print:
-                    start_time = time.time()
-                self._update_header_original_len(len(ba))
-                if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-                    self._update_data_shape(shape)
-                python_header = self._header + self._ext_header
-                ba_comp = split_dtype.split_dtype(
-                    python_header,
-                    ba,
-                    num_buf,
-                    bit_reorder,
-                    byte_reorder,
-                    is_review,
-                    self.compression_chunk,
-                    self.compression_threshold,
-                    self.check_th_after_percent,
-                    self.threads,
-                )
-                if is_print:
-                    print("aggregate output bin ", time.time() - start_time)
+                self._update_data_shape(shape)
+            python_header = self._header + self._ext_header
+            ba_comp = split_dtype.split_dtype(
+                python_header,
+                ba,
+                num_buf,
+                bit_reorder,
+                byte_reorder,
+                is_review,
+                self.compression_chunk,
+                self.compression_threshold,
+                self.check_th_after_percent,
+                self.threads,
+            )
+            if is_print:
+                print("aggregate output bin ", time.time() - start_time)
         if is_print:
             print("total compression ", time.time() - stime)
             print(f"len ba-comp {len(ba_comp)}")
@@ -686,22 +630,27 @@ class ZipNN:
             if dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
                 byte_reorder = 220  # 8b1_10_11_100
                 dtype_size = 32
+                num_buf = 4
             #            elif (dtype_enum == ZipNNDtypeEnum.BFLOAT16.code):
             elif dtype_enum == ZipNNDtypeEnum.BFLOAT16.code:
                 byte_reorder = 10  # 8b01_010
                 dtype_size = 16
+                num_buf = 2
                 if self.input_format == EnumFormat.TORCH.value:
                     data = data.view(torch.uint16)
             elif dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code):
                 bit_reorder = 0
                 byte_reorder = 10  # 8b01_010
                 dtype_size = 16
+                num_buf = 2
             else:
                 raise ValueError("Support only torch.dtype float32/bfloat16/float16")
         else:
             if dtype_enum == ZipNNDtypeEnum.UINT32.code and self.input_format == EnumFormat.NUMPY.value:
+                raise ValueError("Not support uint32 with NumPy format")
                 max_val = np.max(data)
                 dtype_size = 32
+                num_buf = 4
                 if max_val < 256:  # truncate 3 bytes
                     byte_reorder = 1  # 8b0_00_00_001
                 elif max_val < 65536:  # truncate 2 bytes
@@ -742,6 +691,7 @@ class ZipNN:
             is_review=is_review,
             is_float=is_float,
             dtype_size=dtype_size,
+            num_buf = num_buf,
             shape=shape,
             skip_split=skip_split,
         )
@@ -961,35 +911,19 @@ class ZipNN:
             start_ba = [start_len + 8 * groups]
             end_ba = []
             if skip_combine == 0:
-                if float32 or uint32:
-                    for i in range(groups):
-                        btime = time.time()
-                        mv = memoryview(ba_compress)
-                        is_comp = int.from_bytes(mv[after_header + i : after_header + i + 1], byteorder="little")
-                        end_ba.append(int.from_bytes(mv[start_len + i * 8 : start_len + (i + 1) * 8 - 1], byteorder="little") + start_ba[i])
-                        start_ba.append(end_ba[i])
-                        if is_comp == 1:
-                            ba_bg.append(self.decompress_method(ba_compress[start_ba[i] : end_ba[i]]))
-                        else:
-                            ba_bg.append(mv[start_ba[i] : end_ba[i]])
-                        if is_print:
-                            print(f"the time of this byte is: {time.time()-btime}")
+                if uint32:
+                    raise ValueError(f"Unsupported uinit32 in this version yet! please try version 0.1.1")
 
-                    if float32:
-                        ba_decom = split_dtype.combine_dtype32(
-                            ba_bg[0], ba_bg[1], ba_bg[2], ba_bg[3], self._bit_reorder, self._byte_reorder, self.threads
-                        )
-                    else:  # uint32_t
-                        mv = memoryview(ba_compress)
-                        ba_decom = split_dtype.combine_dtype32(
-                            ba_bg[0], bytearray(0), bytearray(0), bytearray(0), self._bit_reorder, self._byte_reorder, self.threads
-                        )
+                elif float32:
+                    num_buf = 2
+
                 elif bfloat16 or float16:
                     num_buf = 2
-                    mv = memoryview(ba_compress)
-                    ba_decom = split_dtype.combine_dtype(
+                print (self._bit_reorder)   
+                mv = memoryview(ba_compress)
+                ba_decom = split_dtype.combine_dtype(
                         mv[after_header:], num_buf, self._bit_reorder, self._byte_reorder, self.compression_chunk, self.original_len, self.threads
-                    )
+                        )
             else:
                 ba_decom = ba_bg[0]
 
