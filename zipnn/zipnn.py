@@ -913,13 +913,10 @@ class ZipNN:
             if skip_combine == 0:
                 if uint32:
                     raise ValueError(f"Unsupported uinit32 in this version yet! please try version 0.1.1")
-
                 elif float32:
-                    num_buf = 2
-
+                    num_buf = 4
                 elif bfloat16 or float16:
                     num_buf = 2
-                print (self._bit_reorder)   
                 mv = memoryview(ba_compress)
                 ba_decom = split_dtype.combine_dtype(
                         mv[after_header:], num_buf, self._bit_reorder, self._byte_reorder, self.compression_chunk, self.original_len, self.threads

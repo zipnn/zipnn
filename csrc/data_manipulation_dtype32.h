@@ -30,3 +30,6 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buff
 uint32_t revert_float_bits(float number); 
 void revert_all_floats(u_int8_t *src, Py_ssize_t len);
 int allocate_buffer(u_int8_t **result, Py_ssize_t total_len);
+
+// Helper function
+int buffer_ratio_dtype32 (int bytes_mode, uint32_t *buf_ratio);

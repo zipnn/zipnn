@@ -409,3 +409,25 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buff
 //  }
 //  return result;
 //}
+
+
+
+/////////////// Helper Function for the Byte ratio /////////////
+
+int buffer_ratio_dtype32 (int bytes_mode, uint32_t *buf_ratio){
+  switch (bytes_mode) {
+  case 220:  // 8b1_10_11_100 - Byte Group to two different groups 
+    buf_ratio[0] = 4;
+    buf_ratio[1] = 4;
+    buf_ratio[2] = 4;
+    buf_ratio[3] = 4;
+    break;
+
+  default:
+    // we are not support this splitting bytes_mode
+    return -1;
+  }
+  return 0;
+}
+
+
