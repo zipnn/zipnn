@@ -457,13 +457,20 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
         }
       }
     }
-    exit(0);
     // Combine
     u_int8_t *combinePtr = resultBuf + origChunkSize * c;
-    if (combine_buffers_dtype16(deCompressedData[0][c], deCompressedData[1][c],
-                        combinePtr, decompLen[c][0], bits_mode, bytes_mode,
-                        threads) != 0) {
-      return NULL;
+    if (numBuf == 2) {
+        if (combine_buffers_dtype16(deCompressedData[0][c], deCompressedData[1][c],
+                          combinePtr, decompLen[c], bits_mode, bytes_mode,
+             threads) != 0){  
+		PyErr_SetString(  PyExc_MemoryError,
+				"Failed to combine dtype16");
+		return NULL;
+	}
+    }
+    else {  // Assume numBuf == 4
+	  printf("combine\n");
+	  exit(0); 
     }
   }
   ////////////// Finish Multi threading /////////////////////////////

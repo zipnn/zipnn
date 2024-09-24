@@ -11,7 +11,7 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buff
 static uint32_t revert_float_bits_dtype16(float number); 
 static void revert_all_floats_dtype16(u_int8_t *src, Py_ssize_t len); 
 int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr,
-                           Py_ssize_t half_len, int bits_mode, int bytes_mode,
+                           Py_ssize_t *bufLens, int bits_mode, int bytes_mode,
                            int threads);
 
 int buffer_ratio_dtype16 (int bytes_mode, uint32_t *buf_ratio);

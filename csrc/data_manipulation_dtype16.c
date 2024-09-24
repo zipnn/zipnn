@@ -122,16 +122,16 @@ static void revert_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
 
 // Helper function to combine four chunk_buffs into a single bytearray
 int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr,
-                           Py_ssize_t half_len, int bits_mode, int bytes_mode,
+                           Py_ssize_t *bufLens, int bits_mode, int bytes_mode,
                            int threads) {
-  Py_ssize_t total_len = half_len * 2;
+  Py_ssize_t total_len = bufLens[0] + bufLens[1];
 
   u_int8_t *dst;
   dst = combinePtr;
 
   switch (bytes_mode) {
   case 10: // 2b01_010 - Byte Group to two different groups
-    for (Py_ssize_t i = 0; i < half_len; i++) {
+    for (Py_ssize_t i = 0; i < bufLens[0]; i++) {
       *dst++ = buf1[i];
       *dst++ = buf2[i];
     }
@@ -143,12 +143,12 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr
           // We are refering to the LSByte as a little endian, thus we omit buf1
 
     if (bytes_mode == 8) {
-      for (Py_ssize_t i = 0; i < half_len; i++) {
+      for (Py_ssize_t i = 0; i < bufLens[0]; i++) {
         *dst++ = 0;
         *dst++ = buf1[i];
       }
     } else {
-      for (Py_ssize_t i = 0; i < half_len; i++) {
+      for (Py_ssize_t i = 0; i < bufLens[0]; i++) {
         *dst++ = buf1[i];
         *dst++ = 0;
       }
