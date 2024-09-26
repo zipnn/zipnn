@@ -41,25 +41,19 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
     return NULL;
   }
 
-  printf ("*resBufSize %zu\n", *resBufSize);
   
   // Copy data to result buffer
   size_t offset = 0;
-  printf ("header_len  %zu\n", offset);
   memcpy(resultBuf + offset, header, header_len);
   offset += header_len;
-  printf ("compChunksType %zu\n", offset);
   memcpy(resultBuf + offset, compChunksType, compChunksTypeLen);
   offset += compChunksTypeLen;
-  printf ("compChunksLen %zu\n", offset);
   memcpy(resultBuf + offset, cumulativeChunksSize, cumulativeChunksSizeLen);
   offset += cumulativeChunksSizeLen;
 
   for (int b = 0; b < numBuf; b++) {
     for (uint32_t c = 0; c < numChunks; c++) {
-      printf ("compChunksSize[%d][%d] %zu\n", b, c, offset);
       memcpy(resultBuf + offset, compressedData[b][c], compChunksSize[b][c]);
-      // printf("\n\n resultBuf + offset %zu\n\n\n ", resultBuf + offset);
       offset += compChunksSize[b][c];
     }
   }
@@ -138,10 +132,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         (data.len - offset > origChunkSize) ? origChunkSize : (data.len - offset);
 
     // Byte Grouping + Byte Ordering
-    printf ("curOrigChunkSize %zu \n", curOrigChunkSize);
-    printf ("offset %zu \n", offset);
-    
-    printf("141 noNeedToCompress[%d] %d\n", 0, noNeedToCompress[0]);
     if (numBuf == 2) {
       if (split_bytearray_dtype16(data.buf + offset, curOrigChunkSize, buffers[curChunk], 
                         unCompChunksSize[curChunk], bits_mode, bytes_mode, is_redata, threads) != 0) {
@@ -158,11 +148,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
           return NULL;
 	}
     }
-    printf("148 noNeedToCompress[%d] %d\n",0, noNeedToCompress[0]);
-    printf("unCompChunksSize %zu\n", unCompChunksSize[curChunk][0]);
-    printf("unCompChunksSize %zu\n", unCompChunksSize[curChunk][1]);
-    printf("buffers[0] %zu\n", buffers[curChunk][0]);
-    printf("buffers[1] %zu\n", buffers[curChunk][1]);
     //    if (isPrint) {
     //      endBGTime = clock();
     //      bgTime = (double)(endBGTime - startBGTime) / CLOCKS_PER_SEC;
@@ -174,8 +159,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
           curChunk >=
               checkCompTh) {  // check that we really need to compress this buf
         isThCheck[b] = 1;
-        printf ("totalCompressedSize[%d] %zu ", b, totalCompressedSize[b]);	
-        printf ("totalUnCompressedSize[%d] %zu ", b, totalUnCompressedSize[b]);	
         if (totalCompressedSize[b] * 1.0 >
             totalUnCompressedSize[b] * compThreshold) {
           noNeedToCompress[b] = 1;
@@ -204,13 +187,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         } else {
           compChunksSize[b][curChunk] = 0;
         }
-
-	printf(" numBuf %d\n", numBuf);
-	printf(" curChunk %d\n", curChunk);
-	printf(" b %d\n", b);
-	printf(" noNeedToCompress[%d] %d\n", b, noNeedToCompress[b]);
-    
-	printf(" compChunksSize[%d][%d] %zu \n", b, curChunk, compChunksSize[b][curChunk]);
 
         if (compChunksSize[b][curChunk] != 0 &&
             (compChunksSize[b][curChunk] <
@@ -321,8 +297,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   size_t *ptrChunksCumulative = (size_t *)(ptrChunksType + numBuf * numChunks);
   u_int8_t *ptrCompressData[numBuf];
   ptrCompressData[0] = (u_int8_t *)(ptrChunksCumulative + numBuf * numChunks);
-  printf("ptrCompressData[0] %zu ", ptrCompressData[0]);
-  printf("ptrCompressData[0][0] %zu \n ", ptrCompressData[0][0]);
   size_t cumulativeChunksSize[numBuf][numChunks];
   uint32_t compChunksType[numBuf][numChunks];
   size_t compCumulativeChunksPos[numBuf][numChunks + 1];
@@ -343,7 +317,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     for (uint32_t c = 0; c < numChunks; c++) {
       compChunksType[b][c] = (*ptrChunksType++);
       cumulativeChunksSize[b][c] = (*ptrChunksCumulative++);
-      printf ("cumulativeChunksSize[%d][%d] %zu\n", b, c, cumulativeChunksSize[b][c]);
     }
   }
   for (uint32_t c = 0; c < numChunks; c++) {
@@ -351,7 +324,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
       compCumulativeChunksPos[b][c + 1] = cumulativeChunksSize[b][c];
       compChunksLen[b][c] =
           compCumulativeChunksPos[b][c + 1] - compCumulativeChunksPos[b][c];
-      printf ("compChunksLen[%d][%d] %zu\n", b, c, cumulativeChunksSize[b][c]);
     }
   }
   for (size_t c = 0; c < numChunks; c++) {
@@ -366,24 +338,17 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
           return NULL;
         }
       }
-      printf ("compChunksType[%d][%d] %zu\n", b, c, compChunksType[b][c]);
     }
   }
   
-  printf ("ptrCompressData[0] %zu\n", ptrCompressData[0]);
-  printf ("ptrCompressData[0][0] %zu\n", ptrCompressData[0][0]);
   for (int b = 1; b < numBuf; b++) {
     ptrCompressData[b] =
       ptrCompressData[b-1] + cumulativeChunksSize[b-1][numChunks - 1];
-    printf ("ptrCompressData[%d] %zu\n", b, ptrCompressData[b]);
-    printf (" cumulativeChunksSize[b-1 %d][numChunks - 1 %d] %zu\n", b-1, numChunks - 1, cumulativeChunksSize[b-1][numChunks - 1]);
   }
   for (uint32_t c = 0; c < numChunks; c++) {
     if (c < numChunks - 1) {
         for (uint32_t b = 0; b < numBuf; b++) {
           decompLen[c][b] = unCompChunkSize[c][b];
-          printf ("unCompChunkSize[%d][%d] %zu\n", c, b, unCompChunkSize[c][b]);
-          printf ("decompLen[%d][%d] %zu\n", c, b, decompLen[c][b]);
 	}
     } 
     else {
@@ -395,8 +360,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 	size_t lastDecompLen = (origSize - oneChunkSize * (numChunks - 1))/numBuf;
         for (uint32_t b = 0; b < numBuf; b++) {
           decompLen[c][b] = lastDecompLen; // TBD for buffers that are not eqaul
-          printf ("-unCompChunkSize[%d][%d] %zu\n", c, b, unCompChunkSize[c][b]);
-          printf ("-decompLen[%d][%d] %zu\n", b, c, decompLen[c][b]);
   	}
     }
   }
@@ -416,11 +379,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   for (size_t c = 0; c < numChunks; c++) {
     // decompress
     for (uint32_t b = 0; b < numBuf; b++) {
-      printf ("compChunksType[%d][%d] %zu\n", b, c, compChunksType[b][c]);
-      printf ("deCompressedData[%d][%d] %zu\n", b, c, deCompressedData[b][c]);
-      printf ("decompLen[%d][%d] %zu\n", b, c, decompLen[b][c]);
       if (compChunksType[b][c] == 0) {  // No Need to compression
-        printf("no need to compress");					
         deCompressedData[b][c] =
             ptrCompressData[b] + compCumulativeChunksPos[b][c];
       } else if (compChunksType[b][c] == 1) {  // decompress using Huffman
@@ -434,13 +393,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
         }
         
         	
-        printf ("\n\ndeCompressedData[b][c]%d %d  %zu\n", b, c, deCompressedData[b][c]);
-        printf (" decompLen[c][b] %d %d  %zu\n", c, b, decompLen[c][b]);
-        printf (" dcompCumulativeChunksPos[b][c] %d %d  %zu\n", b, c, compCumulativeChunksPos[b][c]);
-        printf (" dcompCumulativeChunksPos[b][c] %d %d %zu\n", b, c, compCumulativeChunksPos[b][c]);
-        printf (" ptrCompressData[b] %d %zu\n", b, ptrCompressData[b]);
-        printf (" ptrCompressData[b][0] %d %zu\n", b, ptrCompressData[b][0]);
-        printf (" ccompCumulativeChunksPos[b][c] %d %d %zu\n", b, c, compCumulativeChunksPos[b][c]);
 	size_t decompressedSize = HUF_decompress(
             deCompressedData[b][c], decompLen[c][b],
             (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
@@ -469,8 +421,13 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 	}
     }
     else {  // Assume numBuf == 4
-	  printf("combine\n");
-	  exit(0); 
+          if (combine_buffers_dtype32(deCompressedData[0][c], deCompressedData[1][c], deCompressedData[2][c], deCompressedData[3][c], 
+                          combinePtr, decompLen[c], bits_mode, bytes_mode,
+             threads) != 0){  
+		PyErr_SetString(  PyExc_MemoryError,
+				"Failed to combine dtype16");
+		return NULL;
+	  }
     }
   }
   ////////////// Finish Multi threading /////////////////////////////

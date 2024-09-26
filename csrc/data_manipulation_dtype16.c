@@ -159,8 +159,6 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr
     // we are not supporting this splitting bytes_mode
     return -1;
   }
-  // printf("combinePtr %zu\n ",combinePtr);
-  // printf("dst %zu\n ", dst);
   //  Revert the reordering of all floats if needed
   if (bits_mode == 1) {
     revert_all_floats_dtype16(combinePtr, total_len);
