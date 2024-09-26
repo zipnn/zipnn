@@ -21,6 +21,13 @@ git lfs pull upstream
 ```
 
 1. Compress all the model weights
+Download the scripts for compressing/decompressing AI Models:
+
+```bash
+wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt &&
+rm scripts.txt
+```
+
 ```bash
 python3 zipnn_compress_path.py safetensors --path .
 ```
