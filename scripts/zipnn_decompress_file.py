@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import argparse
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -10,6 +11,7 @@ YELLOW = "\033[93m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
 
+GB = 1024 * 1024 * 1024
 
 def check_and_install_zipnn():
     try:
@@ -42,12 +44,23 @@ def decompress_file(input_file, delete=False, force=False, hf_cache=False):
         output_file = input_file[:-4]
         zpn = zipnn.ZipNN(is_streaming=True)
 
+        file_size_before = 0
+        file_size_after = 0
+        start_time = time.time()
         with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
             d_data = b""
             chunk = infile.read()
+            file_size_before = len(chunk)
             d_data += zpn.decompress(chunk)
+            file_size_after = len(d_data)
             outfile.write(d_data)
             print(f"Decompressed {input_file} to {output_file}")
+        end_time = time.time() - start_time
+
+        print(
+            f"{GREEN}Back to original size: {file_size_after/GB:.02f}GB size before decompression: {file_size_before/GB:.02f}GB, time: {end_time:.02f}{RESET}"
+            )
+
 
         if delete and not hf_cache:
             print(f"Deleting {input_file}...")
