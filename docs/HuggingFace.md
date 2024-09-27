@@ -93,6 +93,7 @@ You can try other state-of-the-art compressed models from the updating list belo
 | ZipNN Compressed Models Hosted on Hugging Face                                                                                      |
 |-------------------------------------------------------------------------------------------------------------------------------------|
 | [ compressed meta-llama/Llama-3.2-11B-Vision-Instruct ]( https://huggingface.co/royleibov/Llama-3.2-11B-Vision-Instruct-ZipNN-Compressed ) |
+| [compressed ibm-granite granite-7b-instruct](https://huggingface.co/royleibov/granite-7b-instruct-ZipNN-Compressed) |
 | [ compressed meta-llama/Meta-Llama-3.1-8B-Instruct ]( https://huggingface.co/royleibov/Llama-3.1-8B-ZipNN-Compressed )              |
 | [ compressed Qwen/Qwen2-VL-7B-Instruct ]( https://huggingface.co/royleibov/Qwen2-VL-7B-Instruct-ZipNN-Compressed )                  |
 | [ compressed ai21labs/Jamba-v0.1 ]( https://huggingface.co/royleibov/Jamba-v0.1-ZipNN-Compressed )                                  |
