@@ -298,6 +298,7 @@ For issues and feature requests, please open a GitHub issue.
 
 ## Contributing
 We welcome and value all contributions to the project!
+You can contact us in this email: zipnn_compression@gmail.com
 
 ## Change Log
 
