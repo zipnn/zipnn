@@ -80,14 +80,14 @@ class ZipNN:
                  Default is 0.95.
 
          check_th_after_percent: int
-                 Check the compression threshhold after % from the number of chunk and stop compressing if not pass the compression_threshold.
+                 Check the compression threshold after % from the number of chunk and stop compressing if not pass the compression_threshold.
                  Only relevant for a compression that uses byte grouping.
                  Default is 10[%]
 
          byte_reorder: int
                  Number of grouping.
                  4 Groups - Nu,ber for the group and zero for truncate.
-                 [7] - Gorup 0/1 - 4'th Byte
+                 [7] - Group 0/1 - 4'th Byte
                  [6-5] - Group 0/1/2 - 3'th Byte
                  [4-3] - Group 0/1/2/3 - 2'th Byte
                  [2-0] - Group 0/1/2/3/4 - 1'th Byte
@@ -98,10 +98,10 @@ class ZipNN:
 
          reorder_signbit: int
                  This reorder the bits of the float32 or bfloat16 to better compression.
-                 If set to zero [defualt], auto decision according to the dtype
+                 If set to zero [default], auto decision according to the dtype
                  If set to 255 - no reorder_signbit.
                  If 16,32 - reorder_signbit for bfloat16 or float32 respectively
-                 Defualt is 0 [Auto decision]
+                 Default is 0 [Auto decision]
 
         delta_compressed_type: string
                NOT IMPLEMENTED YET.
@@ -127,7 +127,7 @@ class ZipNN:
          is_streaming: bool
                  NOT IMPLEMENTED YET.
                  If true – signals compression is for a stream of data.
-                 Deafult is False.
+                 Default is False.
 
          streaming_chunk_kb: int
                  Chunk size for streaming.
@@ -148,7 +148,7 @@ class ZipNN:
          decompressed_file: string
                  Path to the decompressed file.
                  Only relevant if compressed_ret_type is ‘file’.
-                 Defaul is None.
+                 Default is None.
 
          zstd_level: int
                  Compression level for ‘zstd’ compression.
@@ -158,7 +158,7 @@ class ZipNN:
          lz4_compression_level: int
                  Compression level for ‘lz4’ compression.
                  Only relevant if method is ‘lz4’.
-                 Deafult is 0.
+                 Default is 0.
 
          Returns
          -------------------------------------
@@ -328,7 +328,7 @@ class ZipNN:
 
     def _update_data_shape(self, shape):
         """
-        Updates the shpae of the data add to the and of the header
+        Updates the shape of the data add to the and of the header
         """
         self._ext_header = zipnn_pack_shape(shape)
 
@@ -375,7 +375,7 @@ class ZipNN:
         #        self._header[10] = self.lossy_compressed_type
         #        self._header[11] = self.lossy_compressed_factor
         #        self._header[12] = self._lossy_is_int
-        if self.is_streaming:  # MSB is streaming, unsigned & is stremaing
+        if self.is_streaming:  # MSB is streaming, unsigned & is streaming
             self._header[13] = 128 + int(math.log(self.streaming_chunk_kb, 2))
         else:
             self._header[13] = 0
@@ -752,7 +752,7 @@ class ZipNN:
                 if max_val < 256:  # truncate 3 bytes
                     byte_reorder = 1  # 8b0_00_00_001
                 elif max_val < 65536:  # truncate 2 bytes
-                    # It is faster to work with change the format to uint16 then to truncate out c implememtation
+                    # It is faster to work with change the format to uint16 then to truncate out c implementation
                     data = data.astype(np.uint16)
                     skip_split = 1  # use vanilla compression method
                     byte_reorder = 9  # 8b0_00_01_001
@@ -1139,7 +1139,7 @@ class ZipNN:
 
 def zipnn_hf():
     """
-    Pluging for the Hugging Face Transformers library to use ZipNN compression.
+    Plugin for the Hugging Face Transformers library to use ZipNN compression.
 
     Parameters
     -------------------------------------

@@ -44,7 +44,7 @@ Fine-tuning of models often degrades their compressibility (at times significant
 
 In a nutshell, this technique allows for incurring controlled inaccuracies to parameters, under the assumption that a lot of the entropy in model weights is actually redundant, i.e., noise saved to disk. This is done by casting every parameter into an integer representation with a chosen level of fixed precision, in essence trimming some of the least bits. Then compression follows as before using byte grouping and a standard lossless compressor.
 
-Formally, given a parameter θ in floating point representation, and precision B = $2^b$ the casting is done by first multipling the parameter by the precision factor and then cast it into an integer, effectively rounding it to ⌊θ · B⌋. The transformed parameters are then fed into a standard lossless compressor. During decompression, the stream first undergoes standard decompression and then the resulting integers are transformed into floating point after division by the precision factor.
+Formally, given a parameter θ in floating point representation, and precision B = $2^b$ the casting is done by first multiplying the parameter by the precision factor and then cast it into an integer, effectively rounding it to ⌊θ · B⌋. The transformed parameters are then fed into a standard lossless compressor. During decompression, the stream first undergoes standard decompression and then the resulting integers are transformed into floating point after division by the precision factor.
 
 ### Delta compression
 
