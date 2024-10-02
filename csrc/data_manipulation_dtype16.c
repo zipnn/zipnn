@@ -142,11 +142,8 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr
     for (Py_ssize_t i = 0; i < bufLens[1]; i++) {
       *dst++ = buf1[i];
       *dst++ = buf2[i];
-      printf ("buf1[%d] %zu \n", i, buf1[i]);
     }
     if (bufLens[0] > bufLens[1]) { // There is a remainder 
-      printf ("bufLens[0] %zu \n", bufLens[0]);
-      printf ("buf1[%d] %zu \n", bufLens[0]-1, buf1[bufLens[0]-1]);
       *dst = buf1[bufLens[0]-1];	    
     }
     break;
