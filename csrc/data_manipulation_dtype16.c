@@ -38,8 +38,8 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buff
   }
   Py_ssize_t half_len = len / 2;
   Py_ssize_t lens[] = {half_len, half_len};
-  int reminder = len % 2;
-  if (reminder > 0) {
+  int remainder = len % 2;
+  if (remainder > 0) {
     lens[0] += 1;	  
   }
 
@@ -63,7 +63,7 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buff
       *dst0++ = src[i];
       *dst1++ = src[i + 1];
     }
-    if (reminder > 0) {
+    if (remainder > 0) {
       *dst0 = src[len-1];	    
     }
     break;
@@ -144,7 +144,7 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr
       *dst++ = buf2[i];
       printf ("buf1[%d] %zu \n", i, buf1[i]);
     }
-    if (bufLens[0] > bufLens[1]) { // There is a reminder
+    if (bufLens[0] > bufLens[1]) { // There is a remainder 
       printf ("bufLens[0] %zu \n", bufLens[0]);
       printf ("buf1[%d] %zu \n", bufLens[0]-1, buf1[bufLens[0]-1]);
       *dst = buf1[bufLens[0]-1];	    

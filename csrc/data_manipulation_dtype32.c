@@ -81,9 +81,15 @@ int handle_split_mode_220(u_int8_t *src, Py_ssize_t total_len,
                                  u_int8_t **chunk_buffs, Py_ssize_t *bufLens, uint32_t num_buf) {
 
   Py_ssize_t q_len = total_len / num_buf;
-
-  for (Py_ssize_t i = 0; i < num_buf; i++) {
-      bufLens[i] = q_len;
+  int remainder= total_len % num_buf;
+  
+  for (Py_ssize_t b = 0; b < num_buf; b++) {
+    if (b < remainder) {
+      bufLens[b] = q_len + 1;
+    }
+    else {
+      bufLens[b] = q_len;
+    }
   }
   
   if (allocate_4chunk_buffs(chunk_buffs, bufLens, num_buf) != 0)
@@ -99,6 +105,36 @@ int handle_split_mode_220(u_int8_t *src, Py_ssize_t total_len,
     *dst4++ = src[i + 3];
   }
 
+  switch (remainder) {
+    case 3:
+        *dst3++ = src[total_len - 2];
+    case 2:
+        *dst2++ = src[total_len - 1];
+    case 1:
+        *dst1++ = src[total_len - remainder];
+        break;
+    default:
+        break;
+  }
+
+return 0;
+
+
+  if (remainder == 3) {
+    *dst1++ = src[total_len - remainder];
+    *dst2++ = src[total_len - remainder - 1];
+    *dst3++ = src[total_len - remainder - 2];
+  }
+ 
+  if (remainder == 2) {
+    *dst1++ = src[total_len - remainder];
+    *dst2++ = src[total_len - remainder - 1];
+  }
+ 
+  if (remainder == 1) {
+    *dst1++ = src[total_len - remainder];
+  }
+ 
   return 0;
 }
 //
@@ -360,6 +396,7 @@ u_int8_t combine_buffers_dtype32(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
                                 Py_ssize_t *bufLens, int bits_mode, int bytes_mode, int threads) {
   
   int num_buf = 4;
+  u_int8_t *bufs[] = {buf1, buf2, buf3, buf4};
   size_t total_len = 0;
   for (int b=0; b<num_buf; b++){
     total_len += bufLens[b];	  
@@ -370,12 +407,23 @@ u_int8_t combine_buffers_dtype32(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
   switch (bytes_mode) {
   case 220:
     // 8b1_10_11_100 [decimal 220] - bytegroup to four groups [1,2,3,4]
-    for (Py_ssize_t i = 0; i < bufLens[0]; i++) {
-      *dst++ = buf1[i];
-      *dst++ = buf2[i];
-      *dst++ = buf3[i];
-      *dst++ = buf4[i];
+    for (Py_ssize_t i = 0; i < bufLens[3]; i++) {
+      *dst++ = bufs[0][i];
+      *dst++ = bufs[1][i];
+      *dst++ = bufs[2][i];
+      *dst++ = bufs[3][i];
     }
+    int remainder= total_len % num_buf;
+    for (Py_ssize_t b = 0; b < num_buf; b++) {
+      if (b < remainder) {
+        *dst++ = bufs[b][bufLens[b]-1];
+      }	      
+  }
+
+
+
+
+
     break;
 //
 //  case 41:
