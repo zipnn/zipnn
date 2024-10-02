@@ -37,13 +37,18 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buff
     reorder_all_floats_dtype16(src, len);
   }
   Py_ssize_t half_len = len / 2;
+  Py_ssize_t lens[] = {half_len, half_len};
+  int reminder = len % 2;
+  if (reminder > 0) {
+    lens[0] += 1;	  
+  }
 
   switch (bytes_mode) {
   case 10:  // 2b01_010 - Byte Group to two different groups
-    chunk_buffs[0] = PyMem_Malloc(half_len);
-    chunk_buffs[1] = PyMem_Malloc(half_len);
-    unCompChunksSizeCurChunk[0] = half_len; 
-    unCompChunksSizeCurChunk[1] = half_len;
+    chunk_buffs[0] = PyMem_Malloc(lens[0]);
+    chunk_buffs[1] = PyMem_Malloc(lens[1]);
+    unCompChunksSizeCurChunk[0] = lens[0]; 
+    unCompChunksSizeCurChunk[1] = lens[1];
 
     if (chunk_buffs[0] == NULL || chunk_buffs[1] == NULL) {
       PyMem_Free(chunk_buffs[0]);
@@ -57,6 +62,9 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buff
     for (Py_ssize_t i = 0; i < len; i += 2) {
       *dst0++ = src[i];
       *dst1++ = src[i + 1];
+    }
+    if (reminder > 0) {
+      *dst0 = src[len-1];	    
     }
     break;
 
@@ -131,9 +139,15 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr
 
   switch (bytes_mode) {
   case 10: // 2b01_010 - Byte Group to two different groups
-    for (Py_ssize_t i = 0; i < bufLens[0]; i++) {
+    for (Py_ssize_t i = 0; i < bufLens[1]; i++) {
       *dst++ = buf1[i];
       *dst++ = buf2[i];
+      printf ("buf1[%d] %zu \n", i, buf1[i]);
+    }
+    if (bufLens[0] > bufLens[1]) { // There is a reminder
+      printf ("bufLens[0] %zu \n", bufLens[0]);
+      printf ("buf1[%d] %zu \n", bufLens[0]-1, buf1[bufLens[0]-1]);
+      *dst = buf1[bufLens[0]-1];	    
     }
     break;
 

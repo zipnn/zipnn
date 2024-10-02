@@ -96,11 +96,15 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
                         &checkThAfterPercent, &threads)) {
     return NULL;
   }
+  for (size_t i = 0; i < data.len; i++) {
+    printf ("data[%zu] %d\n", i, ((u_int8_t*)data.buf)[i]);	  
+  }
 
   // Byte Group per chunk, Compress per bufChunk
   size_t numChunks = (data.len + origChunkSize - 1) / origChunkSize;
   u_int8_t *buffers[numChunks][numBuf];
   size_t curChunk = 0;
+  
 
   u_int8_t *compressedData[numBuf][numChunks];
   uint32_t compChunksSize[numBuf][numChunks];
@@ -358,8 +362,15 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 	}
 	
 	size_t lastDecompLen = (origSize - oneChunkSize * (numChunks - 1))/numBuf;
+	size_t remainder = (origSize - oneChunkSize * (numChunks - 1)) % numBuf;
+	printf ("origSize %zu\n", origSize);
+	printf ("oneChunkSize %zu\n", oneChunkSize);
         for (uint32_t b = 0; b < numBuf; b++) {
-          decompLen[c][b] = lastDecompLen; // TBD for buffers that are not eqaul
+	  if (b < remainder) {
+            decompLen[c][b] = lastDecompLen + 1;
+          } else {
+            decompLen[c][b] = lastDecompLen;
+	  }
   	}
     }
   }
@@ -412,6 +423,8 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     // Combine
     u_int8_t *combinePtr = resultBuf + origChunkSize * c;
     if (numBuf == 2) {
+	printf ("decompLen[%zu][0]\n", decompLen[c][0]);    
+	printf ("decompLen[%zu][1]\n", decompLen[c][1]);    
         if (combine_buffers_dtype16(deCompressedData[0][c], deCompressedData[1][c],
                           combinePtr, decompLen[c], bits_mode, bytes_mode,
              threads) != 0){  
@@ -434,6 +447,13 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
   PyObject *py_result =
       PyByteArray_FromStringAndSize((const char *)resultBuf, origSize);
+
+  for (size_t i = 0; i < origSize; i++) {
+    printf ("data[%zu] %d\n", i, ((u_int8_t*)resultBuf)[i]);	  
+  }
+
+
+
 
   for (size_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
