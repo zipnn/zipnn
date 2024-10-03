@@ -10,6 +10,10 @@ KB = 1024
 MB = 1024 * 1024
 GB = 1024 * 1024 * 1024
 
+RED = "\033[91m"
+YELLOW = "\033[93m"
+GREEN = "\033[92m"
+RESET = "\033[0m"
 
 def check_and_install_zipnn():
     try:
@@ -33,7 +37,7 @@ def parse_streaming_chunk_size(
     streaming_chunk_size,
 ):
     if str(streaming_chunk_size).isdigit():
-        final = int(streaming_chunk_size)  
+        final = int(streaming_chunk_size)
     else:
         size_value = int(streaming_chunk_size[:-2])
         size_unit = streaming_chunk_size[-2].lower()
@@ -56,56 +60,70 @@ def compress_file(
     streaming_chunk_size=1048576,
     delete=False,
     force=False,
+    hf_cache=False,
 ):
-    import zipnn    
+    import zipnn
+
     streaming_chunk_size = parse_streaming_chunk_size(streaming_chunk_size)
     full_path = input_file
     if not os.path.exists(full_path):
-        print("File not found")
+        print(f"{RED}File not found{RESET}")
         return
-    if delete:
+
+    compressed_path = full_path + ".znn"
+    if not force and os.path.exists(compressed_path):
+        user_input = (
+            input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
+        )
+        if user_input not in ("yes", "y"):
+            print(f"Skipping {full_path}...")
+            return
+    print(f"Compressing {full_path}...")
+    #
+    output_file = input_file + ".znn"
+    if dtype:
+        zpn = zipnn.ZipNN(
+            bytearray_dtype="float32",
+            is_streaming=True,
+            streaming_chunk_kb=streaming_chunk_size,
+        )
+    else:
+        zpn = zipnn.ZipNN(
+            is_streaming=True,
+            streaming_chunk_kb=streaming_chunk_size,
+        )
+    file_size_before = 0
+    file_size_after = 0
+    start_time = time.time()
+    with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
+        chunk = infile.read()
+        file_size_before += len(chunk)
+        compressed_chunk = zpn.compress(chunk)
+        if compressed_chunk:
+            file_size_after += len(compressed_chunk)
+            outfile.write(compressed_chunk)
+    end_time = time.time() - start_time
+    print(f"Compressed {input_file} to {output_file}")
+    print(
+        f"{GREEN}Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}{RESET}"
+    )
+
+    if delete and not hf_cache:
         print(f"Deleting {full_path}...")
         os.remove(full_path)
-    else:
-        compressed_path = full_path + ".zpn"
-        if not force and os.path.exists(compressed_path):
-            user_input = (
-                input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
-            )
-            if user_input not in ("yes", "y"):
-                print(f"Skipping {full_path}...")
-                return
-        print(f"Compressing {full_path}...")
-        #
-        output_file = input_file + ".zpn"
-        if dtype:
-            zpn = zipnn.ZipNN(
-                bytearray_dtype="float32",
-                is_streaming=True,
-                streaming_chunk_kb=streaming_chunk_size,
-            )
-        else:
-            zpn = zipnn.ZipNN(
-                is_streaming=True,
-                streaming_chunk_kb=streaming_chunk_size,
-            )
-        file_size_before = 0
-        file_size_after = 0
-        start_time = time.time()
-        with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
-            chunk = infile.read()
-            file_size_before += len(chunk)
-            compressed_chunk = zpn.compress(chunk)
-            if compressed_chunk:
-                file_size_after += len(compressed_chunk)
-                outfile.write(compressed_chunk)
-        end_time = time.time() - start_time
-        print(f"Compressed {input_file} to {output_file}")
-        print(
-            f"Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}"
-        )
 
-
+    if hf_cache:
+        # If the file is in the Hugging Face cache, fix the symlinks
+        print(f"{YELLOW}Reorganizing Hugging Face cache...{RESET}")
+        try:
+            snapshot_path = os.path.dirname(input_file)
+            blob_name = os.path.join(snapshot_path, os.readlink(input_file))
+            os.rename(output_file, blob_name)
+            os.symlink(blob_name, output_file)
+            if os.path.exists(input_file):
+                os.remove(input_file)
+        except Exception as e:
+            raise Exception(f"Error reorganizing Hugging Face cache: {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -139,6 +157,11 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag that forces overwriting when compressing.",
     )
+    parser.add_argument(
+        "--hf_cache",
+        action="store_true",
+        help="A flag that indicates if the file is in the Hugging Face cache.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.float32:
@@ -149,6 +172,8 @@ if __name__ == "__main__":
         optional_kwargs["delete"] = args.delete
     if args.force:
         optional_kwargs["force"] = args.force
+    if args.hf_cache:
+        optional_kwargs["hf_cache"] = args.hf_cache
 
     check_and_install_zipnn()
     compress_file(args.input_file, **optional_kwargs)

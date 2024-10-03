@@ -1,1 +1,1 @@
-from .zipnn import ZipNN
+from .zipnn import ZipNN, zipnn_hf

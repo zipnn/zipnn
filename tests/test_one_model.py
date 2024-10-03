@@ -129,7 +129,7 @@ def test_compression_decompression_float(self):
     for dtype in [torch.float32, torch.bfloat16, torch.float16]:
         vars_dict, original_tensor, original_bin, bytearray_dtype = build_tensors_and_vars(dtype)
 
-        print("Check different standart option with different dtypes")
+        print("Check different standard option with different dtypes")
         run_few_config(
             self,
             original_bin,

@@ -1,6 +1,8 @@
 import time
 import os
 import math
+from pathlib import Path
+
 import numpy as np
 import torch
 import zstandard as zstd
@@ -78,14 +80,14 @@ class ZipNN:
                  Default is 0.95.
 
          check_th_after_percent: int
-                 Check the compression threshhold after % from the number of chunk and stop compressing if not pass the compression_threshold.
+                 Check the compression threshold after % from the number of chunk and stop compressing if not pass the compression_threshold.
                  Only relevant for a compression that uses byte grouping.
                  Default is 10[%]
 
          byte_reorder: int
                  Number of grouping.
                  4 Groups - Nu,ber for the group and zero for truncate.
-                 [7] - Gorup 0/1 - 4'th Byte
+                 [7] - Group 0/1 - 4'th Byte
                  [6-5] - Group 0/1/2 - 3'th Byte
                  [4-3] - Group 0/1/2/3 - 2'th Byte
                  [2-0] - Group 0/1/2/3/4 - 1'th Byte
@@ -96,10 +98,10 @@ class ZipNN:
 
          reorder_signbit: int
                  This reorder the bits of the float32 or bfloat16 to better compression.
-                 If set to zero [defualt], auto decision according to the dtype
+                 If set to zero [default], auto decision according to the dtype
                  If set to 255 - no reorder_signbit.
                  If 16,32 - reorder_signbit for bfloat16 or float32 respectively
-                 Defualt is 0 [Auto decision]
+                 Default is 0 [Auto decision]
 
         delta_compressed_type: string
                NOT IMPLEMENTED YET.
@@ -125,7 +127,7 @@ class ZipNN:
          is_streaming: bool
                  NOT IMPLEMENTED YET.
                  If true – signals compression is for a stream of data.
-                 Deafult is False.
+                 Default is False.
 
          streaming_chunk_kb: int
                  Chunk size for streaming.
@@ -146,17 +148,17 @@ class ZipNN:
          decompressed_file: string
                  Path to the decompressed file.
                  Only relevant if compressed_ret_type is ‘file’.
-                 Defaul is None.
+                 Default is None.
 
          zstd_level: int
                  Compression level for ‘zstd’ compression.
                  Only relevant if method is ‘zstd’.
-                 Default is 3.
+                 Default is 3.``
 
          lz4_compression_level: int
                  Compression level for ‘lz4’ compression.
                  Only relevant if method is ‘lz4’.
-                 Deafult is 0.
+                 Default is 0.
 
          Returns
          -------------------------------------
@@ -178,8 +180,21 @@ class ZipNN:
         self.lossy_compressed_type = EnumLossy.NONE if lossy_compressed_type is None else EnumLossy(lossy_compressed_type)
         self.lossy_compressed_factor = lossy_compressed_factor
 
-        self.compression_chunk = compression_chunk
-        self.is_streaming = is_streaming
+        if (compression_chunk & (compression_chunk - 1)) == 0:
+            self.compression_chunk = compression_chunk
+        else:
+            raise ValueError("compression_chunk must be a number that is a power of 2.")
+
+        if self.input_format != EnumFormat.BYTE.value and is_streaming:
+            raise ValueError("Streaming is currently implemented only for bytes data type.")
+        else:
+            self.is_streaming = is_streaming
+
+        if (streaming_chunk_kb & (streaming_chunk_kb - 1)) == 0:
+            self.streaming_chunk_kb = streaming_chunk_kb
+        else:
+            raise ValueError("streaming_chunk_kb must be a number that is a power of 2.")
+
         self.streaming_chunk_kb = streaming_chunk_kb
 
         self.input_file = input_file
@@ -190,7 +205,7 @@ class ZipNN:
 
         self._version_major = 0
         self._version_minor = 3
-        self._version_tiny = 1
+        self._version_tiny = 5
         self._import_dependencies(zstd_level)
 
         self.header_length = 32
@@ -312,7 +327,7 @@ class ZipNN:
 
     def _update_data_shape(self, shape):
         """
-        Updates the shpae of the data add to the and of the header
+        Updates the shape of the data add to the and of the header
         """
         self._ext_header = zipnn_pack_shape(shape)
 
@@ -353,11 +368,13 @@ class ZipNN:
         #        self._header[6] = bit_reorder
         self._header[7] = self.method
         self._header[8] = self.input_format
-        self._header[9] = 0 if self.delta_compressed_type is None else self.delta_compressed_type
+        self._header[9] = (0 if self.delta_compressed_type is None else
+                   1 if self.delta_compressed_type == "byte" else
+                   2 if self.delta_compressed_type == "file" else 0)
         #        self._header[10] = self.lossy_compressed_type
         #        self._header[11] = self.lossy_compressed_factor
         #        self._header[12] = self._lossy_is_int
-        if self.is_streaming:  # MSB is streaming, unsigned & is stremaing
+        if self.is_streaming:  # MSB is streaming, unsigned & is streaming
             self._header[13] = 128 + int(math.log(self.streaming_chunk_kb, 2))
         else:
             self._header[13] = 0
@@ -378,7 +395,7 @@ class ZipNN:
         The header length.
         """
         mv = memoryview(ba_compress)
-        header = mv[:self.header_length]
+        header = mv[: self.header_length]
         if header[0:2].tobytes().decode("ascii") != "ZN":
             raise ValueError("Header should start with ZN")
         self.version_major = int(header[2])
@@ -388,14 +405,18 @@ class ZipNN:
         self._bit_reorder = int(header[6])
         self.method = int(header[7])
         self.input_format = int(header[8])
-        self.delta_compressed_type = int(header[9])
+        self.delta_compressed_type = (
+            0 if self._header[9] == 0 else
+            "byte" if self._header[9] == 1 else
+            "file" if self._header[9] == 2 else 0
+        )
         self.lossy_compressed_type = int(header[10])
         self.lossy_compressed_factor = int(header[11])
         self._lossy_is_int = int(header[12])
         streaming_vals = int(header[13])
         if streaming_vals > 127:
             self.is_streaming = 1
-            self.streaming_chunk_kb = 2 ** (128 - streaming_vals)
+            # self.streaming_chunk_kb = 2 ** (128 - streaming_vals)
         else:
             self.is_streaming = 0
         self.compression_chunk = 2 ** header[14]
@@ -403,7 +424,7 @@ class ZipNN:
         self.original_len = int.from_bytes(header[16:24], byteorder="little")
 
         if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
-            self.shape_bytes, self._shape_size = zipnn_unpack_shape(mv[self.header_length:])
+            self.shape_bytes, self._shape_size = zipnn_unpack_shape(mv[self.header_length :])
         return self.header_length + self._shape_size
 
     #################
@@ -445,11 +466,28 @@ class ZipNN:
         (depends on the type of the data compressed), which will be the compressed file,
         in the format chosen in the ZipNN class instance configuration.
         """
+        if self.delta_compressed_type=="byte":
+            if len(data)!=len(delta_second_data):
+                raise ValueError("Length of delta file has to match the length of the original file.")
+        elif self.delta_compressed_type=="file":
+            try:
+                with open(delta_second_data, 'rb') as file:
+                    file_data = file.read()
+                delta_second_data = file_data
+            except Exception:
+                raise FileNotFoundError("Encountered an error when reading the delta file")
+            if len(data)!=len(file_data):
+                raise ValueError("Length of delta file has to match the length of the original file.")
+            delta_second_data=file_data
+        else: #self.delta_compressed_type="0"
+            if delta_second_data!=None:
+                raise ValueError("ZipNN isn't set for delta compression, but delta_second_data is not null.")
 
-        if self.is_streaming:
+        if self.is_streaming and self.input_format == EnumFormat.BYTE.value:
             mv_data = memoryview(data)
+            if delta_second_data:
+                mv_delta=memoryview(delta_second_data)
             CHUNK_SIZE = self.streaming_chunk_kb
-            
             # Compression into bytearray
             compressed_buffer = bytearray()
             remaining_bytes = len(data)
@@ -458,6 +496,11 @@ class ZipNN:
             while remaining_bytes > 0:
                 chunk_size = min(CHUNK_SIZE, remaining_bytes)
                 chunk = mv_data[offset : offset + chunk_size]
+                if delta_second_data:
+                    chunk_delta=mv_delta[offset : offset + chunk_size]
+                    array1 = np.frombuffer(chunk, dtype=np.uint8)
+                    array2 = np.frombuffer(chunk_delta, dtype=np.uint8)
+                    chunk = np.bitwise_xor(array1, array2).tobytes()
                 compressed_chunk = self.compress_torch_numpy_byte(chunk, lossy_compressed_type, lossy_compressed_factor)
                 if compressed_chunk:
                     compressed_buffer.extend(compressed_chunk)
@@ -465,6 +508,10 @@ class ZipNN:
                 remaining_bytes -= chunk_size
             return compressed_buffer
         else:
+            if delta_second_data:
+                array1 = np.frombuffer(data, dtype=np.uint8)
+                array2 = np.frombuffer(delta_second_data, dtype=np.uint8)
+                data = np.bitwise_xor(array1, array2).tobytes()
             #        if self.delta_compressed_type is not None:
             #            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
             return self.compress_torch_numpy_byte(data, lossy_compressed_type, lossy_compressed_factor)
@@ -654,7 +701,7 @@ class ZipNN:
                 if max_val < 256:  # truncate 3 bytes
                     byte_reorder = 1  # 8b0_00_00_001
                 elif max_val < 65536:  # truncate 2 bytes
-                    # It is faster to work with change the format to uint16 then to truncate out c implememtation
+                    # It is faster to work with change the format to uint16 then to truncate out c implementation
                     data = data.astype(np.uint16)
                     skip_split = 1  # use vanilla compression method
                     byte_reorder = 9  # 8b0_00_01_001
@@ -755,7 +802,7 @@ class ZipNN:
     # decompression #
     #################
 
-    def decompress(self, data, decompress_cpu_gpu="cpu"):
+    def decompress(self, data, decompress_cpu_gpu="cpu",delta_second_data=None):
         """
         Decompress is the ZipNN function used for decompression.
 
@@ -774,22 +821,64 @@ class ZipNN:
         Returns the output of decompress_bin or decompress_read_file (depends on the type of the data compressed),
         which will be the compressed file, in the format chosen in the ZipNN class instance configuration.
         """
+        if self.delta_compressed_type=="byte":
+            if delta_second_data is None:
+                raise ValueError("delta_second_data is None or not set for delta copression")
+        elif self.delta_compressed_type=="file":
+            try:
+                with open(delta_second_data, 'rb') as file:
+                    file_data = file.read()
+                delta_second_data = file_data
+            except Exception:
+                raise FileNotFoundError("Encountered an error when reading the delta file")
+        else: #self.delta_compressed_type==0
+            if delta_second_data!=None:
+                raise ValueError("ZipNN isn't set for delta compression, but delta_second_data is not null.")
+            
         mv_data = memoryview(data)
+
+        was_data_delta_compressed=mv_data[9]
+        if was_data_delta_compressed==0 and self.delta_compressed_type!=0:
+            raise ValueError("The data wasn't compressed using delta compression and you're trying to delta-decompress it.")
+        if was_data_delta_compressed!=0 and self.delta_compressed_type==0:    
+            raise ValueError("The data was compressed using delta compression and you're trying to decompress it normally.")
+        if delta_second_data:
+            mv_delta=memoryview(delta_second_data)
+        
         comp_chunk_size = mv_data[13]  # 0 if no streaming > 127
-        if comp_chunk_size > 127:
+        if self.input_format == EnumFormat.BYTE.value and comp_chunk_size > 127: #xor inside streaming
             decompressed_buffer = bytearray()
             offset = 0
             compressed_length = len(data)
-
+            offset_delta=0
             while offset < compressed_length:
                 header = mv_data[offset : offset + 32]
                 mid_chunk_len = int.from_bytes(header[24:32], byteorder="little") - 32
                 chunk = mv_data[offset : offset + mid_chunk_len + 32]
                 decompressed_chunk = self.decompress_bin(chunk)
                 if decompressed_chunk:
+                    if delta_second_data:
+                        if(offset_delta + len(decompressed_chunk)>len(mv_delta)):
+                            raise ValueError("Length of delta file has to match the length of the decompressed file.")
+                        chunk_delta=mv_delta[offset_delta : offset_delta + len(decompressed_chunk)]
+                        array1 = np.frombuffer(decompressed_chunk, dtype=np.uint8)
+                        array2 = np.frombuffer(chunk_delta, dtype=np.uint8)
+                        decompressed_chunk = np.bitwise_xor(array1, array2).tobytes()
+                        offset_delta+=len(decompressed_chunk)
                     decompressed_buffer.extend(decompressed_chunk)
                 offset += mid_chunk_len + 32
+            if delta_second_data and offset_delta!=len(mv_delta):
+                raise ValueError("Length of delta file has to match the length of the decompressed file.")
             return decompressed_buffer
+        
+        if delta_second_data:
+            decompressed_buffer=self.decompress_bin(data)
+            if len(decompressed_buffer)!=len(delta_second_data):
+                raise ValueError("Length of delta file has to match the length of the decompressed file.")
+            array1 = np.frombuffer(decompressed_buffer, dtype=np.uint8)
+            array2 = np.frombuffer(delta_second_data, dtype=np.uint8)
+            final_data = np.bitwise_xor(array1, array2).tobytes()
+            return final_data
         return self.decompress_bin(data)
 
     def decompress_method(self, data):
@@ -979,6 +1068,195 @@ class ZipNN:
             ba = in_file_handler.read()
         return self.decompress_bin(ba)
 
+
+def zipnn_hf():
+    """
+    Plugin for the Hugging Face Transformers library to use ZipNN compression.
+
+    Parameters
+    -------------------------------------
+    None.
+
+    Returns
+    -------------------------------------
+    None.
+    """
+    try:
+        from transformers import modeling_utils
+        from typing import Union, Optional
+        from transformers.configuration_utils import PretrainedConfig
+        from transformers.utils import (
+            FLAX_WEIGHTS_NAME,
+            SAFE_WEIGHTS_INDEX_NAME,
+            SAFE_WEIGHTS_NAME,
+            TF2_WEIGHTS_NAME,
+            TF_WEIGHTS_NAME,
+            WEIGHTS_INDEX_NAME,
+            WEIGHTS_NAME,
+            cached_file,
+        )
+        from transformers.modeling_utils import _add_variant, PreTrainedModel
+    except ImportError as exc:
+        raise ImportError("Hugging Face Transformers library is not installed. Please install it to use ZipNN compression.") from exc
+
+    from typing import Union
+
+    # Save the original load_state_dict method
+    original_load_state_dict = modeling_utils.load_state_dict
+
+    # Define a monkey-patched version of load_state_dict
+    def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False):
+        if checkpoint_file.endswith(".znn"):
+            print(f"Decompressing {checkpoint_file.split('/')[-1]}")
+            output_file = checkpoint_file.replace(".znn", "")
+            snapshot_path = os.path.dirname(checkpoint_file)
+            if not os.path.exists(output_file):
+                znn = ZipNN(is_streaming=True)
+                with open(checkpoint_file, "rb") as infile, open(output_file, "wb") as outfile:
+                    d_data = b""
+                    chunk = infile.read()
+                    d_data += znn.decompress(chunk)
+                    outfile.write(d_data)
+                blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
+                os.rename(output_file, blob_name)
+                os.symlink(blob_name, output_file)
+            os.remove(checkpoint_file)
+            checkpoint_file = output_file
+
+            # Change index name to the decompressed file
+            if os.path.exists(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)):
+                file_name = os.path.basename(output_file)
+                blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
+                replace_in_file(
+                    file_path=blob_name,
+                    old=f"{file_name}.znn",
+                    new=f"{file_name}"
+                )
+
+            elif os.path.exists(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)):
+                file_name = os.path.basename(output_file)
+                blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
+                replace_in_file(
+                    file_path=blob_name,
+                    old=f"{file_name}.znn",
+                    new=f"{file_name}"
+                )
+
+        # Call the original load_state_dict method
+        return original_load_state_dict(checkpoint_file, is_quantized)
+
+    # Monkey patch the load_state_dict method in the transformers library
+    modeling_utils.load_state_dict = custom_load_state_dict
+
+    # save original from_pretrained
+    original_from_pretrained = PreTrainedModel.from_pretrained
+
+    # class CustomPreTrainedModel(PreTrainedModel):
+    def custom_from_pretrained(cls,
+            pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
+            *model_args,
+            config: Optional[Union[PretrainedConfig, str, os.PathLike]] = None,
+            cache_dir: Optional[Union[str, os.PathLike]] = None,
+            ignore_mismatched_sizes: bool = False,
+            force_download: bool = False,
+            local_files_only: bool = False,
+            token: Optional[Union[str, bool]] = None,
+            revision: str = "main",
+            use_safetensors: bool = None,
+            **kwargs,):
+
+        subfolder = kwargs.get("subfolder", "")
+        variant = kwargs.get("variant", None)
+        proxies = kwargs.get("proxies", None)
+        resume_download = kwargs.get("resume_download", None)
+        commit_hash = kwargs.get("_commit_hash", None)
+        from_pipeline = kwargs.get("_from_pipeline", None)
+        from_auto_class = kwargs.get("_from_auto", False)
+
+        # Skipping user_agent["quant"]! Could be a problem
+        user_agent = {"file_type": "model", "framework": "pytorch", "from_auto_class": from_auto_class}
+        if from_pipeline is not None:
+            user_agent["using_pipeline"] = from_pipeline
+
+        test_paths = [
+            TF_WEIGHTS_NAME + ".index",
+            TF2_WEIGHTS_NAME,
+            FLAX_WEIGHTS_NAME,
+            _add_variant(SAFE_WEIGHTS_NAME, variant),
+            _add_variant(SAFE_WEIGHTS_INDEX_NAME, variant),
+            _add_variant(WEIGHTS_NAME, variant),
+            _add_variant(WEIGHTS_INDEX_NAME, variant),
+            FLAX_WEIGHTS_NAME,
+            pretrained_model_name_or_path,
+            pretrained_model_name_or_path + ".index",
+        ]
+
+        test_paths = [path + ".znn" for path in test_paths]
+
+        cached_file_kwargs = {
+                        "cache_dir": cache_dir,
+                        "force_download": force_download,
+                        "proxies": proxies,
+                        "resume_download": resume_download,
+                        "local_files_only": local_files_only,
+                        "token": token,
+                        "user_agent": user_agent,
+                        "revision": revision,
+                        "subfolder": subfolder,
+                        "_raise_exceptions_for_gated_repo": False,
+                        "_raise_exceptions_for_missing_entries": False,
+                        "_commit_hash": commit_hash,
+                }
+
+        for filename in test_paths:
+            resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
+            if resolved_archive_file is not None:
+                print(f"Decompressing {resolved_archive_file.split('/')[-1]}")
+                output_file = resolved_archive_file.replace(".znn", "")
+                if not os.path.exists(output_file):
+                    znn = ZipNN(is_streaming=True)
+                    with open(resolved_archive_file, "rb") as infile, open(output_file, "wb") as outfile:
+                        d_data = b""
+                        chunk = infile.read()
+                        d_data += znn.decompress(chunk)
+                        outfile.write(d_data)
+                    snapshot_path = os.path.dirname(resolved_archive_file)
+                    blob_name = os.path.join(snapshot_path, os.readlink(resolved_archive_file))
+                    os.rename(output_file, blob_name)
+                    os.symlink(blob_name, output_file)
+                os.remove(resolved_archive_file)
+        # pack config, cache_dir, etc. into kwargs
+        kwargs.update({
+            "config": config,
+            "cache_dir": cache_dir,
+            "ignore_mismatched_sizes": ignore_mismatched_sizes,
+            "force_download": force_download,
+            "local_files_only": local_files_only,
+            "token": token,
+            "revision": revision,
+            "use_safetensors": use_safetensors,
+        })
+
+        # Call the original from_pretrained method with the updated kwargs
+        return original_from_pretrained.__func__(cls,
+            pretrained_model_name_or_path,
+            *model_args,
+            **kwargs,
+        )
+    
+    # Monkey patch the from_pretrained method in the transformers library
+    PreTrainedModel.from_pretrained = classmethod(custom_from_pretrained)
+
+def replace_in_file(file_path, old: str, new: str) -> None:
+    """Given a file_path, replace all occurrences of `old` with `new` inplace."""
+
+    with open(file_path, 'r') as file:
+        file_data = file.read()
+
+    file_data = file_data.replace(old, new)
+
+    with open(file_path, 'w') as file:
+        file.write(file_data)
 
 #    def decompress_delta(self, base_path, delta_file):
 #        return 0

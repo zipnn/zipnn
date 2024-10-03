@@ -8,7 +8,7 @@
 #include "data_manipulation_dtype16.h" 
 #include "data_manipulation_dtype32.h" 
 
-//////////////////////// Help function /////////////
+////  Helper Functions ///////
 u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                 size_t numChunks, u_int8_t *header,
                                 u_int8_t *compressedData[numBuf][numChunks],
@@ -70,9 +70,9 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
 // Python callable function to split a bytearray into four buffers
 // bits_mode:
 //     0 - no ordering of the bits
-//     1 - reorder of the exponent (eponent, sign_bit, mantissa)
+//     1 - /ereorder of the exponent (eponent, sign_bit, mantissa)
 // bytes_mode:
-//     [we are refering to the bytes order as first 2bits refer to the MSByte
+//     [we are referring to the bytes order as first 2bits refer to the MSByte
 //     and the second two bits to the LSByte] 2b [MSB Byte],2b[LSB Byte] 0 -
 //     truncate this byte 1 or 2 - a group of bytes 4b0110 [6] - bytegroup to
 //     two groups 4b0001 [1] - truncate the MSByte 4b1000 [8] - truncate the
@@ -80,7 +80,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
 // is_review:
 //     Even if you have the Byte mode, you can change it if needed.
 //     0 - No review, take the bit_mode and byte_mode
-//     1 - the finction can change the Bytes_mode
+//     1 - the function can change the Bytes_mode
 
 PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   Py_buffer header, data;
@@ -357,7 +357,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 	for (int b = 0; b < numBuf; b++) {
 	  oneChunkSize += unCompChunkSize[0][b];    	
 	}
-	
+        	
 	size_t lastDecompLen = (origSize - oneChunkSize * (numChunks - 1))/numBuf;
 	int remainder = (origSize - oneChunkSize * (numChunks - 1)) % numBuf;
         for (int b = 0; b < numBuf; b++) {
@@ -369,7 +369,8 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   	}
     }
   }
-  
+    
+
   resultBuf = PyMem_Malloc(origSize);
   if (!resultBuf) {
     PyErr_SetString(
@@ -406,12 +407,12 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
         if (HUF_isError(decompressedSize)) {
           HUF_getErrorName(decompressedSize);
-          return 0;
+          return NULL;
         }
 
 
         if (decompressedSize != decompLen[c][b]) {
-          return 0;
+          return NULL;
         }
       }
     }
