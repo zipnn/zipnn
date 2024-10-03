@@ -39,7 +39,7 @@ file_32_copy = shutil.copy2(file_32, os.path.join(data_dir, "model_copy.safetens
 print("\n bfloat16: Compression starts.")
 zipnn_compress.compress_file(file_16, streaming_chunk_size=2097152)
 print("Compression ended, decompression starts.")
-zipnn_decompress.decompress_file(file_16 + ".zpn")
+zipnn_decompress.decompress_file(file_16 + ".znn")
 print("Decompression ended.")
 print("Are the files equal? " + str(filecmp.cmp(file_16, file_16_copy, shallow=False)))
 
@@ -47,7 +47,7 @@ print("Are the files equal? " + str(filecmp.cmp(file_16, file_16_copy, shallow=F
 print("\n float32: Compression starts.")
 zipnn_compress.compress_file(file_32, dtype='float32')
 print("Compression ended, decompression starts.")
-zipnn_decompress.decompress_file(file_32 + ".zpn")
+zipnn_decompress.decompress_file(file_32 + ".znn")
 print("Decompression ended.")
 print("Are the files equal? " + str(filecmp.cmp(file_32, file_32_copy, shallow=False)))
 

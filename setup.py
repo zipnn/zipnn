@@ -18,7 +18,6 @@ split_dtype_extension = Extension(
     "split_dtype",
     sources=[
         "csrc/split_dtype_module.c",
-        "csrc/split_dtype32.c",
         "csrc/split_dtype.c",
         "csrc/data_manipulation_dtype16.c",
         "csrc/data_manipulation_dtype32.c",
@@ -36,8 +35,8 @@ split_dtype_extension = Extension(
 
 setup(
     name="zipnn",
-    version="0.3.1",
-    author="Moshik Hershcovitch",
+    version="0.3.5",
+    author="ZipNN Contributors",
     author_email="moshik1@gmail.com",
     description="A lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment",
     long_description=open("README.md").read(),

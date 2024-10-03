@@ -406,12 +406,11 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
         if (HUF_isError(decompressedSize)) {
           HUF_getErrorName(decompressedSize);
-          return 0;
+          return NULL;
         }
 
-
-        if (decompressedSize != decompLen[c][b]) {
-          return 0;
+        if (decompressedSize != decompLen[c]) {
+          return NULL;
         }
       }
     }
