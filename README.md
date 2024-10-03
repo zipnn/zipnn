@@ -25,7 +25,7 @@ python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-
 
 The model will be decompressed automatically and safely as long as `zipnn_hf()` is added at the top of the file like in the example above.
 
-To decompress manualy, simply run:
+To decompress manually, simply run:
 ```bash
 python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```
@@ -254,7 +254,7 @@ The default configuration is ByteGrouping of 4 with vanilla ZSTD (running wit
 * ```bytearray_dtype```: The data type of the byte array, if input_format is 'byte'. If input_format is torch or numpy, the dtype will be derived from the data automatically (default value = 'float32').
 * ```threads```: The maximum threads for the compression and the bit manipulation. If 0, the code decides according to the dataset length (default value = 1).
 * ```compression_threshold```: Save original buffer if not compress above the threshold (default value = 0.95).
-* ```check_th_after_percent```: Check the compression threshhold after % from the number of chunk and stop compressing if not pass the compression_threshold. (default value = 10[%]).
+* ```check_th_after_percent```: Check the compression threshold after % from the number of chunk and stop compressing if not pass the compression_threshold. (default value = 10[%]).
                  
 * ```byte_reorder```: Number of grouping. The format is the following:
   - Bit Format:

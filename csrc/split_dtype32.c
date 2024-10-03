@@ -5,7 +5,7 @@
 #include <time.h>
 
 ///////////////////////////////////
-/// Review Helpe Funcation  //////
+/// Review Helper Function  //////
 //////////////////////////////////
 
 // Helper function ithat count zero bytes
@@ -239,7 +239,7 @@ static int split_dtype32(u_int8_t *src, Py_ssize_t total_len, u_int8_t **buf1,
     break;
 
   default:
-    // we are not supportin this splitting bytes_mode
+    // we are not supporting this splitting bytes_mode
     return -1;
   }
   return 0;
@@ -400,7 +400,7 @@ static u_int8_t *combine_dtype32(Py_ssize_t *total_len, u_int8_t *buf1,
     break;
 
   default:
-    // we are not supportin this splitting bytes_mode
+    // we are not supporting this splitting bytes_mode
     return NULL;
   }
   return result;
@@ -415,7 +415,7 @@ static u_int8_t *combine_dtype32(Py_ssize_t *total_len, u_int8_t *buf1,
 //     0 - no ordering of the bits
 //     1 - reorder of the exponent (eponent, sign_bit, mantissa)
 // bytes_mode:
-//     [we are refering to the bytes order as first 2bits refer to the MSByte
+//     [we are referring to the bytes order as first 2bits refer to the MSByte
 //     and the second two bits to the LSByte] 1b [MSByte],2b[MID-HIGH Byte],
 //     2b[MID-LOW Byte], 3b[LSByte] 0 - truncate this byte 1-4 - different
 //     groups 8b1_10_11_100 [decimal 220] - bytegroup to four groups [1,2,3,4]
@@ -437,7 +437,7 @@ static u_int8_t *combine_dtype32(Py_ssize_t *total_len, u_int8_t *buf1,
 // is_review:
 //     Even if you have the Byte mode, you can change it if needed.
 //     0 - No review, take the bit_mode and bytes_mode
-//     1 - the finction can change the Bytes_mode
+//     1 - the function can change the Bytes_mode
 
 PyObject *py_split_dtype32(PyObject *self, PyObject *args) {
   Py_buffer view;

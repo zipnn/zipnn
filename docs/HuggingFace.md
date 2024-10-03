@@ -84,7 +84,7 @@ python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-
 
 The model will be decompressed automatically and safely as long as `zipnn_hf()` is added at the top of the file like in the example above.
 
-To decompress manualy, simply run:
+To decompress manually, simply run:
 ```bash
 python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```

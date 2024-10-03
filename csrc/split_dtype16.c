@@ -62,9 +62,9 @@ static int split_bytearray(u_int8_t *src, Py_ssize_t len, u_int8_t **buffers,
     break;
 
   case 8:  // 4b1000 - Truncate MSByte
-           // We are refering to the MSBbyte as little endian, thus we omit buf2
+           // We are referring to the MSBbyte as little endian, thus we omit buf2
   case 1:  // 4b1000 - Truncate LSByte
-    // We are refering to the LSByte  as a little endian, thus we omit buf1
+    // We are referring to the LSByte  as a little endian, thus we omit buf1
     buffers[0] = PyMem_Malloc(half_len);
     buffers[1] = NULL;
 
@@ -137,9 +137,9 @@ static int combine_buffers(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr,
     break;
 
   case 8: // 4b1000 - Truncate MSByte
-          // We are refering to the MSByte as a little endian, thus we omit buf2
+          // We are referring to the MSByte as a little endian, thus we omit buf2
   case 1: // 4b001 - Truncate LSByte
-          // We are refering to the LSByte as a little endian, thus we omit buf1
+          // We are referring to the LSByte as a little endian, thus we omit buf1
 
     if (bytes_mode == 8) {
       for (Py_ssize_t i = 0; i < half_len; i++) {
@@ -229,7 +229,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
 //     0 - no ordering of the bits
 //     1 - reorder of the exponent (eponent, sign_bit, mantissa)
 // bytes_mode:
-//     [we are refering to the bytes order as first 2bits refer to the MSByte
+//     [we are referring to the bytes order as first 2bits refer to the MSByte
 //     and the second two bits to the LSByte] 2b [MSB Byte],2b[LSB Byte] 0 -
 //     truncate this byte 1 or 2 - a group of bytes 4b0110 [6] - bytegroup to
 //     two groups 4b0001 [1] - truncate the MSByte 4b1000 [8] - truncate the
@@ -237,7 +237,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
 // is_review:
 //     Even if you have the Byte mode, you can change it if needed.
 //     0 - No review, take the bit_mode and byte_mode
-//     1 - the finction can change the Bytes_mode
+//     1 - the function can change the Bytes_mode
 
 PyObject *py_split_dtype16(PyObject *self, PyObject *args) {
   const uint32_t numBuf = 2;
