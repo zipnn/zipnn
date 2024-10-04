@@ -1,7 +1,6 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
-#include "data_manipulation_dtype16.h" 
 
 ///////////////////////////////////
 /// Split Helper Functions ///////
@@ -30,24 +29,25 @@ static void reorder_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
 }
 
 // Helper function to split a bytearray into groups
-int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buffs,
-                           size_t *unCompChunksSizeCurChunk, int bits_mode, int bytes_mode, int is_review,
-                           int threads) {
-  if (bits_mode == 1) {  // reoreder exponent
+int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
+                            u_int8_t **chunk_buffs,
+                            size_t *unCompChunksSizeCurChunk, int bits_mode,
+                            int bytes_mode, int is_review, int threads) {
+  if (bits_mode == 1) { // reoreder exponent
     reorder_all_floats_dtype16(src, len);
   }
   Py_ssize_t half_len = len / 2;
   Py_ssize_t lens[] = {half_len, half_len};
   int remainder = len % 2;
   if (remainder > 0) {
-    lens[0] += 1;	  
+    lens[0] += 1;
   }
 
   switch (bytes_mode) {
-  case 10:  // 2b01_010 - Byte Group to two different groups
+  case 10: // 2b01_010 - Byte Group to two different groups
     chunk_buffs[0] = PyMem_Malloc(lens[0]);
     chunk_buffs[1] = PyMem_Malloc(lens[1]);
-    unCompChunksSizeCurChunk[0] = lens[0]; 
+    unCompChunksSizeCurChunk[0] = lens[0];
     unCompChunksSizeCurChunk[1] = lens[1];
 
     if (chunk_buffs[0] == NULL || chunk_buffs[1] == NULL) {
@@ -64,17 +64,17 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buff
       *dst1++ = src[i + 1];
     }
     if (remainder > 0) {
-      *dst0 = src[len-1];	    
+      *dst0 = src[len - 1];
     }
     break;
 
-  case 8:  // 4b1000 - Truncate MSByte
-           // We are refering to the MSBbyte as little endian, thus we omit buf2
-  case 1:  // 4b1000 - Truncate LSByte
+  case 8: // 4b1000 - Truncate MSByte
+          // We are refering to the MSBbyte as little endian, thus we omit buf2
+  case 1: // 4b1000 - Truncate LSByte
     // We are refering to the LSByte  as a little endian, thus we omit buf1
     chunk_buffs[0] = PyMem_Malloc(half_len);
     chunk_buffs[1] = NULL;
-    unCompChunksSizeCurChunk[0] = half_len; 
+    unCompChunksSizeCurChunk[0] = half_len;
     unCompChunksSizeCurChunk[1] = 0;
 
     if (chunk_buffs[0] == NULL) {
@@ -129,9 +129,9 @@ static void revert_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
 }
 
 // Helper function to combine four chunk_buffs into a single bytearray
-int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr,
-                           Py_ssize_t *bufLens, int bits_mode, int bytes_mode,
-                           int threads) {
+int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2,
+                            u_int8_t *combinePtr, Py_ssize_t *bufLens,
+                            int bits_mode, int bytes_mode, int threads) {
   Py_ssize_t total_len = bufLens[0] + bufLens[1];
 
   u_int8_t *dst;
@@ -143,8 +143,8 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr
       *dst++ = buf1[i];
       *dst++ = buf2[i];
     }
-    if (bufLens[0] > bufLens[1]) { // There is a remainder 
-      *dst = buf1[bufLens[0]-1];	    
+    if (bufLens[0] > bufLens[1]) { // There is a remainder
+      *dst = buf1[bufLens[0] - 1];
     }
     break;
 
@@ -179,15 +179,15 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *combinePtr
 
 /////////////// Helper Function for the Byte ratio /////////////
 
-int buffer_ratio_dtype16 (int bytes_mode, uint32_t *buf_ratio){
+int buffer_ratio_dtype16(int bytes_mode, uint32_t *buf_ratio) {
   switch (bytes_mode) {
-  case 10:  // 2b01_010 - Byte Group to two different groups 
+  case 10: // 2b01_010 - Byte Group to two different groups
     buf_ratio[0] = 2;
     buf_ratio[1] = 2;
     break;
 
-  case 8:  // 4b1000 - Truncate MSByte
-  case 1:  // 4b1000 - Truncate LSByte
+  case 8: // 4b1000 - Truncate MSByte
+  case 1: // 4b1000 - Truncate LSByte
     buf_ratio[0] = 1;
     buf_ratio[1] = 0;
     break;

@@ -14,12 +14,8 @@ static PyMethodDef SplitMethods[] = {
 };
 
 // Module definition
-static struct PyModuleDef splitmodule = {
-    PyModuleDef_HEAD_INIT,
-    "split_dtype",  
-    NULL,
-    -1, 
-    SplitMethods};
+static struct PyModuleDef splitmodule = {PyModuleDef_HEAD_INIT, "split_dtype",
+                                         NULL, -1, SplitMethods};
 
 // Module initialization function
 PyMODINIT_FUNC PyInit_split_dtype(void) {

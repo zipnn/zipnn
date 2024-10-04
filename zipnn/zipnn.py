@@ -1,13 +1,11 @@
 import time
 import os
 import math
-from pathlib import Path
-
 import numpy as np
 import torch
 import zstandard as zstd
-from zipnn.util_header import EnumMethod, EnumFormat, EnumLossy
 import split_dtype
+from zipnn.util_header import EnumMethod, EnumFormat, EnumLossy
 from zipnn.util_torch import (
     ZipNNDtypeEnum,
     zipnn_multiply_if_max_below,
@@ -368,9 +366,11 @@ class ZipNN:
         #        self._header[6] = bit_reorder
         self._header[7] = self.method
         self._header[8] = self.input_format
-        self._header[9] = (0 if self.delta_compressed_type is None else
-                   1 if self.delta_compressed_type == "byte" else
-                   2 if self.delta_compressed_type == "file" else 0)
+        self._header[9] = (
+            0
+            if self.delta_compressed_type is None
+            else 1 if self.delta_compressed_type == "byte" else 2 if self.delta_compressed_type == "file" else 0
+        )
         #        self._header[10] = self.lossy_compressed_type
         #        self._header[11] = self.lossy_compressed_factor
         #        self._header[12] = self._lossy_is_int
@@ -406,9 +406,7 @@ class ZipNN:
         self.method = int(header[7])
         self.input_format = int(header[8])
         self.delta_compressed_type = (
-            0 if self._header[9] == 0 else
-            "byte" if self._header[9] == 1 else
-            "file" if self._header[9] == 2 else 0
+            0 if self._header[9] == 0 else "byte" if self._header[9] == 1 else "file" if self._header[9] == 2 else 0
         )
         self.lossy_compressed_type = int(header[10])
         self.lossy_compressed_factor = int(header[11])
@@ -466,27 +464,27 @@ class ZipNN:
         (depends on the type of the data compressed), which will be the compressed file,
         in the format chosen in the ZipNN class instance configuration.
         """
-        if self.delta_compressed_type=="byte":
-            if len(data)!=len(delta_second_data):
+        if self.delta_compressed_type == "byte":
+            if len(data) != len(delta_second_data):
                 raise ValueError("Length of delta file has to match the length of the original file.")
-        elif self.delta_compressed_type=="file":
+        elif self.delta_compressed_type == "file":
             try:
-                with open(delta_second_data, 'rb') as file:
+                with open(delta_second_data, "rb") as file:
                     file_data = file.read()
                 delta_second_data = file_data
             except Exception:
                 raise FileNotFoundError("Encountered an error when reading the delta file")
-            if len(data)!=len(file_data):
+            if len(data) != len(file_data):
                 raise ValueError("Length of delta file has to match the length of the original file.")
-            delta_second_data=file_data
-        else: #self.delta_compressed_type="0"
-            if delta_second_data!=None:
+            delta_second_data = file_data
+        else:  # self.delta_compressed_type="0"
+            if delta_second_data != None:
                 raise ValueError("ZipNN isn't set for delta compression, but delta_second_data is not null.")
 
         if self.is_streaming and self.input_format == EnumFormat.BYTE.value:
             mv_data = memoryview(data)
             if delta_second_data:
-                mv_delta=memoryview(delta_second_data)
+                mv_delta = memoryview(delta_second_data)
             CHUNK_SIZE = self.streaming_chunk_kb
             # Compression into bytearray
             compressed_buffer = bytearray()
@@ -497,7 +495,7 @@ class ZipNN:
                 chunk_size = min(CHUNK_SIZE, remaining_bytes)
                 chunk = mv_data[offset : offset + chunk_size]
                 if delta_second_data:
-                    chunk_delta=mv_delta[offset : offset + chunk_size]
+                    chunk_delta = mv_delta[offset : offset + chunk_size]
                     array1 = np.frombuffer(chunk, dtype=np.uint8)
                     array2 = np.frombuffer(chunk_delta, dtype=np.uint8)
                     chunk = np.bitwise_xor(array1, array2).tobytes()
@@ -529,7 +527,7 @@ class ZipNN:
         -------------------------------------
         Compression of the data in the chosen method.
         """
-        if self.method == EnumMethod.ZSTD.value or self.method == EnumMethod.AUTO.value:
+        if self.method in (EnumMethod.ZSTD.value, EnumMethod.AUTO.value):
             return self._zstd_compress.compress(data)
 
         if self.method == EnumMethod.LZ4.value:
@@ -540,7 +538,16 @@ class ZipNN:
         raise ValueError(f"Unsupported method {self.method}")
 
     def compress_bin(
-            self, ba: bytes, bit_reorder: int, byte_reorder: int, is_review: int, is_float: int, dtype_size: int, num_buf : int, shape, skip_split: bool
+        self,
+        ba: bytes,
+        bit_reorder: int,
+        byte_reorder: int,
+        is_review: int,
+        is_float: int,
+        dtype_size: int,
+        num_buf: int,
+        shape,
+        skip_split: bool,
     ):
         """
         Compresses byte data.
@@ -566,12 +573,9 @@ class ZipNN:
                 return b"".join([self._header] + [ba_comp])
         else:
             stime = time.time()
-            bg_ret = []
-            bg_len = []
-            buf_is_comp = []
 
             if is_print:
-               start_time = time.time()
+                start_time = time.time()
             self._update_header_original_len(len(ba))
             if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                 self._update_data_shape(shape)
@@ -738,7 +742,7 @@ class ZipNN:
             is_review=is_review,
             is_float=is_float,
             dtype_size=dtype_size,
-            num_buf = num_buf,
+            num_buf=num_buf,
             shape=shape,
             skip_split=skip_split,
         )
@@ -802,7 +806,7 @@ class ZipNN:
     # decompression #
     #################
 
-    def decompress(self, data, decompress_cpu_gpu="cpu",delta_second_data=None):
+    def decompress(self, data, decompress_cpu_gpu="cpu", delta_second_data=None):
         """
         Decompress is the ZipNN function used for decompression.
 
@@ -821,36 +825,36 @@ class ZipNN:
         Returns the output of decompress_bin or decompress_read_file (depends on the type of the data compressed),
         which will be the compressed file, in the format chosen in the ZipNN class instance configuration.
         """
-        if self.delta_compressed_type=="byte":
+        if self.delta_compressed_type == "byte":
             if delta_second_data is None:
                 raise ValueError("delta_second_data is None or not set for delta copression")
-        elif self.delta_compressed_type=="file":
+        elif self.delta_compressed_type == "file":
             try:
-                with open(delta_second_data, 'rb') as file:
+                with open(delta_second_data, "rb") as file:
                     file_data = file.read()
                 delta_second_data = file_data
             except Exception:
                 raise FileNotFoundError("Encountered an error when reading the delta file")
-        else: #self.delta_compressed_type==0
-            if delta_second_data!=None:
+        else:  # self.delta_compressed_type==0
+            if delta_second_data != None:
                 raise ValueError("ZipNN isn't set for delta compression, but delta_second_data is not null.")
-            
+
         mv_data = memoryview(data)
 
-        was_data_delta_compressed=mv_data[9]
-        if was_data_delta_compressed==0 and self.delta_compressed_type!=0:
+        was_data_delta_compressed = mv_data[9]
+        if was_data_delta_compressed == 0 and self.delta_compressed_type != 0:
             raise ValueError("The data wasn't compressed using delta compression and you're trying to delta-decompress it.")
-        if was_data_delta_compressed!=0 and self.delta_compressed_type==0:    
+        if was_data_delta_compressed != 0 and self.delta_compressed_type == 0:
             raise ValueError("The data was compressed using delta compression and you're trying to decompress it normally.")
         if delta_second_data:
-            mv_delta=memoryview(delta_second_data)
-        
+            mv_delta = memoryview(delta_second_data)
+
         comp_chunk_size = mv_data[13]  # 0 if no streaming > 127
-        if self.input_format == EnumFormat.BYTE.value and comp_chunk_size > 127: #xor inside streaming
+        if self.input_format == EnumFormat.BYTE.value and comp_chunk_size > 127:  # xor inside streaming
             decompressed_buffer = bytearray()
             offset = 0
             compressed_length = len(data)
-            offset_delta=0
+            offset_delta = 0
             while offset < compressed_length:
                 header = mv_data[offset : offset + 32]
                 mid_chunk_len = int.from_bytes(header[24:32], byteorder="little") - 32
@@ -858,22 +862,22 @@ class ZipNN:
                 decompressed_chunk = self.decompress_bin(chunk)
                 if decompressed_chunk:
                     if delta_second_data:
-                        if(offset_delta + len(decompressed_chunk)>len(mv_delta)):
+                        if offset_delta + len(decompressed_chunk) > len(mv_delta):
                             raise ValueError("Length of delta file has to match the length of the decompressed file.")
-                        chunk_delta=mv_delta[offset_delta : offset_delta + len(decompressed_chunk)]
+                        chunk_delta = mv_delta[offset_delta : offset_delta + len(decompressed_chunk)]
                         array1 = np.frombuffer(decompressed_chunk, dtype=np.uint8)
                         array2 = np.frombuffer(chunk_delta, dtype=np.uint8)
                         decompressed_chunk = np.bitwise_xor(array1, array2).tobytes()
-                        offset_delta+=len(decompressed_chunk)
+                        offset_delta += len(decompressed_chunk)
                     decompressed_buffer.extend(decompressed_chunk)
                 offset += mid_chunk_len + 32
-            if delta_second_data and offset_delta!=len(mv_delta):
+            if delta_second_data and offset_delta != len(mv_delta):
                 raise ValueError("Length of delta file has to match the length of the decompressed file.")
             return decompressed_buffer
-        
+
         if delta_second_data:
-            decompressed_buffer=self.decompress_bin(data)
-            if len(decompressed_buffer)!=len(delta_second_data):
+            decompressed_buffer = self.decompress_bin(data)
+            if len(decompressed_buffer) != len(delta_second_data):
                 raise ValueError("Length of delta file has to match the length of the decompressed file.")
             array1 = np.frombuffer(decompressed_buffer, dtype=np.uint8)
             array2 = np.frombuffer(delta_second_data, dtype=np.uint8)
@@ -1000,16 +1004,21 @@ class ZipNN:
             start_ba = [start_len + 8 * groups]
             end_ba = []
             if skip_combine == 0:
+                num_buf = 4
                 if uint32:
-                    raise ValueError(f"Unsupported uinit32 in this version yet! please try version 0.1.1")
-                elif float32:
-                    num_buf = 4
+                    raise ValueError("Unsupported uinit32 in this version yet! please try version 0.1.1")
                 elif bfloat16 or float16:
                     num_buf = 2
                 mv = memoryview(ba_compress)
                 ba_decom = split_dtype.combine_dtype(
-                        mv[after_header:], num_buf, self._bit_reorder, self._byte_reorder, self.compression_chunk, self.original_len, self.threads
-                        )
+                    mv[after_header:],
+                    num_buf,
+                    self._bit_reorder,
+                    self._byte_reorder,
+                    self.compression_chunk,
+                    self.original_len,
+                    self.threads,
+                )
             else:
                 ba_decom = ba_bg[0]
 
@@ -1127,20 +1136,12 @@ def zipnn_hf():
             if os.path.exists(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)):
                 file_name = os.path.basename(output_file)
                 blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
-                replace_in_file(
-                    file_path=blob_name,
-                    old=f"{file_name}.znn",
-                    new=f"{file_name}"
-                )
+                replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
 
             elif os.path.exists(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)):
                 file_name = os.path.basename(output_file)
                 blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
-                replace_in_file(
-                    file_path=blob_name,
-                    old=f"{file_name}.znn",
-                    new=f"{file_name}"
-                )
+                replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
 
         # Call the original load_state_dict method
         return original_load_state_dict(checkpoint_file, is_quantized)
@@ -1152,18 +1153,20 @@ def zipnn_hf():
     original_from_pretrained = PreTrainedModel.from_pretrained
 
     # class CustomPreTrainedModel(PreTrainedModel):
-    def custom_from_pretrained(cls,
-            pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
-            *model_args,
-            config: Optional[Union[PretrainedConfig, str, os.PathLike]] = None,
-            cache_dir: Optional[Union[str, os.PathLike]] = None,
-            ignore_mismatched_sizes: bool = False,
-            force_download: bool = False,
-            local_files_only: bool = False,
-            token: Optional[Union[str, bool]] = None,
-            revision: str = "main",
-            use_safetensors: bool = None,
-            **kwargs,):
+    def custom_from_pretrained(
+        cls,
+        pretrained_model_name_or_path: Optional[Union[str, os.PathLike]],
+        *model_args,
+        config: Optional[Union[PretrainedConfig, str, os.PathLike]] = None,
+        cache_dir: Optional[Union[str, os.PathLike]] = None,
+        ignore_mismatched_sizes: bool = False,
+        force_download: bool = False,
+        local_files_only: bool = False,
+        token: Optional[Union[str, bool]] = None,
+        revision: str = "main",
+        use_safetensors: bool = None,
+        **kwargs,
+    ):
 
         subfolder = kwargs.get("subfolder", "")
         variant = kwargs.get("variant", None)
@@ -1194,19 +1197,19 @@ def zipnn_hf():
         test_paths = [path + ".znn" for path in test_paths]
 
         cached_file_kwargs = {
-                        "cache_dir": cache_dir,
-                        "force_download": force_download,
-                        "proxies": proxies,
-                        "resume_download": resume_download,
-                        "local_files_only": local_files_only,
-                        "token": token,
-                        "user_agent": user_agent,
-                        "revision": revision,
-                        "subfolder": subfolder,
-                        "_raise_exceptions_for_gated_repo": False,
-                        "_raise_exceptions_for_missing_entries": False,
-                        "_commit_hash": commit_hash,
-                }
+            "cache_dir": cache_dir,
+            "force_download": force_download,
+            "proxies": proxies,
+            "resume_download": resume_download,
+            "local_files_only": local_files_only,
+            "token": token,
+            "user_agent": user_agent,
+            "revision": revision,
+            "subfolder": subfolder,
+            "_raise_exceptions_for_gated_repo": False,
+            "_raise_exceptions_for_missing_entries": False,
+            "_commit_hash": commit_hash,
+        }
 
         for filename in test_paths:
             resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
@@ -1226,37 +1229,42 @@ def zipnn_hf():
                     os.symlink(blob_name, output_file)
                 os.remove(resolved_archive_file)
         # pack config, cache_dir, etc. into kwargs
-        kwargs.update({
-            "config": config,
-            "cache_dir": cache_dir,
-            "ignore_mismatched_sizes": ignore_mismatched_sizes,
-            "force_download": force_download,
-            "local_files_only": local_files_only,
-            "token": token,
-            "revision": revision,
-            "use_safetensors": use_safetensors,
-        })
+        kwargs.update(
+            {
+                "config": config,
+                "cache_dir": cache_dir,
+                "ignore_mismatched_sizes": ignore_mismatched_sizes,
+                "force_download": force_download,
+                "local_files_only": local_files_only,
+                "token": token,
+                "revision": revision,
+                "use_safetensors": use_safetensors,
+            }
+        )
 
         # Call the original from_pretrained method with the updated kwargs
-        return original_from_pretrained.__func__(cls,
+        return original_from_pretrained.__func__(
+            cls,
             pretrained_model_name_or_path,
             *model_args,
             **kwargs,
         )
-    
+
     # Monkey patch the from_pretrained method in the transformers library
     PreTrainedModel.from_pretrained = classmethod(custom_from_pretrained)
+
 
 def replace_in_file(file_path, old: str, new: str) -> None:
     """Given a file_path, replace all occurrences of `old` with `new` inplace."""
 
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         file_data = file.read()
 
     file_data = file_data.replace(old, new)
 
-    with open(file_path, 'w') as file:
+    with open(file_path, "w") as file:
         file.write(file_data)
+
 
 #    def decompress_delta(self, base_path, delta_file):
 #        return 0
