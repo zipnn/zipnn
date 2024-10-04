@@ -304,6 +304,12 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 ##### v0.3.5
 
+* Add float32 to the C implementation with Huffman compression.
+
+
+
+##### v0.3.4
+
 * Plugin for Hugging Face transformers to allow using from_pretrained and decompressing the model after downloading it from Hugging Face.
 
 * Add Delta compression support in python -> save Xor between two models and compress them).  
