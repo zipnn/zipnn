@@ -133,13 +133,14 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2,
                             u_int8_t *combinePtr, Py_ssize_t *bufLens,
                             int bits_mode, int bytes_mode, int threads) {
   Py_ssize_t total_len = bufLens[0] + bufLens[1];
+  Py_ssize_t half_len = total_len / 2;
 
   u_int8_t *dst;
   dst = combinePtr;
 
   switch (bytes_mode) {
   case 10: // 2b01_010 - Byte Group to two different groups
-    for (Py_ssize_t i = 0; i < bufLens[1]; i++) {
+    for (Py_ssize_t i = 0; i < half_len; i++) {
       *dst++ = buf1[i];
       *dst++ = buf2[i];
     }

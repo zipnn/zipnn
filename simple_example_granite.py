@@ -106,6 +106,8 @@ elif (is_torch_numpy_byte == 1): # Numpy
     zipnn = ZipNN(input_format="numpy", threads = threads, is_streaming=True)
 elif (is_torch_numpy_byte == 0): # Byte 
     zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = bytearray_dtype, is_streaming=True)
+    #zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = "float32", is_streaming=True)
+    #zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = "float16", is_streaming=True)
 else: 
     raise ValueError("Unsupported input_format")
 

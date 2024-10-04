@@ -409,13 +409,15 @@ u_int8_t combine_buffers_dtype32(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
   for (int b = 0; b < num_buf; b++) {
     total_len += bufLens[b];
   }
+  
+  size_t q_len = total_len / num_buf;
 
   u_int8_t *dst;
   dst = combinePtr;
   switch (bytes_mode) {
   case 220:
     // 8b1_10_11_100 [decimal 220] - bytegroup to four groups [1,2,3,4]
-    for (Py_ssize_t i = 0; i < bufLens[3]; i++) {
+    for (Py_ssize_t i = 0; i < q_len; i++) {
       *dst++ = bufs[0][i];
       *dst++ = bufs[1][i];
       *dst++ = bufs[2][i];
