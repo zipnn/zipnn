@@ -140,7 +140,7 @@ def test_byte_torch_streaming():
     # Float32
     for size in [int(1024*8)]:  # Size in number of float32 elements
         zpn_streaming_delta = ZipNN(bytearray_dtype="float32")
-        original_bytes = np.random.rand(size).astype(np.float32)
+        original_bytes = np.random.rand(size).astype(np.float32).tobytes()
         copy_bytes = bytearray(original_bytes)
         compressed_data = zpn_streaming_delta.compress(original_bytes)
         decompressed_data = zpn_streaming_delta.decompress(compressed_data)
@@ -153,7 +153,7 @@ def test_byte_torch_streaming():
     # Streaming float32
     for size in [int(1024*8)]:  # Size in number of float32 elements
         zpn_streaming_delta = ZipNN(bytearray_dtype="float32",is_streaming=True)
-        original_bytes = np.random.rand(size).astype(np.float32)
+        original_bytes = np.random.rand(size).astype(np.float32).tobytes()
         copy_bytes = bytearray(original_bytes)
         compressed_data = zpn_streaming_delta.compress(original_bytes)
         decompressed_data = zpn_streaming_delta.decompress(compressed_data)

@@ -149,6 +149,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
           return NULL;
 	}
     }
+
     //    if (isPrint) {
     //      endBGTime = clock();
     //      bgTime = (double)(endBGTime - startBGTime) / CLOCKS_PER_SEC;
@@ -407,11 +408,17 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
         if (HUF_isError(decompressedSize)) {
           HUF_getErrorName(decompressedSize);
+          PyErr_SetString(
+              PyExc_MemoryError,
+              "Hufman decompression returned an error");
           return NULL;
         }
 
 
         if (decompressedSize != decompLen[c][b]) {
+	  PyErr_SetString(
+              PyExc_MemoryError,
+              "decompressedSize is not equal the expected decompressedSize");
           return NULL;
         }
       }
