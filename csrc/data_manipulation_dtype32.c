@@ -454,7 +454,7 @@ u_int8_t combine_buffers_dtype32(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
     //
   default:
     // we are not supportin this splitting bytes_mode
-    return NULL;
+    return 0;
   }
   if (bits_mode == 1) {
     revert_all_floats_dtype32(combinePtr, total_len);
