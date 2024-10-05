@@ -9,9 +9,9 @@ static void count_zero_bytes(const u_int8_t *src, Py_ssize_t len,
   Py_ssize_t num_uint32 =
       len /
       sizeof(
-          uint32_t); // Calculate how many uint32_t elements are in the buffer
-  uint32_t *uint32_array =
-      (uint32_t *)src; // Cast the byte buffer to a uint32_t array
+          uint32_t);  // Calculate how many uint32_t elements are in the buffer
+  const uint32_t *uint32_array =
+      (uint32_t *)src;  // Cast the byte buffer to a uint32_t array
 
   *msb_zeros = 0;
   *mid_high = 0;
@@ -80,10 +80,9 @@ int allocate_4chunk_buffs(u_int8_t **chunk_buffs, Py_ssize_t *bufLens,
   return 0;
 }
 
-int handle_split_mode_220(u_int8_t *src, Py_ssize_t total_len,
+int handle_split_mode_220(const u_int8_t *src, Py_ssize_t total_len,
                           u_int8_t **chunk_buffs, Py_ssize_t *bufLens,
                           uint32_t num_buf) {
-
   Py_ssize_t q_len = total_len / num_buf;
   int remainder = total_len % num_buf;
 
@@ -119,8 +118,6 @@ int handle_split_mode_220(u_int8_t *src, Py_ssize_t total_len,
   default:
     break;
   }
-
-  return 0;
 
   if (remainder == 3) {
     *dst1++ = src[total_len - remainder];
@@ -228,9 +225,8 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
                             u_int8_t **chunk_buffs, size_t *bufLens,
                             int bits_mode, int bytes_mode, int is_review,
                             int threads) {
-
   uint32_t num_buf = 4;
-  if (bits_mode == 1) { // reoreder exponent
+  if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats_dtype32(src, len);
   }
 
@@ -241,7 +237,7 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
     start = clock();
     count_zero_bytes(src, len, &msb_zeros, &mid_high, &mid_low, &low);
 
-    end = clock(); // End the timer
+    end = clock();  // End the timer
     cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
   }
 
@@ -400,16 +396,15 @@ void revert_all_floats_dtype32(u_int8_t *src, Py_ssize_t len) {
 //// Helper function to combine four chunk_buffs into a single bytearray
 u_int8_t combine_buffers_dtype32(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
                                  u_int8_t *buf4, u_int8_t *combinePtr,
-                                 Py_ssize_t *bufLens, int bits_mode,
+                                 const Py_ssize_t *bufLens, int bits_mode,
                                  int bytes_mode, int threads) {
-
   int num_buf = 4;
   u_int8_t *bufs[] = {buf1, buf2, buf3, buf4};
   size_t total_len = 0;
   for (int b = 0; b < num_buf; b++) {
     total_len += bufLens[b];
   }
-  
+
   size_t q_len = total_len / num_buf;
 
   u_int8_t *dst;
@@ -468,7 +463,7 @@ u_int8_t combine_buffers_dtype32(u_int8_t *buf1, u_int8_t *buf2, u_int8_t *buf3,
 
 int buffer_ratio_dtype32(int bytes_mode, uint32_t *buf_ratio) {
   switch (bytes_mode) {
-  case 220: // 8b1_10_11_100 - Byte Group to two different groups
+  case 220:  // 8b1_10_11_100 - Byte Group to two different groups
     buf_ratio[0] = 4;
     buf_ratio[1] = 4;
     buf_ratio[2] = 4;

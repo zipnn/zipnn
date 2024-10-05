@@ -14,9 +14,9 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                 size_t numChunks, u_int8_t *header,
                                 u_int8_t *compressedData[numBuf][numChunks],
                                 uint32_t compChunksSize[numBuf][numChunks],
-                                u_int8_t compChunksType[numBuf][numChunks],
-                                size_t cumulativeChunksSize[numBuf][numChunks],
-                                size_t *totalCompressedSize,
+                                const u_int8_t compChunksType[numBuf][numChunks],
+                                const size_t cumulativeChunksSize[numBuf][numChunks],
+                                const size_t *totalCompressedSize,
                                 size_t *resBufSize) {
   *resBufSize = header_len;
 
@@ -140,7 +140,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
         return NULL;
       }
-    } else { // numBuf == 4
+    } else {  // numBuf == 4
       if (split_bytearray_dtype32(data.buf + offset, curOrigChunkSize,
                                   buffers[curChunk], unCompChunksSize[curChunk],
                                   bits_mode, bytes_mode, is_redata,
@@ -160,7 +160,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     for (int b = 0; b < numBuf; b++) {
       if (isThCheck[b] == 0 &&
           curChunk >=
-              checkCompTh) { // check that we really need to compress this buf
+              checkCompTh) {  // check that we really need to compress this buf
         isThCheck[b] = 1;
         if (totalCompressedSize[b] * 1.0 >
             totalUnCompressedSize[b] * compThreshold) {
@@ -194,20 +194,20 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         if (compChunksSize[b][curChunk] != 0 &&
             (compChunksSize[b][curChunk] <
              unCompChunksSize[curChunk][b] * compThreshold)) {
-          compChunksType[b][curChunk] = 1; // Compress with Huffman
-        } else {                           // the buffer was not compressed
+          compChunksType[b][curChunk] = 1;  // Compress with Huffman
+        } else {                            // the buffer was not compressed
           PyMem_Free(compressedData[b][curChunk]);
           compChunksSize[b][curChunk] = unCompChunksSize[curChunk][b];
-          compChunksType[b][curChunk] = 0; // not compressed
+          compChunksType[b][curChunk] = 0;  // not compressed
           compressedData[b][curChunk] = buffers[curChunk][b];
         }
         totalCompressedSize[b] += compChunksSize[b][curChunk];
         totalUnCompressedSize[b] += unCompChunksSize[curChunk][b];
         cumulativeChunksSize[b][curChunk] = totalCompressedSize[b];
       }
-    } // end for loop -> compression
+    }  // end for loop -> compression
     curChunk++;
-  } // end for loop - chunk
+  }  // end for loop - chunk
 
   ////////////// The end of multi Threading part 1
   /////////////////////////////////
@@ -269,13 +269,13 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   uint32_t oneBufRatio[numBuf];
   uint32_t oneUnCompChunkSize[numBuf];
 
-  if (1) { // TBD when support auto byte_reorder
+  if (1) {  // TBD when support auto byte_reorder
     if (numBuf == 2) {
       if (buffer_ratio_dtype16(bytes_mode, oneBufRatio) == -1) {
         PyErr_SetString(PyExc_MemoryError, "Failed to calculate bufffer ratio");
         return NULL; //
       }
-    } else { // numBuf == 4
+    } else {  // numBuf == 4
       if (buffer_ratio_dtype32(bytes_mode, oneBufRatio) == -1) {
         PyErr_SetString(PyExc_MemoryError, "Failed to calculate bufffer ratio");
         return NULL;
@@ -329,9 +329,9 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   }
   for (size_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 0) { // no compression is needed
+      if (compChunksType[b][c] == 0) {  // no compression is needed
       } else {
-        if (compChunksType[b][c] == 1) { // open with Huffman compression
+        if (compChunksType[b][c] == 1) {  // open with Huffman compression
         } else {
           PyErr_SetString(
               PyExc_MemoryError,
@@ -385,10 +385,10 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   for (size_t c = 0; c < numChunks; c++) {
     // decompress
     for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 0) { // No Need to compression
+      if (compChunksType[b][c] == 0) {  // No Need to compression
         deCompressedData[b][c] =
             ptrCompressData[b] + compCumulativeChunksPos[b][c];
-      } else if (compChunksType[b][c] == 1) { // decompress using Huffman
+      } else if (compChunksType[b][c] == 1) {  // decompress using Huffman
         deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
         if (deCompressedData[b][c] == NULL) {
           PyErr_SetString(
@@ -427,7 +427,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
         PyErr_SetString(PyExc_MemoryError, "Failed to combine dtype16");
         return NULL;
       }
-    } else { // Assume numBuf == 4
+    } else {  // Assume numBuf == 4
       if (combine_buffers_dtype32(
               deCompressedData[0][c], deCompressedData[1][c],
               deCompressedData[2][c], deCompressedData[3][c], combinePtr,

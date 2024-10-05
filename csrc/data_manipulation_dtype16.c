@@ -33,7 +33,7 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
                             u_int8_t **chunk_buffs,
                             size_t *unCompChunksSizeCurChunk, int bits_mode,
                             int bytes_mode, int is_review, int threads) {
-  if (bits_mode == 1) { // reoreder exponent
+  if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats_dtype16(src, len);
   }
   Py_ssize_t half_len = len / 2;
@@ -44,7 +44,7 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
   }
 
   switch (bytes_mode) {
-  case 10: // 2b01_010 - Byte Group to two different groups
+  case 10:  // 2b01_010 - Byte Group to two different groups
     chunk_buffs[0] = PyMem_Malloc(lens[0]);
     chunk_buffs[1] = PyMem_Malloc(lens[1]);
     unCompChunksSizeCurChunk[0] = lens[0];
@@ -68,9 +68,9 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
     }
     break;
 
-  case 8: // 4b1000 - Truncate MSByte
-          // We are refering to the MSBbyte as little endian, thus we omit buf2
-  case 1: // 4b1000 - Truncate LSByte
+  case 8:  // 4b1000 - Truncate MSByte
+           // We are refering to the MSBbyte as little endian, thus we omit buf2
+  case 1:  // 4b1000 - Truncate LSByte
     // We are refering to the LSByte  as a little endian, thus we omit buf1
     chunk_buffs[0] = PyMem_Malloc(half_len);
     chunk_buffs[1] = NULL;
@@ -129,8 +129,8 @@ static void revert_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
 }
 
 // Helper function to combine four chunk_buffs into a single bytearray
-int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2,
-                            u_int8_t *combinePtr, Py_ssize_t *bufLens,
+int combine_buffers_dtype16(const u_int8_t *buf1, const u_int8_t *buf2,
+                            u_int8_t *combinePtr, const Py_ssize_t *bufLens,
                             int bits_mode, int bytes_mode, int threads) {
   Py_ssize_t total_len = bufLens[0] + bufLens[1];
   Py_ssize_t half_len = total_len / 2;
@@ -139,20 +139,20 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2,
   dst = combinePtr;
 
   switch (bytes_mode) {
-  case 10: // 2b01_010 - Byte Group to two different groups
+  case 10:  // 2b01_010 - Byte Group to two different groups
     for (Py_ssize_t i = 0; i < half_len; i++) {
       *dst++ = buf1[i];
       *dst++ = buf2[i];
     }
-    if (bufLens[0] > bufLens[1]) { // There is a remainder
+    if (bufLens[0] > bufLens[1]) {  // There is a remainder
       *dst = buf1[bufLens[0] - 1];
     }
     break;
 
-  case 8: // 4b1000 - Truncate MSByte
-          // We are refering to the MSByte as a little endian, thus we omit buf2
-  case 1: // 4b001 - Truncate LSByte
-          // We are refering to the LSByte as a little endian, thus we omit buf1
+  case 8:  // 4b1000 - Truncate MSByte
+           // We are refering to the MSByte as a little endian, thus we omit buf2
+  case 1:  // 4b001 - Truncate LSByte
+           // We are refering to the LSByte as a little endian, thus we omit buf1
 
     if (bytes_mode == 8) {
       for (Py_ssize_t i = 0; i < bufLens[0]; i++) {
@@ -182,13 +182,13 @@ int combine_buffers_dtype16(u_int8_t *buf1, u_int8_t *buf2,
 
 int buffer_ratio_dtype16(int bytes_mode, uint32_t *buf_ratio) {
   switch (bytes_mode) {
-  case 10: // 2b01_010 - Byte Group to two different groups
+  case 10:  // 2b01_010 - Byte Group to two different groups
     buf_ratio[0] = 2;
     buf_ratio[1] = 2;
     break;
 
-  case 8: // 4b1000 - Truncate MSByte
-  case 1: // 4b1000 - Truncate LSByte
+  case 8:  // 4b1000 - Truncate MSByte
+  case 1:  // 4b1000 - Truncate LSByte
     buf_ratio[0] = 1;
     buf_ratio[1] = 0;
     break;
