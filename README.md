@@ -1,6 +1,7 @@
 # ZipNN - A Lossless Compression Library for AI pipelines
 
-**TL;DR - simple, fast, and effective model compression**
+
+**TL;DR - simple, fast, and effective model compression** 
 
 ## Download compressed models from Hugging Face
 Try out yourself the [compressed ibm-granite granite-7b-instruct](https://huggingface.co/royleibov/granite-7b-instruct-ZipNN-Compressed) hosted on Hugging Face:
@@ -68,7 +69,7 @@ python3 zipnn_decompress_file.py compressed_model_name.znn
 
 In the realm of data compression, achieving a high compression/decompression ratio often requires careful consideration of the data types and the nature of the datasets being compressed. For instance, different strategies may be optimal for floating-point numbers compared to integers, and datasets in monotonic order may benefit from distinct preparations.
 
-ZipNN is a lossless compression library optimized for numbers/tensors in the Foundation Models environment, designed to automatically prepare the data for compression according to its type. By simply calling zipnn.compress(data), users can rely on the package to apply the most effective compression technique under the hood.
+ZipNN (The NN stands for Neural Networks) is a lossless compression library optimized for numbers/tensors in the Foundation Models environment, designed to automatically prepare the data for compression according to its type. By simply calling zipnn.compress(data), users can rely on the package to apply the most effective compression technique under the hood.
 
 [Click here to explore the options we use for different datasets and data types](./docs/UTH.md)
 
