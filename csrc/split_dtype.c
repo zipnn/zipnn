@@ -8,7 +8,7 @@
 #include "zstd.h"
 #include <zstd_errors.h>
 #include "split_dtype_functions.h"
-
+#include "methods_enums.h"
 
 size_t HUF_decompress(void* dst, size_t dstSize, const void* cSrc, size_t cSrcSize);
 size_t HUF_compress(void* dst, size_t dstCapacity, const void* src, size_t srcSize);
@@ -201,11 +201,11 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         if (compChunksSize[b][curChunk] != 0 &&
             (compChunksSize[b][curChunk] <
              unCompChunksSize[curChunk][b] * compThreshold)) {
-          compChunksType[b][curChunk] = 1;  // Compress with Huffman
+          compChunksType[b][curChunk] = HUFFMAN;  // Compress with Huffman
         } else {                            // the buffer was not compressed
           PyMem_Free(compressedData[b][curChunk]);
           compChunksSize[b][curChunk] = unCompChunksSize[curChunk][b];
-          compChunksType[b][curChunk] = 0;  // not compressed
+          compChunksType[b][curChunk] = ORIGINAL;  // not compressed
           compressedData[b][curChunk] = buffers[curChunk][b];
         }
         totalCompressedSize[b] += compChunksSize[b][curChunk];
@@ -248,7 +248,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
 
   for (uint32_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 1) {
+      if (compChunksType[b][c] == HUFFMAN) {
         PyMem_Free(compressedData[b][c]);
       }
     }
@@ -327,6 +327,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
       cumulativeChunksSize[b][c] = (*ptrChunksCumulative++);
     }
   }
+  
   for (uint32_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       compCumulativeChunksPos[b][c + 1] = cumulativeChunksSize[b][c];
@@ -334,21 +335,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
           compCumulativeChunksPos[b][c + 1] - compCumulativeChunksPos[b][c];
     }
   }
-  for (size_t c = 0; c < numChunks; c++) {
-    for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 0) {  // no compression is needed
-      } else {
-        if (compChunksType[b][c] == 1) {  // open with Huffman compression
-        } else {
-          PyErr_SetString(
-              PyExc_MemoryError,
-              "Compress Type is not correct in Decompression function");
-          return NULL;
-        }
-      }
-    }
-  }
-
+  
   for (int b = 1; b < numBuf; b++) {
     ptrCompressData[b] =
         ptrCompressData[b - 1] + cumulativeChunksSize[b - 1][numChunks - 1];
@@ -392,38 +379,58 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   for (size_t c = 0; c < numChunks; c++) {
     // decompress
     for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 0) {  // No Need to compression
-        deCompressedData[b][c] =
-            ptrCompressData[b] + compCumulativeChunksPos[b][c];
-      } else if (compChunksType[b][c] == 1) {  // decompress using Huffman
-        deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
-        if (deCompressedData[b][c] == NULL) {
-          PyErr_SetString(
+
+      switch (compChunksType[b][c]) {
+        case ORIGINAL:  // No compression needed
+	  deCompressedData[b][c] = ptrCompressData[b] + compCumulativeChunksPos[b][c];
+          break;
+
+        case HUFFMAN:  // Decompress using Huffman
+          deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
+          if (deCompressedData[b][c] == NULL) {
+            PyErr_SetString(
+                PyExc_MemoryError,
+                "Failed to allocate memory - Function during decompression"
+            );
+            free(deCompressedData[b][c]);
+            return NULL;
+	  }
+          // Add logic for Huffman decompression here
+          size_t decompressedSize = HUF_decompress(
+          deCompressedData[b][c], decompLen[c][b],
+          (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
+          compChunksLen[b][c]);
+
+          if (HUF_isError(decompressedSize)) {
+            HUF_getErrorName(decompressedSize);
+            PyErr_SetString(PyExc_MemoryError,
+			     "Hufman decompression returned an error");
+            return NULL;
+	  }
+
+	  if (decompressedSize != decompLen[c][b]) {
+            PyErr_SetString(
               PyExc_MemoryError,
-              "Failed to allocate memory - Function during decompression");
-          free(deCompressedData[b][c]);
-          return NULL;
-        }
+             "decompressedSize is not equal the expected decompressedSize");
+            return NULL;
+	  }
+          break;
 
-        size_t decompressedSize = HUF_decompress(
-            deCompressedData[b][c], decompLen[c][b],
-            (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
-            compChunksLen[b][c]);
+        case ZSTD:  // Decompress using ZSTD
+          // Logic for ZSTD decompression will go here
+          break;
 
-        if (HUF_isError(decompressedSize)) {
-          HUF_getErrorName(decompressedSize);
-          PyErr_SetString(PyExc_MemoryError,
-                          "Hufman decompression returned an error");
-          return NULL;
-        }
+        case TRUNCATE:  // Truncate decompression
+          // Logic for truncation will go here
+          break;
 
-        if (decompressedSize != decompLen[c][b]) {
-          PyErr_SetString(
-              PyExc_MemoryError,
-              "decompressedSize is not equal the expected decompressedSize");
+        default:  
+	  PyErr_SetString(
+            PyExc_ValueError,
+            "Unknown compression type during decompression"
+          );
           return NULL;
-        }
-      }
+     }
     }
     // Combine
     u_int8_t *combinePtr = resultBuf + origChunkSize * c;

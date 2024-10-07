@@ -303,6 +303,11 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 ## Change Log
 
+
+##### v0.3.6
+
+* Removed Fi
+
 ##### v0.3.5
 
 * Add float32 to the C implementation with Huffman compression.
