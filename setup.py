@@ -2,7 +2,6 @@ from setuptools import setup, find_packages, Extension
 import subprocess
 import os
 
-
 def update_submodules():
     if os.path.exists(".git"):
         try:
@@ -17,18 +16,32 @@ update_submodules()
 split_dtype_extension = Extension(
     "split_dtype",
     sources=[
+        "include/zstd/lib/common/entropy_common.c",
+        "include/zstd/lib/common/error_private.c",
+        "include/zstd/lib/common/fse_decompress.c",
+        "include/zstd/lib/common/pool.c",
+        "include/zstd/lib/common/threading.c",
+        "include/zstd/lib/common/zstd_common.c",
+        "include/zstd/lib/compress/huf_compress.c",
+        "include/zstd/lib/compress/fse_compress.c",
+        "include/zstd/lib/compress/zstd_compress.c",
+        "include/zstd/lib/compress/zstd_double_fast.c",
+        "include/zstd/lib/compress/zstd_fast.c",
+        "include/zstd/lib/compress/zstd_lazy.c",
+        "include/zstd/lib/compress/zstd_ldm.c",
+        "include/zstd/lib/compress/zstd_opt.c",
+        "include/zstd/lib/compress/zstdmt_compress.c",
+        "include/zstd/lib/decompress/huf_decompress.c",
+        "include/zstd/lib/decompress/zstd_decompress.c",
+        "include/zstd/lib/decompress/zstd_ddict.c",
+        "include/zstd/lib/common/xxhash.c",
+        "include/zstd/lib/decompress/zstd_decompress_block.c",
         "csrc/split_dtype_module.c",
         "csrc/split_dtype.c",
         "csrc/data_manipulation_dtype16.c",
         "csrc/data_manipulation_dtype32.c",
-        "include/FiniteStateEntropy/lib/fse_compress.c",
-        "include/FiniteStateEntropy/lib/fse_decompress.c",
-        "include/FiniteStateEntropy/lib/huf_compress.c",
-        "include/FiniteStateEntropy/lib/huf_decompress.c",
-        "include/FiniteStateEntropy/lib/entropy_common.c",
-        "include/FiniteStateEntropy/lib/hist.c",
     ],
-    include_dirs=["include/FiniteStateEntropy/lib/", "csrc/"],
+    include_dirs=["include/zstd/lib/", "csrc/"],
     extra_compile_args=["-O3", "-Wall", "-Wextra"],
     extra_link_args=["-O3", "-Wall", "-Wextra"],
 )

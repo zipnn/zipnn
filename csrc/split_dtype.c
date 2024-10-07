@@ -5,8 +5,15 @@
 #include <time.h>
 #include "data_manipulation_dtype16.h"
 #include "data_manipulation_dtype32.h"
-#include "huf.h"
+#include "zstd.h"
+#include <zstd_errors.h>
 #include "split_dtype_functions.h"
+
+
+size_t HUF_decompress(void* dst, size_t dstSize, const void* cSrc, size_t cSrcSize);
+size_t HUF_compress(void* dst, size_t dstCapacity, const void* src, size_t srcSize);
+unsigned HUF_isError(size_t code);
+const char* HUF_getErrorName(size_t code);
 
 
 ////  Helper Functions ///////
