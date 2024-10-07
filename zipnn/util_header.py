@@ -6,8 +6,9 @@ class EnumMethod(Enum):
     AUTO = 0
     HUFFMAN = 1
     ZSTD = 2
-    LZ4 = 3
-    SNAPPY = 4
+    TRUNCATE = 3
+    LZ4 = 4
+    SNAPPY = 5
 
     @classmethod
     def _missing_(cls, value):

@@ -7,7 +7,7 @@
 #include "data_manipulation_dtype32.h"
 #include "huf.h"
 #include "split_dtype_functions.h"
-
+#include "methods_enums.h"
 
 ////  Helper Functions ///////
 u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
@@ -181,7 +181,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         }
         return NULL;
       }
-
+       
       if (buffers[curChunk][b] != NULL) {
         if (noNeedToCompress[b] == 0) {
           compChunksSize[b][curChunk] =
@@ -194,11 +194,11 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         if (compChunksSize[b][curChunk] != 0 &&
             (compChunksSize[b][curChunk] <
              unCompChunksSize[curChunk][b] * compThreshold)) {
-          compChunksType[b][curChunk] = 1;  // Compress with Huffman
+          compChunksType[b][curChunk] = HUFFMAN;  // Compress with Huffman
         } else {                            // the buffer was not compressed
           PyMem_Free(compressedData[b][curChunk]);
           compChunksSize[b][curChunk] = unCompChunksSize[curChunk][b];
-          compChunksType[b][curChunk] = 0;  // not compressed
+          compChunksType[b][curChunk] = ORIGINAL;  // not compressed
           compressedData[b][curChunk] = buffers[curChunk][b];
         }
         totalCompressedSize[b] += compChunksSize[b][curChunk];
@@ -241,7 +241,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
 
   for (uint32_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 1) {
+      if (compChunksType[b][c] == HUFFMAN) {
         PyMem_Free(compressedData[b][c]);
       }
     }
@@ -327,11 +327,13 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
           compCumulativeChunksPos[b][c + 1] - compCumulativeChunksPos[b][c];
     }
   }
+
+  /*
   for (size_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 0) {  // no compression is needed
+      if (compChunksType[b][c] == ORIGINAL) {  // no compression is needed
       } else {
-        if (compChunksType[b][c] == 1) {  // open with Huffman compression
+        if (compChunksType[b][c] == HUFFMAN) {  // open with Huffman compression
         } else {
           PyErr_SetString(
               PyExc_MemoryError,
@@ -341,6 +343,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
       }
     }
   }
+  */
 
   for (int b = 1; b < numBuf; b++) {
     ptrCompressData[b] =
@@ -385,6 +388,47 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   for (size_t c = 0; c < numChunks; c++) {
     // decompress
     for (int b = 0; b < numBuf; b++) {
+      switch (compChunksType[b][c]) {
+        case ORIGINAL:  // No compression needed
+          deCompressedData[b][c] = ptrCompressData[b] + compCumulativeChunksPos[b][c];
+          break;
+        case HUFFMAN:  // Decompress using Huffman
+          deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
+          if (deCompressedData[b][c] == NULL) {
+            PyErr_SetString(
+                PyExc_MemoryError,
+                "Failed to allocate memory - Function during decompression"
+            );
+            free(deCompressedData[b][c]);
+            return NULL;
+	  }
+          break;
+
+        case ZSTD:  // Decompress using ZSTD
+        break;
+
+        case TRUNCATE:  // Truncate decompression
+	  deCompressedData[b][c] = PyMem_Calloc(decompLen[c][b], 1);  // Allocate and zero-initialize memory
+          if (deCompressedData[b][c] == NULL) {
+            PyErr_SetString(
+              PyExc_MemoryError,
+              "Failed to allocate memory - Function during decompression"
+	      );
+	    return NULL;
+	  } 
+        break;
+
+	default:  // Handle unknown compression types
+	  PyErr_SetString(
+            PyExc_ValueError,
+            "Unknown compression type"
+	    );
+        return NULL;
+}
+
+
+
+
       if (compChunksType[b][c] == 0) {  // No Need to compression
         deCompressedData[b][c] =
             ptrCompressData[b] + compCumulativeChunksPos[b][c];
