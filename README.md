@@ -306,7 +306,7 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 ##### v0.3.6
 
-* Removed Fi
+* Removed the FiniteStateEntropy repo and use ZSTD also for Huffman coding
 
 ##### v0.3.5
 

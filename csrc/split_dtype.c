@@ -10,10 +10,38 @@
 #include "split_dtype_functions.h"
 #include "methods_enums.h"
 
+// Huffman Function declaration //
 size_t HUF_decompress(void* dst, size_t dstSize, const void* cSrc, size_t cSrcSize);
 size_t HUF_compress(void* dst, size_t dstCapacity, const void* src, size_t srcSize);
 unsigned HUF_isError(size_t code);
 const char* HUF_getErrorName(size_t code);
+
+
+// ZSTD initialzation ////
+ZSTD_CCtx* cctx;  
+ZSTD_DCtx* dctx; 
+
+void initialize_zstd_contexts() {
+    cctx = ZSTD_createCCtx();
+    if (cctx == NULL) {
+        fprintf(stderr, "Failed to create ZSTD compression context\n");
+        exit(1);  // Or handle error appropriately
+    }
+
+    dctx = ZSTD_createDCtx();
+    if (dctx == NULL) {
+        fprintf(stderr, "Failed to create ZSTD decompression context\n");
+        ZSTD_freeCCtx(cctx); 
+        exit(1);  
+    }
+}
+
+void cleanup_zstd_contexts() {
+    // Free the contexts
+    if (cctx != NULL) ZSTD_freeCCtx(cctx);
+    if (dctx != NULL) ZSTD_freeDCtx(dctx);
+}
+
 
 
 ////  Helper Functions ///////
@@ -189,11 +217,35 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         return NULL;
       }
 
+      compChunksType[b][curChunk] = HUFFMAN;
       if (buffers[curChunk][b] != NULL) {
         if (noNeedToCompress[b] == 0) {
-          compChunksSize[b][curChunk] =
-              HUF_compress(compressedData[b][curChunk], origChunkSize,
-                           buffers[curChunk][b], unCompChunksSize[curChunk][b]);
+          if (compChunksType[b][curChunk] == HUFFMAN) {
+            compChunksSize[b][curChunk] = HUF_compress(
+               compressedData[b][curChunk], origChunkSize,
+               buffers[curChunk][b], unCompChunksSize[curChunk][b]);
+//            if (compChunksSize[b][curChunk] == HUF_ERROR) {
+//              fprintf(stderr, "Huffman compression failed for chunk %d\n", curChunk);
+//              // Handle the error, e.g., set the size to 0 or use a special error code
+//            }
+           } else if (compChunksType[b][curChunk] == ZSTD) {
+             ZSTD_CCtx* cctx = ZSTD_createCCtx();
+             if (cctx == NULL) {
+               fprintf(stderr, "Failed to create ZSTD compression context for chunk %d\n", curChunk);
+               // Handle error in creating context, e.g., exit or continue with other tasks
+              } else {
+                size_t const cSize = ZSTD_compressCCtx(
+                cctx, compressedData[b][curChunk], origChunkSize,
+                buffers[curChunk][b], unCompChunksSize[curChunk][b], ZSTD_maxCLevel());
+                ZSTD_freeCCtx(cctx);  // Always free the context when done
+                if (ZSTD_isError(cSize)) {
+                  fprintf(stderr, "ZSTD compression error for chunk %d: %s\n", curChunk, ZSTD_getErrorName(cSize));
+                 // Handle the compression error
+                } else {
+                  compChunksSize[b][curChunk] = cSize;
+               }
+             }
+	   }
         } else {
           compChunksSize[b][curChunk] = 0;
         }
@@ -417,12 +469,47 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
           break;
 
         case ZSTD:  // Decompress using ZSTD
-          // Logic for ZSTD decompression will go here
+          deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
+          if (deCompressedData[b][c] == NULL) {
+            PyErr_SetString(
+                PyExc_MemoryError,
+                "Failed to allocate memory - Function during decompression"
+            );
+            free(deCompressedData[b][c]);
+            return NULL;
+	  }
+          decompressedSize = ZSTD_decompressDCtx(dctx,
+          deCompressedData[b][c], decompLen[c][b],
+          (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
+          compChunksLen[b][c]);
+
+          if (ZSTD_isError(decompressedSize)) {
+            ZSTD_getErrorName(decompressedSize);
+            PyErr_SetString(PyExc_MemoryError,
+			     "Hufman decompression returned an error");
+            return NULL;
+	  }
+
+	  if (decompressedSize != decompLen[c][b]) {
+            PyErr_SetString(
+              PyExc_MemoryError,
+             "decompressedSize is not equal the expected decompressedSize");
+            return NULL;
+	  }
           break;
 
         case TRUNCATE:  // Truncate decompression
-          // Logic for truncation will go here
+	  deCompressedData[b][c] = (u_int8_t*)PyMem_Calloc(decompLen[c][b], sizeof(u_int8_t));
+          if (deCompressedData[b][c] == NULL) {
+            PyErr_SetString(
+                PyExc_MemoryError,
+                "Failed to allocate memory - Function during decompression"
+            );
+            free(deCompressedData[b][c]);
+            return NULL;
+	  }
           break;
+ 
 
         default:  
 	  PyErr_SetString(
