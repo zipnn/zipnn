@@ -16,6 +16,11 @@ size_t HUF_compress(void* dst, size_t dstCapacity, const void* src, size_t srcSi
 unsigned HUF_isError(size_t code);
 const char* HUF_getErrorName(size_t code);
 
+// FSE Function declaration //
+size_t FSE_decompress(void* dst, size_t dstSize, const void* cSrc, size_t cSrcSize);
+size_t FSE_compress(void* dst, size_t dstCapacity, const void* src, size_t srcSize);
+unsigned FSE_isError(size_t code);
+const char* FSE_getErrorName(size_t code);
 
 // ZSTD initialzation ////
 ZSTD_CCtx* cctx;  
@@ -224,25 +229,27 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
             compChunksSize[b][curChunk] = HUF_compress(
                compressedData[b][curChunk], origChunkSize,
                buffers[curChunk][b], unCompChunksSize[curChunk][b]);
-//            if (compChunksSize[b][curChunk] == HUF_ERROR) {
-//              fprintf(stderr, "Huffman compression failed for chunk %d\n", curChunk);
-//              // Handle the error, e.g., set the size to 0 or use a special error code
-//            }
+            if (HUF_isError(compChunksSize[b][curChunk])) {
+	      HUF_getErrorName(compChunksSize[b][curChunk]);
+              PyErr_SetString(PyExc_MemoryError,
+			     "Hufman compression returned an error");
+	      return NULL;
+            }
            } else if (compChunksType[b][curChunk] == ZSTD) {
              ZSTD_CCtx* cctx = ZSTD_createCCtx();
              if (cctx == NULL) {
                fprintf(stderr, "Failed to create ZSTD compression context for chunk %d\n", curChunk);
                // Handle error in creating context, e.g., exit or continue with other tasks
               } else {
-                size_t const cSize = ZSTD_compressCCtx(
+                compChunksSize[b][curChunk] = ZSTD_compressCCtx(
                 cctx, compressedData[b][curChunk], origChunkSize,
                 buffers[curChunk][b], unCompChunksSize[curChunk][b], ZSTD_maxCLevel());
                 ZSTD_freeCCtx(cctx);  // Always free the context when done
-                if (ZSTD_isError(cSize)) {
-                  fprintf(stderr, "ZSTD compression error for chunk %d: %s\n", curChunk, ZSTD_getErrorName(cSize));
-                 // Handle the compression error
-                } else {
-                  compChunksSize[b][curChunk] = cSize;
+                if (ZSTD_isError(compChunksSize[b][curChunk])) {
+	          ZSTD_getErrorName(compChunksSize[b][curChunk]);
+                  PyErr_SetString(PyExc_MemoryError,
+			     "ZSTD compression returned an error");
+		  return NULL;
                }
              }
 	   }
