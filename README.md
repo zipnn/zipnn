@@ -304,11 +304,13 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 ## Change Log
 
+##### v0.3.6
+
+* Fix bug that causes memory leaks in corner cases
+
 ##### v0.3.5
 
 * Add float32 to the C implementation with Huffman compression.
-
-
 
 ##### v0.3.4
 
@@ -316,11 +318,9 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 * Add Delta compression support in python -> save Xor between two models and compress them).  
 
-
 ##### v0.3.2
 
 * Change ZipNN suffix from .zpn to .znn 
-
 
 ##### v0.3.1
 
@@ -328,13 +328,11 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 * Integrate the Streaming support into zipnn python code.
 
-
 ##### v0.2.4
 
 * Add support for Streaming when using outside scripts
 
 * Fix bug: Compression didn't work when compressing files larger than 3GB
-
 
 ##### v0.2.3
 
