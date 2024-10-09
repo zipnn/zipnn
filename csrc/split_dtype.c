@@ -394,7 +394,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
           PyErr_SetString(
               PyExc_MemoryError,
               "Failed to allocate memory - Function during decompression");
-          free(deCompressedData[b][c]);
+          PyMem_Free(deCompressedData[b][c]);
           return NULL;
         }
 
