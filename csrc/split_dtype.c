@@ -224,39 +224,48 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
 
       compChunksType[b][curChunk] = HUFFMAN;
       if (buffers[curChunk][b] != NULL) {
-        if (noNeedToCompress[b] == 0) {
-          if (compChunksType[b][curChunk] == HUFFMAN) {
+       if (noNeedToCompress[b] == 0) {
+         switch (compChunksType[b][curChunk]) {
+          case HUFFMAN: {
             compChunksSize[b][curChunk] = HUF_compress(
-               compressedData[b][curChunk], origChunkSize,
-               buffers[curChunk][b], unCompChunksSize[curChunk][b]);
+                compressedData[b][curChunk], origChunkSize,
+                buffers[curChunk][b], unCompChunksSize[curChunk][b]);
             if (HUF_isError(compChunksSize[b][curChunk])) {
-	      HUF_getErrorName(compChunksSize[b][curChunk]);
-              PyErr_SetString(PyExc_MemoryError,
-			     "Hufman compression returned an error");
-	      return NULL;
+                HUF_getErrorName(compChunksSize[b][curChunk]);
+                PyErr_SetString(PyExc_MemoryError,
+                                "Huffman compression returned an error");
+                return NULL;
             }
-           } else if (compChunksType[b][curChunk] == ZSTD) {
-             ZSTD_CCtx* cctx = ZSTD_createCCtx();
-             if (cctx == NULL) {
-               fprintf(stderr, "Failed to create ZSTD compression context for chunk %d\n", curChunk);
-               // Handle error in creating context, e.g., exit or continue with other tasks
-              } else {
-                compChunksSize[b][curChunk] = ZSTD_compressCCtx(
-                cctx, compressedData[b][curChunk], origChunkSize,
-                buffers[curChunk][b], unCompChunksSize[curChunk][b], ZSTD_maxCLevel());
-                ZSTD_freeCCtx(cctx);  // Always free the context when done
-                if (ZSTD_isError(compChunksSize[b][curChunk])) {
-	          ZSTD_getErrorName(compChunksSize[b][curChunk]);
-                  PyErr_SetString(PyExc_MemoryError,
-			     "ZSTD compression returned an error");
-		  return NULL;
-               }
-             }
-	   }
-        } else {
-          compChunksSize[b][curChunk] = 0;
-        }
+            break;
+  	  }
 
+          case ZSTD: {
+            ZSTD_CCtx* cctx = ZSTD_createCCtx();
+            if (cctx == NULL) {
+                fprintf(stderr, "Failed to create ZSTD compression context for chunk %d\n", curChunk);
+            } else {
+                compChunksSize[b][curChunk] = ZSTD_compressCCtx(
+                    cctx, compressedData[b][curChunk], origChunkSize,
+                    buffers[curChunk][b], unCompChunksSize[curChunk][b], ZSTD_maxCLevel());
+                ZSTD_freeCCtx(cctx);
+                if (ZSTD_isError(compChunksSize[b][curChunk])) {
+                    ZSTD_getErrorName(compChunksSize[b][curChunk]);
+                    PyErr_SetString(PyExc_MemoryError,
+                                    "ZSTD compression returned an error");
+                    return NULL;
+                }
+            }
+            break;
+          }
+
+          default: {
+            fprintf(stderr, "Unknown compression type for chunk %d\n", curChunk);
+            break;
+          }
+        }
+      } else {
+        compChunksSize[b][curChunk] = 0;
+      }
         if (compChunksSize[b][curChunk] != 0 &&
             (compChunksSize[b][curChunk] <
              unCompChunksSize[curChunk][b] * compThreshold)) {
