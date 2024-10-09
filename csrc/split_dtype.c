@@ -451,7 +451,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
                 PyExc_MemoryError,
                 "Failed to allocate memory - Function during decompression"
             );
-            free(deCompressedData[b][c]);
+            PyMem_Free(deCompressedData[b][c]);
             return NULL;
 	  }
           // Add logic for Huffman decompression here
@@ -482,7 +482,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
                 PyExc_MemoryError,
                 "Failed to allocate memory - Function during decompression"
             );
-            free(deCompressedData[b][c]);
+            PyMem_Free(deCompressedData[b][c]);
             return NULL;
 	  }
           decompressedSize = ZSTD_decompressDCtx(dctx,
@@ -512,7 +512,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
                 PyExc_MemoryError,
                 "Failed to allocate memory - Function during decompression"
             );
-            free(deCompressedData[b][c]);
+            PyMem_Free(deCompressedData[b][c]);
             return NULL;
 	  }
           break;
