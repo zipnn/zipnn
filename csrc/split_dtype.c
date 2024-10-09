@@ -445,7 +445,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   for (size_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       if (compChunksType[b][c] > 0) {
-        free(deCompressedData[b][c]);
+        PyMem_Free(deCompressedData[b][c]);
       }
     }
   }
