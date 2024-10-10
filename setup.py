@@ -10,7 +10,6 @@ def update_submodules():
             print(f"Failed to update submodules: {e}")
             raise
 
-
 update_submodules()
 
 split_dtype_extension = Extension(
@@ -41,8 +40,9 @@ split_dtype_extension = Extension(
         "csrc/data_manipulation_dtype16.c",
         "csrc/data_manipulation_dtype32.c",
     ],
-    include_dirs=["include/zstd/lib/", "csrc/"],
-    extra_compile_args=["-O3", "-Wall", "-Wextra"],
+    include_dirs=["include/zstd/lib/", "include/zstd/lib/common", "csrc/"],
+    define_macros=[('ZSTD_MULTITHREAD', None)],
+    extra_compile_args=["-O3", "-Wall", "-Wextra", "-g", "-DDEBUG"],
     extra_link_args=["-O3", "-Wall", "-Wextra"],
 )
 
