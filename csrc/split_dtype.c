@@ -222,7 +222,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         return NULL;
       }
 
-      compChunksType[b][curChunk] = HUFFMAN;
+      compChunksType[b][curChunk] = ZSTD; // HUFFMAN FSE ZSTD
       if (buffers[curChunk][b] != NULL) {
        if (noNeedToCompress[b] == 0) {
          switch (compChunksType[b][curChunk]) {
@@ -239,14 +239,31 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
             break;
   	  }
 
+          case FSE: {
+            compChunksSize[b][curChunk] = FSE_compress(
+                compressedData[b][curChunk], origChunkSize,
+                buffers[curChunk][b], unCompChunksSize[curChunk][b]);
+            if (FSE_isError(compChunksSize[b][curChunk])) {
+                FSE_getErrorName(compChunksSize[b][curChunk]);
+                PyErr_SetString(PyExc_MemoryError,
+                                "FSE compression returned an error");
+                return NULL;
+            }
+            break;
+  	  }
+
+
+
+
           case ZSTD: {
             ZSTD_CCtx* cctx = ZSTD_createCCtx();
+	    size_t zstd_levels = 1;
             if (cctx == NULL) {
                 fprintf(stderr, "Failed to create ZSTD compression context for chunk %d\n", curChunk);
             } else {
                 compChunksSize[b][curChunk] = ZSTD_compressCCtx(
                     cctx, compressedData[b][curChunk], origChunkSize,
-                    buffers[curChunk][b], unCompChunksSize[curChunk][b], ZSTD_maxCLevel());
+                    buffers[curChunk][b], unCompChunksSize[curChunk][b], zstd_levels);
                 ZSTD_freeCCtx(cctx);
                 if (ZSTD_isError(compChunksSize[b][curChunk])) {
                     ZSTD_getErrorName(compChunksSize[b][curChunk]);
@@ -266,10 +283,10 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
       } else {
         compChunksSize[b][curChunk] = 0;
       }
+
         if (compChunksSize[b][curChunk] != 0 &&
-            (compChunksSize[b][curChunk] <
-             unCompChunksSize[curChunk][b] * compThreshold)) {
-          compChunksType[b][curChunk] = HUFFMAN;  // Compress with Huffman
+           (compChunksSize[b][curChunk] <
+              unCompChunksSize[curChunk][b] * compThreshold)) {
         } else {                            // the buffer was not compressed
           PyMem_Free(compressedData[b][curChunk]);
           compChunksSize[b][curChunk] = unCompChunksSize[curChunk][b];
@@ -380,6 +397,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   u_int8_t *resultBuf = NULL;
   u_int8_t *deCompressedData[numBuf][numChunks];
   size_t decompLen[numChunks][numBuf];
+  size_t decompressedSize;
   // clock_t startTime, endTime;
   // startTime = clock();
 
@@ -464,7 +482,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
             return NULL;
 	  }
           // Add logic for Huffman decompression here
-          size_t decompressedSize = HUF_decompress(
+          decompressedSize = HUF_decompress(
           deCompressedData[b][c], decompLen[c][b],
           (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
           compChunksLen[b][c]);
@@ -485,6 +503,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
           break;
 
         case ZSTD:  // Decompress using ZSTD
+          ZSTD_DCtx* dctx = ZSTD_createDCtx();
           deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
           if (deCompressedData[b][c] == NULL) {
             PyErr_SetString(
@@ -513,6 +532,40 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
             return NULL;
 	  }
           break;
+
+        case FSE:  // Decompress using FSE
+          deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
+          if (deCompressedData[b][c] == NULL) {
+            PyErr_SetString(
+                PyExc_MemoryError,
+                "Failed to allocate memory - Function during decompression"
+            );
+            PyMem_Free(deCompressedData[b][c]);
+            return NULL;
+	  }
+          // Add logic for Huffman decompression here
+          decompressedSize = FSE_decompress(
+          deCompressedData[b][c], decompLen[c][b],
+          (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
+          compChunksLen[b][c]);
+
+          if (FSE_isError(decompressedSize)) {
+            FSE_getErrorName(decompressedSize);
+            PyErr_SetString(PyExc_MemoryError,
+			     "FSE decompression returned an error");
+            return NULL;
+	  }
+
+	  if (decompressedSize != decompLen[c][b]) {
+            PyErr_SetString(
+              PyExc_MemoryError,
+             "decompressedSize is not equal the expected decompressedSize");
+            return NULL;
+	  }
+          break;
+
+
+
 
         case TRUNCATE:  // Truncate decompression
 	  deCompressedData[b][c] = (u_int8_t*)PyMem_Calloc(decompLen[c][b], sizeof(u_int8_t));
