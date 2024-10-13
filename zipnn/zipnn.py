@@ -21,7 +21,7 @@ class ZipNN:
 
     def __init__(
         self,
-        method: str = "auto",
+        method: str = "HUFFMAN",
         input_format: str = "byte",
         bytearray_dtype: str = "bfloat16",
         is_monotonic: int = 0,
@@ -39,7 +39,7 @@ class ZipNN:
         input_file: str = None,
         compressed_file: str = None,
         decompressed_file: str = None,
-        zstd_level: int = 3,
+        zstd_level: int = 1,
         lz4_compression_level: int = 0,
     ):
         """
@@ -203,15 +203,15 @@ class ZipNN:
 
         self._version_major = 0
         self._version_minor = 3
-        self._version_tiny = 5
-        self._import_dependencies(zstd_level)
+        self._version_tiny = 7
+#        self._import_dependencies(zstd_level)
 
         self.header_length = 32
         self._header = bytearray(self.header_length)
         self._ext_header = b""
         self._shape_size = 0
         self._update_header()
-
+    '''
     def _import_dependencies(self, zstd_level):
         """
         Importing needed dependencies, based on the ZipNN compression method.
@@ -230,31 +230,8 @@ class ZipNN:
         -------------------------------------
         None.
         """
-        if self.method == EnumMethod.ZSTD.value or self.method == EnumMethod.AUTO.value:
-            self._zstd_compress = zstd.ZstdCompressor(level=zstd_level, threads=self.threads)
-            self._zstd_decompress = zstd.ZstdDecompressor()
-
-        elif self.method == EnumMethod.LZ4.value:
-            try:
-                global lz4
-                import lz4.frame
-            except ImportError as exc:
-                raise ImportError("LZ4 library is not installed. Please install it to use LZ4 compression.") from exc
-
-        elif self.method == EnumMethod.SNAPPY.value:
-            try:
-                global snappy
-                import snappy
-            except ImportError as exc:
-                raise ImportError("Snappy library is not installed. Please install it to use Snappy compression.") from exc
-
-        else:
-            raise ValueError(f"Unsupported method {self.method}")
-
-        if self.lossy_compressed_type != EnumLossy.NONE:
-            if self.input_format != EnumFormat.TORCH.value:
-                raise ValueError("When use lossy compression the input have to be torch.tensor")
-
+        return 
+    '''
     def use_var(self, data, class_var):
         """
         Used to update ZipNN attributes. Updates to data if it isn't null, or to the ZipNN class default if it is.
@@ -514,6 +491,8 @@ class ZipNN:
             #            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
             return self.compress_torch_numpy_byte(data, lossy_compressed_type, lossy_compressed_factor)
 
+    # deprecated in v0.3.7
+    '''
     def compress_method(self, data: bytes):
         """
         Chooses compression based on compression method.
@@ -536,7 +515,7 @@ class ZipNN:
         if self.method == EnumMethod.SNAPPY.value:
             return snappy.compress(data)
         raise ValueError(f"Unsupported method {self.method}")
-
+    '''
     def compress_bin(
         self,
         ba: bytes,
@@ -565,6 +544,7 @@ class ZipNN:
         is_print = 0
 
         if (self.byte_reorder == 0b1_01_01_001 and dtype_size == 32) or (self.byte_reorder == 0b0_00_01_001 and dtype_size == 16):
+            raise ValueError(f"Not supported this byte_reorder 0b1_01_01_001 for dtype_size==32, 0b0_00_01_001 for dtype_size == 16 in this version")
             # one group
             stime = time.time()
             ba_comp = self._header + self.compress_method(ba)
@@ -885,6 +865,8 @@ class ZipNN:
             return final_data
         return self.decompress_bin(data)
 
+    # deprecated in v0.3.7
+    '''
     def decompress_method(self, data):
         """
         Chooses decompression based on decompression method.
@@ -905,6 +887,7 @@ class ZipNN:
         if self.method == EnumMethod.SNAPPY.value:
             return snappy.decompress(data)
         raise ValueError(f"Unsupported method {self.method}")
+    '''
 
     def decompress_lossy(self, tensor, original_dtype):
         """
@@ -969,6 +952,7 @@ class ZipNN:
         dtype_size = 0  # Need to implement
 
         if (self.byte_reorder == 0b1_01_01_001 and dtype_size == 32) or (self.byte_reorder == 0b0_00_01_001 and dtype_size == 16):
+            raise ValueError(f"Not supported this byte_reorder 0b1_01_01_001 for dtype_size==32, 0b0_00_01_001 for dtype_size == 16 in this version")
             mv = memoryview(ba_compress[after_header:])
             ba_decom = self.decompress_method(mv[after_header:])
             if self.input_format == EnumFormat.BYTE.value:

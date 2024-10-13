@@ -222,7 +222,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         return NULL;
       }
 
-      compChunksType[b][curChunk] = ZSTD; // HUFFMAN FSE ZSTD
+      compChunksType[b][curChunk] = HUFFMAN; // HUFFMAN FSE ZSTD
       if (buffers[curChunk][b] != NULL) {
        if (noNeedToCompress[b] == 0) {
          switch (compChunksType[b][curChunk]) {
