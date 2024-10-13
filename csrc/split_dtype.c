@@ -60,15 +60,20 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                 size_t *resBufSize) {
   *resBufSize = header_len;
 
+  printf ("*resBufSize %zu \n", *resBufSize);
   size_t compChunksTypeLen =
       numBuf * numChunks * (sizeof(compChunksType[numBuf][numChunks]));
   size_t cumulativeChunksSizeLen =
       numBuf * numChunks * (sizeof(cumulativeChunksSize[numBuf][numChunks]));
   *resBufSize += compChunksTypeLen;
+  printf ("compChunksType *resBufSize %zu \n", *resBufSize);
   *resBufSize += cumulativeChunksSizeLen;
+  printf ("ccumulativeChunksSize - resBufSize  %zu \n", *resBufSize);
   for (size_t b = 0; b < numBuf; b++) {
     *resBufSize += totalCompressedSize[b];
   }
+  printf ("ccumulativeChunksSize -  totalCompressedSize %zu \n", *resBufSize);
+  printf ("*resBufSize %zu \n", *resBufSize);
 
   // update compress_buffer_len
   memcpy(&header[24], resBufSize, sizeof(size_t));
@@ -97,7 +102,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
       offset += compChunksSize[b][c];
     }
   }
-
+  printf ("*resBufSize %zu \n", *resBufSize);
   return resultBuf;
 }
 
@@ -267,11 +272,12 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
              break;
    	   }
  
- 
+            
            case TRUNCATE: {
              compChunksSize[b][curChunk] = 0;
              compressedData[b][curChunk] = NULL;
            }
+             break;
  
            default: {
              fprintf(stderr, "Unknown compression type for chunk %d\n", curChunk);
@@ -283,9 +289,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         }
       }
 
-      if (chunk_method == TRUNCATE) {
-      }
-      else {
+      if (chunk_method != TRUNCATE) {
         if (compChunksSize[b][curChunk] != 0 &&
          (compChunksSize[b][curChunk] <
             unCompChunksSize[curChunk][b] * compThreshold)) {
@@ -298,8 +302,8 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
        totalCompressedSize[b] += compChunksSize[b][curChunk];
         totalUnCompressedSize[b] += unCompChunksSize[curChunk][b];
         cumulativeChunksSize[b][curChunk] = totalCompressedSize[b];
-      }  // end for loop -> compression
-    }
+      }  
+    }// end for loop -> compression
     curChunk++;
   }  // end for loop - chunk
 
@@ -316,6 +320,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
       compChunksType, cumulativeChunksSize, totalCompressedSize, &resBufSize);
 
+  printf("resBufSize %zu \n", resBufSize);
   if (resultBuf == NULL) {
     // Free all Mallocs
     // print Error
@@ -567,6 +572,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
 
         case TRUNCATE:  // Truncate decompression
+	  printf ("decompLen[%zu][%d] %zu \n", b, c, decompLen[c][b]);
 	  deCompressedData[b][c] = (u_int8_t*)PyMem_Calloc(decompLen[c][b], sizeof(u_int8_t));
           if (deCompressedData[b][c] == NULL) {
             PyErr_SetString(

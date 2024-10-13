@@ -55,7 +55,10 @@ def main(file_path, method, start_byte, end_byte, bytearray_dtype):
     print(f"Decompression time: {decompression_time:.2f} seconds")
 
     # Verify the result
-    print(f"Are the original and decompressed byte strings the same? {original_bytes_saved == decompressed_data}")
+    if (method != "TRUNCATE"):
+        print(f"Are the original and decompressed byte strings the same? {original_bytes_saved == decompressed_data}")
+    if (method == "TRUNCATE"):
+        print(f"Are all the decompressed bytes zero, with the same size as the original data? {bytes(len(original_bytes_saved)) == decompressed_data}")
 
 if __name__ == "__main__":
 
