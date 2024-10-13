@@ -223,9 +223,10 @@ int handle_split_mode_220(const u_int8_t *src, Py_ssize_t total_len,
 //// Helper function to split a bytearray into four chunk_buffs
 int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
                             u_int8_t **chunk_buffs, size_t *bufLens,
-                            int bits_mode, int bytes_mode, int is_review,
+                            int bits_mode, int bytes_mode, int method, int is_review,
                             int threads) {
   uint32_t num_buf = 4;
+  int chunk_method = method;
   if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats_dtype32(src, len);
   }
@@ -270,7 +271,7 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
     // we are not supportin this splitting bytes_mode
     return -1;
   }
-  return 0;
+  return chunk_method;
 }
 //
 /////////////////////////////////////

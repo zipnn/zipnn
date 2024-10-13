@@ -21,7 +21,7 @@ class ZipNN:
 
     def __init__(
         self,
-        method: str = "HUFFMAN",
+        method: str = "FSE",
         input_format: str = "byte",
         bytearray_dtype: str = "bfloat16",
         is_monotonic: int = 0,
@@ -566,6 +566,7 @@ class ZipNN:
                 num_buf,
                 bit_reorder,
                 byte_reorder,
+                self.method,
                 is_review,
                 self.compression_chunk,
                 self.compression_threshold,

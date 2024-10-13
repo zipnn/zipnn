@@ -22,7 +22,7 @@ uint32_t reorder_float_bits_dtype32(float number);
 
 int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
                             u_int8_t **chunk_buffs, size_t *bufLens,
-                            int bits_mode, int bytes_mode, int is_review,
+                            int bits_mode, int bytes_mode, int method, int is_review,
                             int threads);
 
 ///////////////////////////////////

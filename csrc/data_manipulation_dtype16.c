@@ -32,7 +32,10 @@ static void reorder_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
 int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
                             u_int8_t **chunk_buffs,
                             size_t *unCompChunksSizeCurChunk, int bits_mode,
-                            int bytes_mode, int is_review, int threads) {
+                            int bytes_mode, int method, int is_review, int threads) {
+
+  int chunk_method = method; 
+
   if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats_dtype16(src, len);
   }
@@ -42,7 +45,7 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
   if (remainder > 0) {
     lens[0] += 1;
   }
-
+  
   switch (bytes_mode) {
   case 10:  // 2b01_010 - Byte Group to two different groups
     chunk_buffs[0] = PyMem_Malloc(lens[0]);
@@ -99,7 +102,7 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
     // we are not support this splitting bytes_mode
     return -1;
   }
-  return 0;
+  return chunk_method;
 }
 
 ///////////////////////////////////
