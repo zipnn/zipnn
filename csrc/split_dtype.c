@@ -252,25 +252,16 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
             break;
   	  }
 
-
-
-
           case ZSTD: {
-            ZSTD_CCtx* cctx = ZSTD_createCCtx();
 	    size_t zstd_levels = 1;
-            if (cctx == NULL) {
-                fprintf(stderr, "Failed to create ZSTD compression context for chunk %d\n", curChunk);
-            } else {
-                compChunksSize[b][curChunk] = ZSTD_compressCCtx(
-                    cctx, compressedData[b][curChunk], origChunkSize,
-                    buffers[curChunk][b], unCompChunksSize[curChunk][b], zstd_levels);
-                ZSTD_freeCCtx(cctx);
-                if (ZSTD_isError(compChunksSize[b][curChunk])) {
-                    ZSTD_getErrorName(compChunksSize[b][curChunk]);
-                    PyErr_SetString(PyExc_MemoryError,
-                                    "ZSTD compression returned an error");
-                    return NULL;
-                }
+            compChunksSize[b][curChunk] = ZSTD_compress(
+                compressedData[b][curChunk], origChunkSize,
+                buffers[curChunk][b], unCompChunksSize[curChunk][b], zstd_levels);
+            if (ZSTD_isError(compChunksSize[b][curChunk])) {
+                ZSTD_getErrorName(compChunksSize[b][curChunk]);
+                PyErr_SetString(PyExc_MemoryError,
+                                "ZSTD compression returned an error");
+                return NULL;
             }
             break;
           }
@@ -503,7 +494,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
           break;
 
         case ZSTD:  // Decompress using ZSTD
-          ZSTD_DCtx* dctx = ZSTD_createDCtx();
           deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
           if (deCompressedData[b][c] == NULL) {
             PyErr_SetString(
@@ -513,7 +503,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
             PyMem_Free(deCompressedData[b][c]);
             return NULL;
 	  }
-          decompressedSize = ZSTD_decompressDCtx(dctx,
+          decompressedSize = ZSTD_decompress(
           deCompressedData[b][c], decompLen[c][b],
           (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
           compChunksLen[b][c]);
