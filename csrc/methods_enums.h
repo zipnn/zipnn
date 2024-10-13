@@ -6,8 +6,9 @@ typedef enum {
     ORIGINAL = 0,
     HUFFMAN = 1,
     ZSTD = 2,
-    TRUNCATE = 3,
-    FSE = 4
+    FSE = 3,
+    TRUNCATE = 4,
+    AUTO = 5
 } MethodsEnums;
 
 #endif // METHODS_ENUM_H

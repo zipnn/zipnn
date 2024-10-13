@@ -135,7 +135,7 @@ def test_compression_decompression_float(self):
             original_bin,
             original_tensor,
             vars_dict,
-            method_list=["zstd"],
+            method_list=["huffman", "fse", "zstd"],
             input_format_list=["byte", "torch"],
             bytearray_dtype_list=[bytearray_dtype],
             threads_list=[1],

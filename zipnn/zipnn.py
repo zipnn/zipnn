@@ -21,7 +21,7 @@ class ZipNN:
 
     def __init__(
         self,
-        method: str = "FSE",
+        method: str = "HUFFMAN",
         input_format: str = "byte",
         bytearray_dtype: str = "bfloat16",
         is_monotonic: int = 0,

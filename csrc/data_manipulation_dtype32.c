@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
+#include "methods_enums.h"
 
 //// Helper function that count zero bytes
 static void count_zero_bytes(const u_int8_t *src, Py_ssize_t len,
@@ -223,15 +224,18 @@ int handle_split_mode_220(const u_int8_t *src, Py_ssize_t total_len,
 //// Helper function to split a bytearray into four chunk_buffs
 int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
                             u_int8_t **chunk_buffs, size_t *bufLens,
-                            int bits_mode, int bytes_mode, int method, int is_review,
+                            int bits_mode, int bytes_mode, int method, int *chunk_method, int is_review,
                             int threads) {
-  uint32_t num_buf = 4;
-  int chunk_method = method;
+  const int num_buf = 4;
+  for (int i = 0; i < num_buf; i++) {
+    chunk_method[i] = method;
+  }
+
   if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats_dtype32(src, len);
   }
 
-  if (is_review == 1) {
+  if (method == AUTO) {
     clock_t start, end;
     double cpu_time_used;
     Py_ssize_t msb_zeros, mid_high, mid_low, low;
@@ -271,7 +275,7 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
     // we are not supportin this splitting bytes_mode
     return -1;
   }
-  return chunk_method;
+  return 0;
 }
 //
 /////////////////////////////////////

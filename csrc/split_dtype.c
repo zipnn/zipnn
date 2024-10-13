@@ -156,7 +156,8 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   u_int8_t noNeedToCompress[numBuf];
   uint32_t checkCompTh =
       (uint32_t)ceil((double)numChunks / checkThAfterPercent);
-  int chunk_method;
+  int chunk_method[numBuf];
+  int split_result;
   // if (isPrint) {
   //     startBGTime = clock();
   //  }
@@ -178,18 +179,18 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
 
     // Byte Grouping + Byte Ordering
     if (numBuf == 2) {
-      chunk_method = split_bytearray_dtype16(data.buf + offset, curOrigChunkSize,
+      split_result = split_bytearray_dtype16(data.buf + offset, curOrigChunkSize,
                                   buffers[curChunk], unCompChunksSize[curChunk],
-                                  bits_mode, bytes_mode, method, is_review,
+                                  bits_mode, bytes_mode, method, chunk_method, is_review,
                                   threads);
     } else {  // numBuf == 4
-      chunk_method = split_bytearray_dtype32(data.buf + offset, curOrigChunkSize,
+      split_result = split_bytearray_dtype32(data.buf + offset, curOrigChunkSize,
                                   buffers[curChunk], unCompChunksSize[curChunk],
-                                  bits_mode, bytes_mode, method, is_review, threads);
+                                  bits_mode, bytes_mode, method, chunk_method, is_review, threads);
                                   
     }
     
-    if (chunk_method == -1) {
+    if (split_result == -1) {
         PyBuffer_Release(&data);
         PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
         return NULL;
@@ -228,7 +229,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
       }
 
       printf ("method %d chunk_method %d\n", method, chunk_method);
-      compChunksType[b][curChunk] = chunk_method; // HUFFMAN FSE ZSTD
+      compChunksType[b][curChunk] = chunk_method[b]; // HUFFMAN FSE ZSTD
       if (buffers[curChunk][b] != NULL) {
        if (noNeedToCompress[b] == 0) {
          switch (compChunksType[b][curChunk]) {
@@ -271,7 +272,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
              }
              break;
    	   }
- 
             
            case TRUNCATE: {
              compChunksSize[b][curChunk] = 0;
@@ -289,7 +289,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         }
       }
 
-      if (chunk_method != TRUNCATE) {
+      if (chunk_method[b] != TRUNCATE) {
         if (compChunksSize[b][curChunk] != 0 &&
          (compChunksSize[b][curChunk] <
             unCompChunksSize[curChunk][b] * compThreshold)) {
