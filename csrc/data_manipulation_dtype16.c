@@ -32,11 +32,11 @@ static void reorder_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
 int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
                             u_int8_t **chunk_buffs,
                             size_t *unCompChunksSizeCurChunk, int bits_mode,
-                            int bytes_mode, int method, int *chunk_method, int is_review, int threads) {
+                            int bytes_mode, int method, int *chunk_methods, int is_review, int threads) {
 
   const int num_buf = 2;
   for (int i = 0; i < num_buf; i++) {
-    chunk_method[i] = method;
+    chunk_methods[i] = method;
   }
 
   if (bits_mode == 1) {  // reoreder exponent

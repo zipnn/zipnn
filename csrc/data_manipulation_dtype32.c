@@ -4,9 +4,8 @@
 #include "methods_enums.h"
 
 //// Helper function that count zero bytes
-static void count_zero_bytes(const u_int8_t *src, Py_ssize_t len,
-                             Py_ssize_t *msb_zeros, Py_ssize_t *mid_high,
-                             Py_ssize_t *mid_low, Py_ssize_t *lsb_zeros) {
+static int count_zero_bytes(const u_int8_t *src, Py_ssize_t len,
+                             size_t* zeroCount, const int num_buf) {
   Py_ssize_t num_uint32 =
       len /
       sizeof(
@@ -14,24 +13,49 @@ static void count_zero_bytes(const u_int8_t *src, Py_ssize_t len,
   const uint32_t *uint32_array =
       (uint32_t *)src;  // Cast the byte buffer to a uint32_t array
 
-  *msb_zeros = 0;
-  *mid_high = 0;
-  *mid_low = 0;
-  *lsb_zeros = 0;
-
-  for (Py_ssize_t i = 0; i < num_uint32; i++) {
+  for (int b=0; b < num_buf; b++) {
+    zeroCount[b] = 0;	  
+  }
+   
+  for (size_t i = 0; i < num_uint32; i++) {
     uint32_t value = uint32_array[i];
-    if (((value >> 24) & 0xFF) == 0)
-      (*msb_zeros)++;
-    if (((value >> 16) & 0xFF) == 0)
-      (*mid_high)++;
-    if (((value >> 8) & 0xFF00) == 0)
-      (*mid_low)++;
-    if ((value & 0xFF) == 0)
-      (*lsb_zeros)++;
+    printf ("value >> 8 %d\n", value >> 8);
+    if ((value & 0xFF000000) == 0)
+      (zeroCount[3])++;
+    if ((value & 0xFF0000) == 0)
+      (zeroCount[2])++;
+    if ((value & 0xFF00) == 0)
+      (zeroCount[1])++;
+    if (value == 0)
+      (zeroCount[0])++;
+  }
+  
+  for (int b=0; b < num_buf; b++) {
+    printf ("zeroCount[%d] %zu \n", b, zeroCount[b]);	  
+  }
+  return 0;
+}
+
+static int calc_chunk_methods(size_t *zeroCount, int *chunk_methods, const Py_ssize_t num_buf_len, const int num_buf) {
+  float zeroCountForZSTD = 0.05; // above 5% of zeros - go with ZSTD otherwise go with HUFFMAN
+  for (int b=0; b < num_buf; b++) {
+    printf ("zeroCount[%d] %zu, len %zu , zeroCount[b]/len %f\n", b, zeroCount[b], num_buf_len, zeroCount[b]*1.0/num_buf_len);  	  
+    if (zeroCount[b] == num_buf_len) {
+    // all zeros Truncate 
+      chunk_methods[b] = TRUNCATE;
+    }
+    else {
+	  float zeroCountPrecent =  zeroCount[b] *1.0 / num_buf_len; 
+	  if ( zeroCountPrecent < zeroCountForZSTD) {
+            chunk_methods[b] = HUFFMAN;
+	  }
+	  else {
+            chunk_methods[b] = ZSTD;
+	  }
+    }
   }
 }
-//
+ 
 /////////////////////////////////////
 ///// Split Helper Functions ///////
 ////////////////////////////////////
@@ -224,11 +248,11 @@ int handle_split_mode_220(const u_int8_t *src, Py_ssize_t total_len,
 //// Helper function to split a bytearray into four chunk_buffs
 int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
                             u_int8_t **chunk_buffs, size_t *bufLens,
-                            int bits_mode, int bytes_mode, int method, int *chunk_method, int is_review,
+                            int bits_mode, int bytes_mode, int method, int *chunk_methods, int is_review,
                             int threads) {
   const int num_buf = 4;
   for (int i = 0; i < num_buf; i++) {
-    chunk_method[i] = method;
+    chunk_methods[i] = method;
   }
 
   if (bits_mode == 1) {  // reoreder exponent
@@ -238,12 +262,13 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
   if (method == AUTO) {
     clock_t start, end;
     double cpu_time_used;
-    Py_ssize_t msb_zeros, mid_high, mid_low, low;
     start = clock();
-    count_zero_bytes(src, len, &msb_zeros, &mid_high, &mid_low, &low);
-
+    size_t zeroCount[num_buf];
+    count_zero_bytes(src, len, zeroCount, num_buf);
+    calc_chunk_methods(zeroCount, chunk_methods, (size_t)(len/num_buf), num_buf);
     end = clock();  // End the timer
     cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+
   }
 
   switch (bytes_mode) {

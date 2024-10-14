@@ -149,7 +149,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   u_int8_t noNeedToCompress[numBuf];
   uint32_t checkCompTh =
       (uint32_t)ceil((double)numChunks / checkThAfterPercent);
-  int chunk_method[numBuf];
+  int chunk_methods[numBuf];
   int split_result;
   // if (isPrint) {
   //     startBGTime = clock();
@@ -174,12 +174,12 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     if (numBuf == 2) {
       split_result = split_bytearray_dtype16(data.buf + offset, curOrigChunkSize,
                                   buffers[curChunk], unCompChunksSize[curChunk],
-                                  bits_mode, bytes_mode, method, chunk_method, is_review,
+                                  bits_mode, bytes_mode, method, chunk_methods, is_review,
                                   threads);
     } else {  // numBuf == 4
       split_result = split_bytearray_dtype32(data.buf + offset, curOrigChunkSize,
                                   buffers[curChunk], unCompChunksSize[curChunk],
-                                  bits_mode, bytes_mode, method, chunk_method, is_review, threads);
+                                  bits_mode, bytes_mode, method, chunk_methods, is_review, threads);
                                   
     }
     
@@ -221,7 +221,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         return NULL;
       }
 
-      compChunksType[b][curChunk] = chunk_method[b]; // HUFFMAN FSE ZSTD
+      compChunksType[b][curChunk] = chunk_methods[b]; // HUFFMAN FSE ZSTD
       if (buffers[curChunk][b] != NULL) {
        if (noNeedToCompress[b] == 0) {
          switch (compChunksType[b][curChunk]) {
@@ -281,7 +281,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         }
       }
 
-      if (chunk_method[b] != TRUNCATE) {
+      if (chunk_methods[b] != TRUNCATE) {
         if (compChunksSize[b][curChunk] != 0 &&
          (compChunksSize[b][curChunk] <
             unCompChunksSize[curChunk][b] * compThreshold)) {
@@ -291,7 +291,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
           compChunksType[b][curChunk] = ORIGINAL;  // not compressed
           compressedData[b][curChunk] = buffers[curChunk][b];
        }
-       totalCompressedSize[b] += compChunksSize[b][curChunk];
+        totalCompressedSize[b] += compChunksSize[b][curChunk];
         totalUnCompressedSize[b] += unCompChunksSize[curChunk][b];
         cumulativeChunksSize[b][curChunk] = totalCompressedSize[b];
       }  
@@ -409,6 +409,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     for (uint32_t c = 0; c < numChunks; c++) {
       compChunksType[b][c] = (*ptrChunksType++);
       cumulativeChunksSize[b][c] = (*ptrChunksCumulative++);
+      printf("compChunksType[%d][%zu] %zu\n", b, c, compChunksType[b][c]);
     }
   }
   

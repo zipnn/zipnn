@@ -5,7 +5,7 @@
 static uint32_t reorder_float_bits_dtype16(float number); 
 static void reorder_all_floats_dtype16(u_int8_t *src, Py_ssize_t len);
 int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len, u_int8_t **chunk_buffs,
-                           size_t *unCompChunksSizeCurChunk, int bits_mode, int bytes_mode, int method, int * chunk_method, int is_review,
+                           size_t *unCompChunksSizeCurChunk, int bits_mode, int bytes_mode, int method, int * chunk_methods, int is_review,
                            int threads);
 
 static uint32_t revert_float_bits_dtype16(float number); 
