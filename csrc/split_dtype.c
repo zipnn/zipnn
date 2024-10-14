@@ -60,21 +60,15 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                 size_t *resBufSize) {
   *resBufSize = header_len;
 
-  printf ("*resBufSize %zu \n", *resBufSize);
   size_t compChunksTypeLen =
       numBuf * numChunks * (sizeof(compChunksType[numBuf][numChunks]));
   size_t cumulativeChunksSizeLen =
       numBuf * numChunks * (sizeof(cumulativeChunksSize[numBuf][numChunks]));
   *resBufSize += compChunksTypeLen;
-  printf ("compChunksType *resBufSize %zu \n", *resBufSize);
   *resBufSize += cumulativeChunksSizeLen;
-  printf ("ccumulativeChunksSize - resBufSize  %zu \n", *resBufSize);
   for (size_t b = 0; b < numBuf; b++) {
     *resBufSize += totalCompressedSize[b];
   }
-  printf ("ccumulativeChunksSize -  totalCompressedSize %zu \n", *resBufSize);
-  printf ("*resBufSize %zu \n", *resBufSize);
-
   // update compress_buffer_len
   memcpy(&header[24], resBufSize, sizeof(size_t));
 
@@ -102,7 +96,6 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
       offset += compChunksSize[b][c];
     }
   }
-  printf ("*resBufSize %zu \n", *resBufSize);
   return resultBuf;
 }
 
@@ -228,7 +221,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         return NULL;
       }
 
-      printf ("method %d chunk_method %d\n", method, chunk_method);
       compChunksType[b][curChunk] = chunk_method[b]; // HUFFMAN FSE ZSTD
       if (buffers[curChunk][b] != NULL) {
        if (noNeedToCompress[b] == 0) {
@@ -320,7 +312,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
       compChunksType, cumulativeChunksSize, totalCompressedSize, &resBufSize);
 
-  printf("resBufSize %zu \n", resBufSize);
   if (resultBuf == NULL) {
     // Free all Mallocs
     // print Error
@@ -572,7 +563,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
 
         case TRUNCATE:  // Truncate decompression
-	  printf ("decompLen[%zu][%d] %zu \n", b, c, decompLen[c][b]);
 	  deCompressedData[b][c] = (u_int8_t*)PyMem_Calloc(decompLen[c][b], sizeof(u_int8_t));
           if (deCompressedData[b][c] == NULL) {
             PyErr_SetString(
