@@ -16,7 +16,7 @@ python zipnn_compress_file.py model_name
     - `--streaming_chunk_size`: Specifies the chunk size for streaming during compression. The default is 1MB. Accepts either:
       - An integer (e.g., `1024`), interpreted as bytes.
       - A string with a unit suffix (e.g., `4KB`, `2MB`, `1GB`), where the unit is interpreted as kilobytes, megabytes, or gigabytes.
-    - `--delete`: Flag that specifies to delete the files instead of compressing them.
+    - `--delete`: Flag that specifies deleting the original file after compression.
     - `--force`: Flag that forces overwriting when compressing.
     - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
    
@@ -31,7 +31,7 @@ python zipnn_decompress_file.py compressed_model_name.znn
 - **Arguments**: 
   - **Required**: The path of the file to decompress.
   - **Optional**:
-    - `--delete`: Flag that specifies to delete the files instead of compressing them.
+    - `--delete`: Flag that specifies deleting the compressed file after decompression.
     - `--force`: Flag that forces overwriting when decompressing.
     - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
 
@@ -51,7 +51,7 @@ python zipnn_compress_path.py safetensors  --path data/
       - An integer (e.g., `1024`), interpreted as bytes.
       - A string with a unit suffix (e.g., `4KB`, `2MB`, `1GB`), where the unit is interpreted as kilobytes, megabytes, or gigabytes.
     - `--path`: Path to the folder containing all files that need compression. If left empty, it will look for all files in the current folder.
-    - `--delete`: Flag that specifies to delete the files instead of compressing them.
+    - `--delete`: Flag that specifies deleting the original files after compression
     - `-r`,`--recursive`: Both flags operate the same: they specify to look recursively in all subdirectories (of current folder or of the path given) for files with the specified suffix.
     - `--force`: Flag that forces overwriting when compressing.
     - `--max_processes`: Amount of max processes that can be used during the compression. The default is 1.
@@ -70,7 +70,7 @@ python zipnn_decompress_path.py --path data/
 - **Arguments**: 
   - **Optional**:
     - `--path`: Path to the folder containing all files that need decompression. If left empty, it will look for all files in the current folder.
-    - `--delete`: Flag that specifies to delete the files instead of compressing them.
+    - `--delete`: Flag that specifies deleting the compressed files after decompression.
     - `--force`: Flag that forces overwriting when decompressing.
     - `--max_processes`: Amount of max processes that can be used during the decompression. The default is 1.
     - `--model`: Only when using --hf_cache, specify the model name or path. E.g. 'ibm-granite/granite-7b-instruct'.
