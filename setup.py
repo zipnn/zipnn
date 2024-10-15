@@ -32,7 +32,7 @@ zstd_sources.extend([
 extra_compile_args = [
     "-O3", "-Wall", "-Wextra",
     "-DZSTD_MULTITHREAD",
-#    "-DZSTD_DISABLE_ASM",  # Disable assembly optimizations
+    "-DZSTD_DISABLE_ASM",  # Disable assembly optimizations
 #    "-DZSTD_NO_INTRINSICS"  # Disable intrinsics
 ]
 extra_link_args = []
@@ -47,7 +47,7 @@ split_dtype_extension = Extension(
     include_dirs=["include/zstd/lib/", "include/zstd/lib/common", "csrc/"],
     define_macros=[
         ('ZSTD_MULTITHREAD', None),
-#        ('ZSTD_DISABLE_ASM', None),
+        ('ZSTD_DISABLE_ASM', None),
 #        ('ZSTD_NO_INTRINSICS', None)
     ],
     extra_compile_args=extra_compile_args,
