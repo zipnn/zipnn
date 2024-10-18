@@ -419,12 +419,16 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     for (uint32_t c = 0; c < numChunks; c++) {
       compChunksType[b][c] = (*ptrChunksType++);
       cumulativeChunksSize[b][c] = (*ptrChunksCumulative++);
-      if (is_print_method) {
-        printf("Compression method[%d][%zu] %s\n", b, c, getEnumName(compChunksType[b][c]));
-      }
     }
   }
   
+  if (is_print_method) {
+    for (uint32_t c = 0; c < numChunks; c++) {
+      for (int b = 0; b < numBuf; b++) {
+        printf("Compression method Chunk [%zu] Group [%d] %s\n", c, b, getEnumName(compChunksType[b][c]));
+      }	      
+    }	    
+  }
   for (uint32_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       compCumulativeChunksPos[b][c + 1] = cumulativeChunksSize[b][c];
