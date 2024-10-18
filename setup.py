@@ -26,6 +26,7 @@ zstd_sources.extend([
     "csrc/split_dtype.c",
     "csrc/data_manipulation_dtype16.c",
     "csrc/data_manipulation_dtype32.c",
+    "csrc/methods_enums.c",
 ])
 
 # Determine the appropriate compiler and linker flags

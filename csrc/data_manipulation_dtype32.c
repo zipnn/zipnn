@@ -4,53 +4,86 @@
 #include "methods_enums.h"
 
 //// Helper function that count zero bytes
-static int count_zero_bytes(const u_int8_t *src, Py_ssize_t len,
-                             size_t* zeroCount, const int num_buf) {
+
+static int update_seq_count(size_t *lastZero, size_t *tmpSeqZeros, size_t *maxSeqZeros, int num_buf) {
+  for (int b=0; b < num_buf; b++) {
+    if (lastZero[b]) {
+      (tmpSeqZeros[b])++;
+      if (tmpSeqZeros > maxSeqZeros) {
+        maxSeqZeros[b] = tmpSeqZeros[b];	      
+      }      
+    }
+    else {
+      tmpSeqZeros[b] = 0;	    
+    }	    
+  }
+}
+
+static int count_zero_bytes_dtype32(const u_int8_t *src, Py_ssize_t len,
+                             size_t* zeroCount, size_t* maxSeqZeros, const int num_buf) {
+  int is_print_zeros = 1;
   Py_ssize_t num_uint32 =
       len /
       sizeof(
           uint32_t);  // Calculate how many uint32_t elements are in the buffer
   const uint32_t *uint32_array =
       (uint32_t *)src;  // Cast the byte buffer to a uint32_t array
-
+  
+  size_t tmpSeqZeros[] = {0, 0, 0, 0}; 
   for (int b=0; b < num_buf; b++) {
-    zeroCount[b] = 0;	  
+    zeroCount[b] = 0;
+    maxSeqZeros[b] = 0;    
   }
    
   for (size_t i = 0; i < num_uint32; i++) {
     uint32_t value = uint32_array[i];
-    printf ("value >> 8 %d\n", value >> 8);
-    if ((value & 0xFF000000) == 0)
+    size_t lastZero[] = {0, 0, 0, 0};
+    if ((value & 0xFF000000) == 0) {
       (zeroCount[3])++;
-    if ((value & 0xFF0000) == 0)
+      lastZero[3] = 1;
+    }
+    if ((value & 0xFF0000) == 0) {
       (zeroCount[2])++;
-    if ((value & 0xFF00) == 0)
+      lastZero[2] = 1;
+    }
+    if ((value & 0xFF00) == 0) {
       (zeroCount[1])++;
-    if (value == 0)
+      lastZero[1] = 1;
+    }
+    if (value == 0) {
       (zeroCount[0])++;
+      lastZero[0] = 1;
+    }
+    update_seq_count(lastZero, tmpSeqZeros, maxSeqZeros, num_buf);
   }
-  
-  for (int b=0; b < num_buf; b++) {
-    printf ("zeroCount[%d] %zu \n", b, zeroCount[b]);	  
+  if(is_print_zeros) { 
+    for (int b=0; b < num_buf; b++) {
+      float zeroCountPrecent =  zeroCount[b] *1.0 / (num_uint32); 
+      float zeroSeqPrecent =  maxSeqZeros[b] *1.0 / (num_uint32); 
+      printf ("Group[%d] zeroCount %zu [%.4f], maxSeqZeros %zu [%.4f] \n", b, zeroCount[b], zeroCountPrecent, maxSeqZeros[b], zeroSeqPrecent);
+    }
   }
   return 0;
 }
 
-static int calc_chunk_methods(size_t *zeroCount, int *chunk_methods, const Py_ssize_t num_buf_len, const int num_buf) {
-  float zeroCountForZSTD = 0.05; // above 5% of zeros - go with ZSTD otherwise go with HUFFMAN
+static int calc_chunk_methods_dtype32(size_t *zeroCount, size_t *maxSeqZeros, int *chunk_methods, const Py_ssize_t num_buf_len, const int num_buf) {
+  float zeroCountForZSTD = 0.90; // above 5% of zeros - go with ZSTD otherwise go with HUFFMAN
+  float zeroSeqCountForZSTD = 0.10; // above 5% of seq count - go with ZSTD otherwise go with HUFFMAN
+				 //
   for (int b=0; b < num_buf; b++) {
-    printf ("zeroCount[%d] %zu, len %zu , zeroCount[b]/len %f\n", b, zeroCount[b], num_buf_len, zeroCount[b]*1.0/num_buf_len);  	  
+//    printf ("zeroCount[%d] %zu, len %zu , zeroCount[b]/len %f\n", b, zeroCount[b], num_buf_len, zeroCount[b]*1.0/num_buf_len);  	  
     if (zeroCount[b] == num_buf_len) {
     // all zeros Truncate 
       chunk_methods[b] = TRUNCATE;
     }
     else {
 	  float zeroCountPrecent =  zeroCount[b] *1.0 / num_buf_len; 
-	  if ( zeroCountPrecent < zeroCountForZSTD) {
-            chunk_methods[b] = HUFFMAN;
+	  float zeroSeqPrecent =  maxSeqZeros[b] *1.0 / num_buf_len; 
+	  if (zeroCountPrecent > zeroCountForZSTD || zeroSeqPrecent > zeroSeqCountForZSTD) {
+            chunk_methods[b] = ZSTD;
 	  }
 	  else {
-            chunk_methods[b] = ZSTD;
+            chunk_methods[b] = HUFFMAN;
 	  }
     }
   }
@@ -77,6 +110,7 @@ uint32_t reorder_float_bits_dtype32(float number) {
 void reorder_all_floats_dtype32(u_int8_t *src, Py_ssize_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   Py_ssize_t num_floats = len / sizeof(uint32_t);
+//  printf ("num_floats %zu", num_floats);
   for (Py_ssize_t i = 0; i < num_floats; i++) {
     uint_array[i] = reorder_float_bits_dtype32(*(float *)&uint_array[i]);
   }
@@ -89,6 +123,10 @@ int allocate_4chunk_buffs(u_int8_t **chunk_buffs, Py_ssize_t *bufLens,
   chunk_buffs[1] = (bufLens[1] > 0) ? PyMem_Malloc(bufLens[1]) : NULL;
   chunk_buffs[2] = (bufLens[2] > 0) ? PyMem_Malloc(bufLens[2]) : NULL;
   chunk_buffs[3] = (bufLens[3] > 0) ? PyMem_Malloc(bufLens[3]) : NULL;
+
+//  for (int i=0; i<4;i++){
+//    printf("bufLens[i] %zu\n", bufLens[i]);
+//  } 
 
   if ((bufLens[0] > 0 && chunk_buffs[0] == NULL) ||
       (bufLens[1] > 0 && chunk_buffs[1] == NULL) ||
@@ -131,34 +169,26 @@ int handle_split_mode_220(const u_int8_t *src, Py_ssize_t total_len,
     *dst3++ = src[i + 2];
     *dst4++ = src[i + 3];
   }
-
-  switch (remainder) {
-  case 3:
-    *dst3++ = src[total_len - 2];
-  case 2:
-    *dst2++ = src[total_len - 1];
-  case 1:
-    *dst1++ = src[total_len - remainder];
-    break;
-  default:
-    break;
+  
+//  printf ("src[0] %zu\n", src[0]);
+//  printf ("src[1] %zu\n", src[1]);
+//  printf ("src[2] %zu\n", src[2]);
+//  printf ("chunk_buffs[0][0] %zu\n", chunk_buffs[0][0]);
+//  printf ("chunk_buffs[1][0] %zu\n", chunk_buffs[1][0]);
+//  printf ("chunk_buffs[2][0] %zu\n", chunk_buffs[2][0]);
+  if (remainder > 3) {
+     size_t total_len_remainder	= total_len - remainder;
+     chunk_buffs[0][q_len] = src[total_len_remainder];
+     if (remainder > 1) {
+      chunk_buffs[1][q_len] = src[total_len_remainder + 1];
+     }
+     if (remainder > 2) {
+      chunk_buffs[2][q_len] = src[total_len_remainder + 2];
+     }
   }
-
-  if (remainder == 3) {
-    *dst1++ = src[total_len - remainder];
-    *dst2++ = src[total_len - remainder - 1];
-    *dst3++ = src[total_len - remainder - 2];
-  }
-
-  if (remainder == 2) {
-    *dst1++ = src[total_len - remainder];
-    *dst2++ = src[total_len - remainder - 1];
-  }
-
-  if (remainder == 1) {
-    *dst1++ = src[total_len - remainder];
-  }
-
+//  printf ("chunk_buffs[0][0] %zu\n", chunk_buffs[0][0]);
+//  printf ("chunk_buffs[1][0] %zu\n", chunk_buffs[1][0]);
+//  printf ("chunk_buffs[2][0] %zu\n", chunk_buffs[2][0]);
   return 0;
 }
 //
@@ -264,11 +294,12 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
     double cpu_time_used;
     start = clock();
     size_t zeroCount[num_buf];
-    count_zero_bytes(src, len, zeroCount, num_buf);
-    calc_chunk_methods(zeroCount, chunk_methods, (size_t)(len/num_buf), num_buf);
+    size_t maxSeqZeros[num_buf];
+    count_zero_bytes_dtype32(src, len, zeroCount, maxSeqZeros, num_buf);
+    calc_chunk_methods_dtype32(zeroCount, maxSeqZeros, chunk_methods, (size_t)(len/num_buf), num_buf);
     end = clock();  // End the timer
     cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-
+    printf ("count_zero_bytes_dtype32 %f\n", cpu_time_used);
   }
 
   switch (bytes_mode) {

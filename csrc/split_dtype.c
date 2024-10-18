@@ -308,6 +308,15 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   PyObject *result;
   u_int8_t *resultBuf;
   size_t resBufSize;
+  size_t is_print_compression_size = 1;
+  if (is_print_compression_size) {
+    for (int b = 0; b < numBuf; b++) {
+      printf("Group[%d] compression %.6f \n", b, totalCompressedSize[b] * 1.0/ (data.len/numBuf));	    
+    }       
+  }
+
+
+
   resultBuf = prepare_split_results(
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
       compChunksType, cumulativeChunksSize, totalCompressedSize, &resBufSize);
@@ -396,6 +405,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   u_int8_t *deCompressedData[numBuf][numChunks];
   size_t decompLen[numChunks][numBuf];
   size_t decompressedSize;
+  int is_print_method = 1;
   // clock_t startTime, endTime;
   // startTime = clock();
 
@@ -409,7 +419,9 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     for (uint32_t c = 0; c < numChunks; c++) {
       compChunksType[b][c] = (*ptrChunksType++);
       cumulativeChunksSize[b][c] = (*ptrChunksCumulative++);
-      printf("compChunksType[%d][%zu] %zu\n", b, c, compChunksType[b][c]);
+      if (is_print_method) {
+        printf("Compression method[%d][%zu] %s\n", b, c, getEnumName(compChunksType[b][c]));
+      }
     }
   }
   
