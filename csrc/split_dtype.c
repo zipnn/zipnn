@@ -47,8 +47,6 @@ void cleanup_zstd_contexts() {
     if (dctx != NULL) ZSTD_freeDCtx(dctx);
 }
 
-
-
 ////  Helper Functions ///////
 u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                 size_t numChunks, u_int8_t *header,
@@ -308,7 +306,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   PyObject *result;
   u_int8_t *resultBuf;
   size_t resBufSize;
-  size_t is_print_compression_size = 1;
+  size_t is_print_compression_size = 0;
   if (is_print_compression_size) {
     for (int b = 0; b < numBuf; b++) {
       printf("Group[%d] compression %.6f \n", b, totalCompressedSize[b] * 1.0/ (data.len/numBuf));	    
@@ -405,7 +403,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   u_int8_t *deCompressedData[numBuf][numChunks];
   size_t decompLen[numChunks][numBuf];
   size_t decompressedSize;
-  int is_print_method = 1;
+  int is_print_method = 0;
   // clock_t startTime, endTime;
   // startTime = clock();
 

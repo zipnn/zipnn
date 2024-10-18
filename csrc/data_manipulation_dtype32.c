@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <time.h>
 #include "methods_enums.h"
+#include "methods_utils.h"
 
 //// Helper function that count zero bytes
 
@@ -21,7 +22,7 @@ static int update_seq_count(size_t *lastZero, size_t *tmpSeqZeros, size_t *maxSe
 
 static int count_zero_bytes_dtype32(const u_int8_t *src, Py_ssize_t len,
                              size_t* zeroCount, size_t* maxSeqZeros, const int num_buf) {
-  int is_print_zeros = 1;
+  int is_print_zeros = 0;
   Py_ssize_t num_uint32 =
       len /
       sizeof(
@@ -66,28 +67,6 @@ static int count_zero_bytes_dtype32(const u_int8_t *src, Py_ssize_t len,
   return 0;
 }
 
-static int calc_chunk_methods_dtype32(size_t *zeroCount, size_t *maxSeqZeros, int *chunk_methods, const Py_ssize_t num_buf_len, const int num_buf) {
-  float zeroCountForZSTD = 0.90; // above 5% of zeros - go with ZSTD otherwise go with HUFFMAN
-  float zeroSeqCountForZSTD = 0.10; // above 5% of seq count - go with ZSTD otherwise go with HUFFMAN
-				 //
-  for (int b=0; b < num_buf; b++) {
-//    printf ("zeroCount[%d] %zu, len %zu , zeroCount[b]/len %f\n", b, zeroCount[b], num_buf_len, zeroCount[b]*1.0/num_buf_len);  	  
-    if (zeroCount[b] == num_buf_len) {
-    // all zeros Truncate 
-      chunk_methods[b] = TRUNCATE;
-    }
-    else {
-	  float zeroCountPrecent =  zeroCount[b] *1.0 / num_buf_len; 
-	  float zeroSeqPrecent =  maxSeqZeros[b] *1.0 / num_buf_len; 
-	  if (zeroCountPrecent > zeroCountForZSTD || zeroSeqPrecent > zeroSeqCountForZSTD) {
-            chunk_methods[b] = ZSTD;
-	  }
-	  else {
-            chunk_methods[b] = HUFFMAN;
-	  }
-    }
-  }
-}
  
 /////////////////////////////////////
 ///// Split Helper Functions ///////
@@ -289,6 +268,8 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
     reorder_all_floats_dtype32(src, len);
   }
 
+  int is_print_zero_time = 0;
+
   if (method == AUTO) {
     clock_t start, end;
     double cpu_time_used;
@@ -299,7 +280,9 @@ int split_bytearray_dtype32(u_int8_t *src, Py_ssize_t len,
     calc_chunk_methods_dtype32(zeroCount, maxSeqZeros, chunk_methods, (size_t)(len/num_buf), num_buf);
     end = clock();  // End the timer
     cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-    printf ("count_zero_bytes_dtype32 %f\n", cpu_time_used);
+    if (is_print_zero_time) {
+       printf ("count_zero_bytes_dtype32 %f\n", cpu_time_used);
+    }
   }
 
   switch (bytes_mode) {

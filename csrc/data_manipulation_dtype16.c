@@ -1,6 +1,74 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
+#include "methods_enums.h"
+#include "methods_utils.h"
+
+//// Helper function that count zero bytes
+
+static int update_seq_count(size_t *lastZero, size_t *tmpSeqZeros, size_t *maxSeqZeros, int num_buf) {
+  for (int b=0; b < num_buf; b++) {
+    if (lastZero[b] && lastZero[b]) {
+      (tmpSeqZeros[b])++;
+      (tmpSeqZeros[b])++;
+      if (tmpSeqZeros > maxSeqZeros) {
+        maxSeqZeros[b] = tmpSeqZeros[b];	      
+      }      
+    }
+    else {
+      tmpSeqZeros[b] = 0;	    
+    }	    
+  }
+}
+
+static int count_zero_bytes_dtype16(const u_int8_t *src, Py_ssize_t len,
+                             size_t* zeroCount, size_t* maxSeqZeros, const int num_buf) {
+  int is_print_zeros = 0;
+  Py_ssize_t num_uint32 =
+      len /
+      sizeof(
+          uint32_t);  // Calculate how many uint32_t elements are in the buffer
+  const uint32_t *uint32_array =
+      (uint32_t *)src;  // Cast the byte buffer to a uint32_t array
+  
+  size_t tmpSeqZeros[] = {0, 0, 0, 0}; 
+  for (int b=0; b < 4; b++) {
+    zeroCount[b] = 0;
+    maxSeqZeros[b] = 0;    
+  }
+   
+  for (size_t i = 0; i < num_uint32; i++) {
+    uint32_t value = uint32_array[i];
+    size_t lastZero[] = {0, 0, 0, 0};
+    if ((value & 0xFF000000) == 0) {
+      (zeroCount[3])++;
+      lastZero[3] = 1;
+    }
+    if ((value & 0xFF0000) == 0) {
+      (zeroCount[2])++;
+      lastZero[2] = 1;
+    }
+    if ((value & 0xFF00) == 0) {
+      (zeroCount[1])++;
+      lastZero[1] = 1;
+    }
+    if (value == 0) {
+      (zeroCount[0])++;
+      lastZero[0] = 1;
+    }
+    update_seq_count(lastZero, tmpSeqZeros, maxSeqZeros, num_buf);
+  }
+  if(is_print_zeros) { 
+    for (int b=0; b < num_buf; b++) {
+      size_t groupZeroCount = zeroCount[b] + zeroCount[b+2];
+      size_t groupZeroSeq = maxSeqZeros[b] + maxSeqZeros[b+2];
+      float zeroCountPrecent =  (groupZeroCount*1.0) / (num_uint32*2); 
+      float zeroSeqPrecent =  (groupZeroSeq) *1.0 / (num_uint32*2); 
+      printf ("Group[%d] zeroCount %zu [%.4f], maxSeqZeros %zu [%.4f] \n", b, groupZeroCount, zeroCountPrecent, groupZeroSeq, zeroSeqPrecent);
+    }
+  }
+  return 0;
+}
 
 ///////////////////////////////////
 /// Split Helper Functions ///////
@@ -42,6 +110,24 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
   if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats_dtype16(src, len);
   }
+
+  int is_print_zero_time = 0;
+
+  if (method == AUTO) {
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
+    size_t zeroCount[4];
+    size_t maxSeqZeros[4];
+    count_zero_bytes_dtype16(src, len, zeroCount, maxSeqZeros, num_buf);
+    calc_chunk_methods_dtype32(zeroCount, maxSeqZeros, chunk_methods, (size_t)(len/num_buf), num_buf);
+    end = clock();  // End the timer
+    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    if (is_print_zero_time) {
+       printf ("count_zero_bytes_dtype16 %f\n", cpu_time_used);
+    }
+  }
+
   Py_ssize_t half_len = len / 2;
   Py_ssize_t lens[] = {half_len, half_len};
   int remainder = len % 2;

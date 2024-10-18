@@ -23,6 +23,7 @@ for root, _, files in os.walk('include/zstd/lib'):
 # Add your project-specific source files
 zstd_sources.extend([
     "csrc/split_dtype_module.c",
+    "csrc/methods_utils.c",
     "csrc/split_dtype.c",
     "csrc/data_manipulation_dtype16.c",
     "csrc/data_manipulation_dtype32.c",
