@@ -292,6 +292,14 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         totalCompressedSize[b] += compChunksSize[b][curChunk];
         totalUnCompressedSize[b] += unCompChunksSize[curChunk][b];
         cumulativeChunksSize[b][curChunk] = totalCompressedSize[b];
+      }
+      else { // TRUNCATE
+        if (curChunk > 0) {
+          cumulativeChunksSize[b][curChunk] = cumulativeChunksSize[b][curChunk-1];
+	}
+	else{
+          cumulativeChunksSize[b][curChunk] = 0;
+	}
       }  
     }// end for loop -> compression
     curChunk++;
@@ -403,7 +411,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   u_int8_t *deCompressedData[numBuf][numChunks];
   size_t decompLen[numChunks][numBuf];
   size_t decompressedSize;
-  int is_print_method = 0;
+  int is_print_method = 1;
   // clock_t startTime, endTime;
   // startTime = clock();
 
