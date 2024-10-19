@@ -3,7 +3,7 @@ import sys
 import time
 import torch
 from zipnn import ZipNN
-
+import numpy as np 
 
 def build_vars_dict():
     vars_dict = {
@@ -11,6 +11,7 @@ def build_vars_dict():
         "input_format": "byte",
         "bytearray_dtype": "float32",
         "threads": 1,
+        "is_streaming": 0,
     }
     return vars_dict
 
@@ -28,6 +29,7 @@ def test_zipnn(self, original_bin, original_tensor, vars_dict):
 
     zipnn = ZipNN(**vars_dict)
     original_bin_saved = bytearray(original_bin)
+    print ("original_bin_saved ", len(original_bin_saved))
     # Act: Compress and then decompress
     start_time = time.time()
     if vars_dict["input_format"] == "byte":
@@ -38,6 +40,7 @@ def test_zipnn(self, original_bin, original_tensor, vars_dict):
         sys.exit(f"Unsupported input_format")
     compress_time = time.time() - start_time
     start_time = time.time()
+    print (f"The compress len is {len(compressed_zipnn_byte)} bytes")
     decompressed_zipnn = zipnn.decompress(compressed_zipnn_byte)
     decompress_time = time.time() - start_time
 
@@ -45,14 +48,16 @@ def test_zipnn(self, original_bin, original_tensor, vars_dict):
 
     if vars_dict["input_format"] == "byte":
         decompressed_zipnn_byte = decompressed_zipnn
+    
 
     if vars_dict["input_format"] == "torch":
         self.assertEqual(original_tensor.shape, decompressed_zipnn.shape)
         self.assertEqual(original_tensor.dtype, decompressed_zipnn.dtype)
     else:
-        self.assertEqual(original_bin_save, decompressed_zipnn_byte)
+        self.assertEqual(original_bin_saved, decompressed_zipnn_byte)
 
     compress_ratio = len(compressed_zipnn_byte) / len(original_bin)
+    print (len(compressed_zipnn_byte))
     var_str = f"compress_ratio {compress_ratio:.2f} compression_time = {compress_time} decompression_time {decompress_time} original_len {len(original_bin)}"
     for var, value in vars_dict.items():
         var_str += f" {var}: {value} "
@@ -85,7 +90,7 @@ def run_few_config(
                     test_zipnn(self, original_bin, original_tensor, vars_dict)
 
 
-def build_tensors_and_vars(dtype):
+def build_tensors_and_vars(dtype, num_elements, seq_zeros, random_zeros):
     # Arrange: Original data to compress (a byte array)
 
     random.seed(42)
@@ -101,8 +106,7 @@ def build_tensors_and_vars(dtype):
         bytearray_dtype = "float16"
 
     element_size = torch.tensor([], dtype=dtype).element_size()
-    #    num_elements = 1024*1024*1024 // element_size
-    num_elements = 1024 * 1024 // element_size
+    num_elements_element_size = num_elements // element_size
 
     element_size = torch.tensor([], dtype=dtype).element_size()
 
@@ -117,30 +121,45 @@ def build_tensors_and_vars(dtype):
     else:
         np_array = original_tensor.numpy()
 
+
     # Convert the numpy array to bytes
     original_bin = np_array.tobytes()
+
+    #num_elements = 30 
+    #random_array = np.random.randint(1, 2**31, size=num_elements, dtype=np.uint32)
+    #print (random_array)
+    #original_bin = random_array.tobytes()
+    #print (random_array)
+    print ("1-original_bin ", len(original_bin))
+    original_bin += bytes(seq_zeros) 
+    print ("1-original_bin ", len(original_bin))
+
     print(f"original length in bytes {len(original_bin)}")
     return vars_dict, original_tensor, original_bin, bytearray_dtype
 
 
-def test_compression_decompression_float(self):
+def test_auto_mode(self):
     # one model different method "zstd","lz4","snappy" with and without byte grouping
 
+    seq_zeros = 100
+    random_zeros = 0
+    num_elements = 1024 * 100   
     for dtype in [torch.float32, torch.bfloat16, torch.float16]:
-        vars_dict, original_tensor, original_bin, bytearray_dtype = build_tensors_and_vars(dtype)
-
-        print("Check different standard option with different dtypes")
-        run_few_config(
-            self,
-            original_bin,
-            original_tensor,
-            vars_dict,
-            method_list=["huffman", "fse", "zstd"],
-            input_format_list=["byte", "torch"],
-            bytearray_dtype_list=[bytearray_dtype],
-            threads_list=[1],
-        )
-
+        for seq_zeros in range(0, 200000, 1000):
+            vars_dict, original_tensor, original_bin, bytearray_dtype = build_tensors_and_vars(dtype, num_elements, seq_zeros, random_zeros)
+    
+            print("Check different standard option with different dtypes")
+            run_few_config(
+                self,
+                original_bin,
+                original_tensor,
+                vars_dict,
+                method_list=["auto", "huffman", "zstd"],
+                input_format_list=["byte"],
+                bytearray_dtype_list=[bytearray_dtype],
+                threads_list=[1],
+            )
+    
 
 # if __name__ == '__main__':
 #    unittest.main()

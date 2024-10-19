@@ -4,10 +4,6 @@ import os
 import copy
 import numpy as np
 
-
-
-
-
 def test_byte_torch_streaming():
     # Instance of the ZipNN class
     zpn_torch = ZipNN(input_format='torch')
@@ -188,10 +184,6 @@ def test_byte_torch_streaming():
         
         if not np.array_equal(np.frombuffer(copy_bytes, dtype=np.float32), decompressed_array):
             raise ValueError("Error - original and decompressed float32 arrays are NOT equal.")
-
-
-
-
 
     if os.path.exists(file_path):
         os.remove(file_path)
