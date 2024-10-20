@@ -12,8 +12,8 @@ int calc_chunk_methods_dtype32(size_t *zeroCount, size_t *maxSeqZeros, int *chun
   //  If the number of zeros is above 90% or if the sequence of zeros is above 10%, set the method to ZSTD.
   // Otherwise, set the method to HUFFMAN.
   //
-  float zeroCountForZSTD = 0.90;
-  float zeroSeqCountForZSTD = 0.10;
+  float zeroCountForZSTD = 0.92;
+  float zeroSeqCountForZSTD = 0.03;
 				 //
   for (int b=0; b < num_buf; b++) {
 //    printf ("zeroCount[%d] %zu, len %zu , zeroCount[b]/len %f\n", b, zeroCount[b], num_buf_len, zeroCount[b]*1.0/num_buf_len);  	  

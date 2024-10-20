@@ -314,7 +314,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   PyObject *result;
   u_int8_t *resultBuf;
   size_t resBufSize;
-  size_t is_print_compression_size = 0;
+  size_t is_print_compression_size = 1;
   if (is_print_compression_size) {
     for (int b = 0; b < numBuf; b++) {
       printf("Group[%d] compression %.6f \n", b, totalCompressedSize[b] * 1.0/ (data.len/numBuf));	    
