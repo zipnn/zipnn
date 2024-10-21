@@ -34,7 +34,7 @@ int calc_chunk_methods_dtype32(size_t *zeroCount, size_t *maxSeqZeros, int *chun
 	  }
 //          printf ("zeroCountPrecent %f\n", zeroCountPrecent);
 //          printf ("zeroSeqPrecent %f\n", zeroSeqPrecent);
-	  if (zeroCountPrecent > zeroCountForZSTD || zeroSeqPrecent > zeroSeqCountForZSTD) {
+	  if ((zeroCountPrecent > zeroCountForZSTD) || (zeroSeqPrecent > zeroSeqCountForZSTD)) {
             chunk_methods[b] = ZSTD;
 	  }
 	  else {
