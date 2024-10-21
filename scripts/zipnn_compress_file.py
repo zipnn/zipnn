@@ -61,6 +61,7 @@ def compress_file(
     delete=False,
     force=False,
     hf_cache=False,
+    method="HUFFMAN"
 ):
     import zipnn
 
@@ -86,11 +87,13 @@ def compress_file(
             bytearray_dtype="float32",
             is_streaming=True,
             streaming_chunk_kb=streaming_chunk_size,
+            method=method
         )
     else:
         zpn = zipnn.ZipNN(
             is_streaming=True,
             streaming_chunk_kb=streaming_chunk_size,
+            method=method
         )
     file_size_before = 0
     file_size_after = 0
@@ -162,6 +165,13 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag that indicates if the file is in the Hugging Face cache.",
     )
+    parser.add_argument(
+        "--method",
+        type=str,
+        choices=["HUFFMAN", "ZSTD", "FSE", "AUTO"],
+        default="HUFFMAN",
+        help="Specify the method to use. Default is HUFFMAN.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.float32:
@@ -174,6 +184,8 @@ if __name__ == "__main__":
         optional_kwargs["force"] = args.force
     if args.hf_cache:
         optional_kwargs["hf_cache"] = args.hf_cache
+    if args.method:
+        optional_kwargs["method"] = args.method
 
     check_and_install_zipnn()
     compress_file(args.input_file, **optional_kwargs)

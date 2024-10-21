@@ -95,6 +95,7 @@ def compress_files_with_suffix(
     hf_cache=False,
     model="",
     branch="main",
+    method="HUFFMAN"
 ):
     import zipnn
 
@@ -345,6 +346,13 @@ if __name__ == "__main__":
         default="main",
         help="Only when using --model, specify the model branch. Default is 'main'",
     )
+    parser.add_argument(
+        "--method",
+        type=str,
+        choices=["HUFFMAN", "ZSTD", "FSE", "AUTO"],
+        default="HUFFMAN",
+        help="Specify the method to use. Default is HUFFMAN.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.float32:
@@ -373,6 +381,8 @@ if __name__ == "__main__":
         optional_kwargs[
             "branch"
         ] = args.model_branch
+    if args.method:
+        optional_kwargs["method"] = args.method
 
     check_and_install_zipnn()
     compress_files_with_suffix(
