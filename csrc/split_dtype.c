@@ -321,6 +321,14 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     }       
   }
 
+  int is_print_method = 1;
+  if (is_print_method) {
+    for (uint32_t c = 0; c < numChunks; c++) {
+      for (int b = 0; b < numBuf; b++) {
+        printf("Compression method Chunk [%zu] Group [%d] %s\n", c, b, getEnumName(compChunksType[b][c]));
+      }	      
+    }	    
+  }
 
 
   resultBuf = prepare_split_results(
@@ -411,7 +419,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   u_int8_t *deCompressedData[numBuf][numChunks];
   size_t decompLen[numChunks][numBuf];
   size_t decompressedSize;
-  int is_print_method = 1;
   // clock_t startTime, endTime;
   // startTime = clock();
 
@@ -428,13 +435,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     }
   }
   
-  if (is_print_method) {
-    for (uint32_t c = 0; c < numChunks; c++) {
-      for (int b = 0; b < numBuf; b++) {
-        printf("Compression method Chunk [%zu] Group [%d] %s\n", c, b, getEnumName(compChunksType[b][c]));
-      }	      
-    }	    
-  }
   for (uint32_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       compCumulativeChunksPos[b][c + 1] = cumulativeChunksSize[b][c];

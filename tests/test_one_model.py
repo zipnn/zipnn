@@ -50,7 +50,7 @@ def test_zipnn(self, original_bin, original_tensor, vars_dict):
         self.assertEqual(original_tensor.shape, decompressed_zipnn.shape)
         self.assertEqual(original_tensor.dtype, decompressed_zipnn.dtype)
     else:
-        self.assertEqual(original_bin_save, decompressed_zipnn_byte)
+        self.assertEqual(original_bin_saved, decompressed_zipnn_byte)
 
     compress_ratio = len(compressed_zipnn_byte) / len(original_bin)
     var_str = f"compress_ratio {compress_ratio:.2f} compression_time = {compress_time} decompression_time {decompress_time} original_len {len(original_bin)}"
