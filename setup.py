@@ -149,7 +149,8 @@ extra_compile_args = [
     "-Wall",
     "-Wextra",
     "-DXXH_PRIVATE_API",
-    "-DZSTD_STATIC_LINKING_ONLY",
+    "-DZSTD_MULTITHREAD",
+    "-DZSTD_DISABLE_ASM",  # Disable assembly optimization
     "-DZIP_FSE_STATIC_LINKING_ONLY",
     "-DZIP_FSE_STATIC_BUILD",
 ]
@@ -172,8 +173,9 @@ split_dtype_extension = Extension(
         "csrc/",
     ],
     define_macros=[
-        ('ZSTD_STATIC_LINKING_ONLY', None),
         ('XXH_PRIVATE_API', None),
+        ('ZSTD_MULTITHREAD', None),
+        ('ZSTD_DISABLE_ASM', None),
         ('ZIP_FSE_STATIC_LINKING_ONLY', None),
         ('ZIP_FSE_STATIC_BUILD', None),
     ],
