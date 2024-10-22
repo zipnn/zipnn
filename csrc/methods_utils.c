@@ -2,10 +2,32 @@
 #include <time.h>
 #include <Python.h>
 #include "methods_enums.h"
+#include "methods_utils.h"
 
 ////////////////////////////////////////////////////////////////////
 //// Helper function for choosing methods according to zero bytes //
 ////////////////////////////////////////////////////////////////////
+
+const char* getEnumName(MethodsEnums method) {
+    switch(method) {
+        case ORIGINAL:
+            return "ORIGINAL";
+        case HUFFMAN:
+            return "HUFFMAN";
+        case ZSTD:
+            return "ZSTD";
+        case FSE:
+            return "FSE";
+        case TRUNCATE:
+            return "TRUNCATE";
+        case AUTO:
+            return "AUTO";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+
 int calc_chunk_methods_dtype32(size_t *zeroCount, size_t *maxSeqZeros, int *chunk_methods, const Py_ssize_t num_buf_len, const int num_buf) {
   // LOGIC:
   // If all bytes are zeros, set the method to TRUNCATE.

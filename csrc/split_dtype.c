@@ -9,18 +9,11 @@
 #include <zstd_errors.h>
 #include "split_dtype_functions.h"
 #include "methods_enums.h"
+#include "methods_utils.h"
+#include "../build/modified_fse/lib/huf.h"
 
-// Huffman Function declaration //
-size_t HUF_decompress(void* dst, size_t dstSize, const void* cSrc, size_t cSrcSize);
-size_t HUF_compress(void* dst, size_t dstCapacity, const void* src, size_t srcSize);
-unsigned HUF_isError(size_t code);
-const char* HUF_getErrorName(size_t code);
+//#define FSE_buildCTable_wksp ZIPNN_FSE_buildCTable_wksp
 
-// FSE Function declaration //
-size_t FSE_decompress(void* dst, size_t dstSize, const void* cSrc, size_t cSrcSize);
-size_t FSE_compress(void* dst, size_t dstCapacity, const void* src, size_t srcSize);
-unsigned FSE_isError(size_t code);
-const char* FSE_getErrorName(size_t code);
 
 // ZSTD initialzation ////
 ZSTD_CCtx* cctx;  
@@ -224,11 +217,11 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
        if (noNeedToCompress[b] == 0) {
          switch (compChunksType[b][curChunk]) {
            case HUFFMAN: {
-             compChunksSize[b][curChunk] = HUF_compress(
+             compChunksSize[b][curChunk] = ZIPNN_HUF_compress(
                  compressedData[b][curChunk], origChunkSize,
                  buffers[curChunk][b], unCompChunksSize[curChunk][b]);
-             if (HUF_isError(compChunksSize[b][curChunk])) {
-                 HUF_getErrorName(compChunksSize[b][curChunk]);
+             if (ZIPNN_HUF_isError(compChunksSize[b][curChunk])) {
+                 ZIPNN_HUF_getErrorName(compChunksSize[b][curChunk]);
                  PyErr_SetString(PyExc_MemoryError,
                                  "Huffman compression returned an error");
                  return NULL;
@@ -249,9 +242,9 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
              }
              break;
            }
- 
+/* 
            case FSE: {
-             compChunksSize[b][curChunk] = FSE_compress(
+             compChunksSize[b][curChunk] = ZIPNN_FSE_compress(
                  compressedData[b][curChunk], origChunkSize,
                  buffers[curChunk][b], unCompChunksSize[curChunk][b]);
              if (FSE_isError(compChunksSize[b][curChunk])) {
@@ -262,6 +255,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
              }
              break;
    	   }
+*/
             
            case TRUNCATE: {
              compChunksSize[b][curChunk] = 0;
@@ -278,7 +272,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         compChunksSize[b][curChunk] = 0;
         }
       }
-
+      
       if (chunk_methods[b] != TRUNCATE) {
         if (compChunksSize[b][curChunk] != 0 &&
          (compChunksSize[b][curChunk] <
@@ -503,13 +497,13 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
             return NULL;
 	  }
           // Add logic for Huffman decompression here
-          decompressedSize = HUF_decompress(
+          decompressedSize = ZIPNN_HUF_decompress(
           deCompressedData[b][c], decompLen[c][b],
           (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
           compChunksLen[b][c]);
 
-          if (HUF_isError(decompressedSize)) {
-            HUF_getErrorName(decompressedSize);
+          if (ZIPNN_HUF_isError(decompressedSize)) {
+            ZIPNN_HUF_getErrorName(decompressedSize);
             PyErr_SetString(PyExc_MemoryError,
 			     "Hufman decompression returned an error");
             return NULL;
@@ -552,7 +546,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
             return NULL;
 	  }
           break;
-
+/*
         case FSE:  // Decompress using FSE
           deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
           if (deCompressedData[b][c] == NULL) {
@@ -564,7 +558,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
             return NULL;
 	  }
           // Add logic for Huffman decompression here
-          decompressedSize = FSE_decompress(
+          decompressedSize = ZIPNN_FSE_decompress(
           deCompressedData[b][c], decompLen[c][b],
           (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
           compChunksLen[b][c]);
@@ -583,7 +577,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
             return NULL;
 	  }
           break;
-
+*/
 
         case TRUNCATE:  // Truncate decompression
 	  deCompressedData[b][c] = (u_int8_t*)PyMem_Calloc(decompLen[c][b], sizeof(u_int8_t));
