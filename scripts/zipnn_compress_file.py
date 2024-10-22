@@ -56,7 +56,7 @@ def parse_streaming_chunk_size(
 
 def compress_file(
     input_file,
-    dtype="",
+    dtype="bfloat16",
     streaming_chunk_size=1048576,
     delete=False,
     force=False,
@@ -82,15 +82,8 @@ def compress_file(
     print(f"Compressing {full_path}...")
     #
     output_file = input_file + ".znn"
-    if dtype:
-        zpn = zipnn.ZipNN(
-            bytearray_dtype="float32",
-            is_streaming=True,
-            streaming_chunk_kb=streaming_chunk_size,
-            method=method
-        )
-    else:
-        zpn = zipnn.ZipNN(
+    zpn = zipnn.ZipNN(
+            bytearray_dtype=dtype,
             is_streaming=True,
             streaming_chunk_kb=streaming_chunk_size,
             method=method
@@ -141,9 +134,11 @@ if __name__ == "__main__":
         help="Specify the path to the file to compress.",
     )
     parser.add_argument(
-        "--float32",
-        action="store_true",
-        help="A flag that triggers float32 compression",
+        "--dtype",
+        type=str,
+        choices=["bfloat16", "float16", "float32"],
+        default="bfloat16",
+        help="Specify the data type. Default is bfloat16.",
     )
     parser.add_argument(
         "--streaming_chunk_size",
@@ -174,8 +169,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     optional_kwargs = {}
-    if args.float32:
-        optional_kwargs["dtype"] = 32
+    if args.dtype:
+        optional_kwargs["dtype"] = args.dtype
     if args.streaming_chunk_size is not None:
         optional_kwargs["streaming_chunk_size"] = args.streaming_chunk_size
     if args.delete:
