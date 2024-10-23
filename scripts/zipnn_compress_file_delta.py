@@ -91,7 +91,7 @@ def compress_file(
         output_file = os.path.join(folder_path, input_filename[:-4] + "_delta_" + delta_filename + ".znn")
         if dtype:
             zpn = zipnn.ZipNN(
-                bytearray_dtype="float32", is_streaming=True, streaming_chunk_kb=streaming_chunk_size, delta_compressed_type="file",method=method
+                bytearray_dtype=dtype, is_streaming=True, streaming_chunk_kb=streaming_chunk_size, delta_compressed_type="file",method=method
             )
         else:
             zpn = zipnn.ZipNN(is_streaming=True, streaming_chunk_kb=streaming_chunk_size, delta_compressed_type="file",method=method)
