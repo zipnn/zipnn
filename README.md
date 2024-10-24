@@ -1,5 +1,6 @@
-# ZipNN - A Lossless Compression Library for AI pipelines
+<img src="./images/ZipNN-logo.png" alt="ZipNN Logo" width="60" height="60" align="left" />
 
+# ZipNN - A Lossless Compression Library for AI pipelines
 
 **TL;DR - simple, fast, and effective model compression** 
 
