@@ -95,7 +95,9 @@ def compress_files_with_suffix(
     hf_cache=False,
     model="",
     branch="main",
-    method="HUFFMAN"
+    method="HUFFMAN",
+    verification=False,#
+    test=False#        
 ):
     import zipnn
 
@@ -145,8 +147,8 @@ def compress_files_with_suffix(
                 compressed_path = (
                     file_name + ".znn"
                 )
-                if not force and os.path.exists(
-                    compressed_path
+                if not test and not force and os.path.exists(
+                    os.path.join(root, compressed_path)
                 ):
                     #
                     if overwrite_first:
@@ -171,7 +173,7 @@ def compress_files_with_suffix(
                             )
                             force=True
                     #
-                    if not force:
+                    if not force and not test:
                         user_input = (
                             input(
                                 f"{compressed_path} already exists; overwrite (y/n)? "
@@ -233,6 +235,9 @@ def compress_files_with_suffix(
                 delete,
                 True,
                 hf_cache,
+                method,
+                verification,
+                test
             ): file
             for file in file_list[:max_processes]
         }
@@ -261,6 +266,9 @@ def compress_files_with_suffix(
                             delete,
                             True,
                             hf_cache,
+                            method,
+                            verification,
+                            test
                         )
                     ] = next_file
 
@@ -273,15 +281,6 @@ def compress_files_with_suffix(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(
-            "Usage: python compress_files.py <suffix>"
-        )
-        print(
-            "Example: python compress_files.py 'safetensors'"
-        )
-        sys.exit(1)
-
     parser = argparse.ArgumentParser(
         description="Enter a suffix to compress, (optional) dtype, (optional) streaming chunk size, (optional) path to files."
     )
@@ -355,6 +354,16 @@ if __name__ == "__main__":
         default="HUFFMAN",
         help="Specify the method to use. Default is HUFFMAN.",
     )
+    parser.add_argument(#
+        "--verification",
+        action="store_true",
+        help="A flag that verifies that a compression can be decompressed correctly.",
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="A flag to not write the compression to a file.",
+    )#
     args = parser.parse_args()
     optional_kwargs = {}
     if args.dtype:
@@ -385,6 +394,10 @@ if __name__ == "__main__":
         ] = args.model_branch
     if args.method:
         optional_kwargs["method"] = args.method
+    if args.verification:#
+        optional_kwargs["verification"] = args.verification
+    if args.test:
+        optional_kwargs["test"] = args.test#
 
     check_and_install_zipnn()
     compress_files_with_suffix(

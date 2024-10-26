@@ -63,7 +63,9 @@ def compress_file(
     delete=False,
     force=False,
     hf_cache=False,
-    method="HUFFMAN"
+    method="HUFFMAN",
+    verification=False,#
+    test=False#
 ):
     import zipnn
 
@@ -78,7 +80,7 @@ def compress_file(
         os.remove(full_path)
     else:
         compressed_path = full_path + ".znn"
-        if not force and os.path.exists(compressed_path):
+        if not test and not force and os.path.exists(compressed_path):#
             user_input = input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
             if user_input not in ("yes", "y"):
                 print(f"Skipping {full_path}...")
@@ -99,9 +101,17 @@ def compress_file(
         with open(input_file, "rb") as f:
             file_data = f.read()
         compressed_data = zpn.compress(file_data, delta_second_data=delta_file)
-        with open(output_file, "wb") as f_out:
-            f_out.write(compressed_data)
-        end_time = time.time() - start_time
+        end_time = time.time() - start_time#
+        #
+        if verification:
+            with open(input_file, "rb") as f:
+                file_data2 = f.read()
+            assert (zpn.decompress(compressed_data, delta_second_data=delta_file)==file_data2), "Decompressed file should be equal to original file."
+            print("Verification successful.")
+        if not test:
+            with open(output_file, "wb") as f_out:
+                f_out.write(compressed_data)
+        #
         print(f"Compressed {input_file} to {output_file}")
         file_size_before = len(file_data)
         file_size_after = len(compressed_data)
@@ -124,10 +134,6 @@ def compress_file(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python zipnn_compress_file_delta.py file_path1 file_path2")
-        sys.exit(1)
-
     parser = argparse.ArgumentParser(description="Enter a file path to compress and the delta file.")
     parser.add_argument(
         "input_file",
@@ -173,6 +179,16 @@ if __name__ == "__main__":
         default="HUFFMAN",
         help="Specify the method to use. Default is HUFFMAN.",
     )
+    parser.add_argument(#
+        "--verification",
+        action="store_true",
+        help="A flag that verifies that a compression can be decompressed correctly.",
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="A flag to not write the compression to a file.",
+    )#
     args = parser.parse_args()
     optional_kwargs = {}
     if args.dtype:
@@ -187,6 +203,10 @@ if __name__ == "__main__":
         optional_kwargs["hf_cache"] = args.hf_cache
     if args.method:
         optional_kwargs["method"] = args.method
-
+    if args.verification:#
+        optional_kwargs["verification"] = args.verification
+    if args.test:
+        optional_kwargs["test"] = args.test#
+        
     check_and_install_zipnn()
     compress_file(args.input_file, args.delta_file, **optional_kwargs)
