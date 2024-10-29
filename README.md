@@ -40,6 +40,7 @@ You can try other state-of-the-art compressed models from the updating list belo
 | [ compressed FacebookAI/roberta-base ]( https://huggingface.co/royleibov/roberta-base-ZipNN-Compressed ) |
 | [ compressed meta-llama/Llama-3.2-11B-Vision-Instruct ]( https://huggingface.co/royleibov/Llama-3.2-11B-Vision-Instruct-ZipNN-Compressed ) |
 | [compressed ibm-granite/granite-3.0-8b-instruct](https://huggingface.co/royleibov/granite-3.0-8b-instruct-ZipNN-Compressed) |
+| [compressed openai/clip-vit-base-patch32](https://huggingface.co/royleibov/clip-vit-base-patch16-ZipNN-Compressed) |
 | [ compressed mistral-community/pixtral-12b ]( https://huggingface.co/royleibov/pixtral-12b-ZipNN-Compressed ) |
 | [ compressed meta-llama/Meta-Llama-3.1-8B-Instruct ]( https://huggingface.co/royleibov/Llama-3.1-8B-ZipNN-Compressed )              |
 | [ compressed Qwen/Qwen2-VL-7B-Instruct ]( https://huggingface.co/royleibov/Qwen2-VL-7B-Instruct-ZipNN-Compressed )                  |
