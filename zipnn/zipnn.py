@@ -1109,45 +1109,84 @@ def zipnn_hf():
         raise ImportError("Hugging Face Transformers library is not installed. Please install it to use ZipNN compression.") from exc
 
     from typing import Union
+    import transformers
 
     # Save the original load_state_dict method
     original_load_state_dict = modeling_utils.load_state_dict
 
-    # Define a monkey-patched version of load_state_dict
-    def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
-        if checkpoint_file.endswith(".znn"):
-            print(f"Decompressing {checkpoint_file.split('/')[-1]}")
-            output_file = checkpoint_file.replace(".znn", "")
-            snapshot_path = os.path.dirname(checkpoint_file)
-            if not os.path.exists(output_file):
-                znn = ZipNN(is_streaming=True)
-                with open(checkpoint_file, "rb") as infile, open(output_file, "wb") as outfile:
-                    d_data = b""
-                    chunk = infile.read()
-                    d_data += znn.decompress(chunk)
-                    outfile.write(d_data)
-                blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
-                os.rename(output_file, blob_name)
-                os.symlink(blob_name, output_file)
-            os.remove(checkpoint_file)
-            checkpoint_file = output_file
+    # Check the version of transformers
+    transformers_version = transformers.__version__
 
-            # Change index name to the decompressed file
-            if os.path.exists(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)):
-                file_name = os.path.basename(output_file)
-                blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
-                replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
+    if transformers_version >= "4.45.2":
+        # Define a monkey-patched version of load_state_dict
+        def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
+            if checkpoint_file.endswith(".znn"):
+                print(f"Decompressing {checkpoint_file.split('/')[-1]}")
+                output_file = checkpoint_file.replace(".znn", "")
+                snapshot_path = os.path.dirname(checkpoint_file)
+                if not os.path.exists(output_file):
+                    znn = ZipNN(is_streaming=True)
+                    with open(checkpoint_file, "rb") as infile, open(output_file, "wb") as outfile:
+                        d_data = b""
+                        chunk = infile.read()
+                        d_data += znn.decompress(chunk)
+                        outfile.write(d_data)
+                    blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
+                    os.rename(output_file, blob_name)
+                    os.symlink(blob_name, output_file)
+                os.remove(checkpoint_file)
+                checkpoint_file = output_file
 
-            elif os.path.exists(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)):
-                file_name = os.path.basename(output_file)
-                blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
-                replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
+                # Change index name to the decompressed file
+                if os.path.exists(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)):
+                    file_name = os.path.basename(output_file)
+                    blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
+                    replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
 
-        # Call the original load_state_dict method
-        return original_load_state_dict(checkpoint_file, is_quantized, map_location, weights_only)
+                elif os.path.exists(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)):
+                    file_name = os.path.basename(output_file)
+                    blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
+                    replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
 
+            # Call the original load_state_dict method
+            return original_load_state_dict(checkpoint_file, is_quantized, map_location, weights_only)
+    else:
+        # Define a monkey-patched version of load_state_dict
+        def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False):
+            if checkpoint_file.endswith(".znn"):
+                print(f"Decompressing {checkpoint_file.split('/')[-1]}")
+                output_file = checkpoint_file.replace(".znn", "")
+                snapshot_path = os.path.dirname(checkpoint_file)
+                if not os.path.exists(output_file):
+                    znn = ZipNN(is_streaming=True)
+                    with open(checkpoint_file, "rb") as infile, open(output_file, "wb") as outfile:
+                        d_data = b""
+                        chunk = infile.read()
+                        d_data += znn.decompress(chunk)
+                        outfile.write(d_data)
+                    blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
+                    os.rename(output_file, blob_name)
+                    os.symlink(blob_name, output_file)
+                os.remove(checkpoint_file)
+                checkpoint_file = output_file
+
+                # Change index name to the decompressed file
+                if os.path.exists(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)):
+                    file_name = os.path.basename(output_file)
+                    blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
+                    replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
+
+                elif os.path.exists(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)):
+                    file_name = os.path.basename(output_file)
+                    blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
+                    replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
+
+            # Call the original load_state_dict method
+            return original_load_state_dict(checkpoint_file, is_quantized)
+    
     # Monkey patch the load_state_dict method in the transformers library
     modeling_utils.load_state_dict = custom_load_state_dict
+    
 
     # save original from_pretrained
     original_from_pretrained = PreTrainedModel.from_pretrained
