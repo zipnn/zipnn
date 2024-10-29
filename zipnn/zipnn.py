@@ -1114,7 +1114,7 @@ def zipnn_hf():
     original_load_state_dict = modeling_utils.load_state_dict
 
     # Define a monkey-patched version of load_state_dict
-    def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False):
+    def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
         if checkpoint_file.endswith(".znn"):
             print(f"Decompressing {checkpoint_file.split('/')[-1]}")
             output_file = checkpoint_file.replace(".znn", "")
@@ -1144,7 +1144,7 @@ def zipnn_hf():
                 replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
 
         # Call the original load_state_dict method
-        return original_load_state_dict(checkpoint_file, is_quantized)
+        return original_load_state_dict(checkpoint_file, is_quantized, map_location, weights_only)
 
     # Monkey patch the load_state_dict method in the transformers library
     modeling_utils.load_state_dict = custom_load_state_dict
