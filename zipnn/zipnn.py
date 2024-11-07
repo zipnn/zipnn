@@ -1078,13 +1078,14 @@ class ZipNN:
         return self.decompress_bin(ba)
 
 
-def zipnn_hf():
+def zipnn_hf(replace_local_file: bool = False):
     """
     Plugin for the Hugging Face Transformers library to use ZipNN compression.
 
     Parameters
     -------------------------------------
-    None.
+    replace_local_file: bool
+        If True, replace the local file with the decompressed file and deletes the decompressed file.
 
     Returns
     -------------------------------------
@@ -1092,7 +1093,7 @@ def zipnn_hf():
     """
     try:
         from transformers import modeling_utils
-        from typing import Union, Optional
+        from typing import Union, Optional, Dict
         from transformers.configuration_utils import PretrainedConfig
         from transformers.utils import (
             FLAX_WEIGHTS_NAME,
@@ -1104,7 +1105,13 @@ def zipnn_hf():
             WEIGHTS_NAME,
             cached_file,
         )
-        from transformers.modeling_utils import _add_variant, PreTrainedModel
+        from transformers.modeling_utils import _add_variant, PreTrainedModel, is_deepspeed_zero3_enabled, is_fsdp_enabled, is_torch_greater_or_equal_than_1_13, is_zipfile, is_local_dist_rank_0
+        from safetensors.torch import load
+        import json
+        from struct import unpack
+        from packaging import version
+        from io import BytesIO
+
     except ImportError as exc:
         raise ImportError("Hugging Face Transformers library is not installed. Please install it to use ZipNN compression.") from exc
 
@@ -1117,23 +1124,41 @@ def zipnn_hf():
     # Check the version of transformers
     transformers_version = transformers.__version__
 
-    if transformers_version >= "4.45.2":
-        # Define a monkey-patched version of load_state_dict
-        def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
-            if checkpoint_file.endswith(".znn"):
-                print(f"Decompressing {checkpoint_file.split('/')[-1]}")
-                output_file = checkpoint_file.replace(".znn", "")
-                snapshot_path = os.path.dirname(checkpoint_file)
-                if not os.path.exists(output_file):
-                    znn = ZipNN(is_streaming=True)
-                    with open(checkpoint_file, "rb") as infile, open(output_file, "wb") as outfile:
-                        d_data = b""
-                        chunk = infile.read()
-                        d_data += znn.decompress(chunk)
-                        outfile.write(d_data)
+    def decompress_znn(checkpoint_file: Union[str, os.PathLike], replace_local_file: bool = False, is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
+        if checkpoint_file.endswith(".znn"):
+            print(f"Decompressing {checkpoint_file.split('/')[-1]}")
+
+            ### Loading with buffer only supports safetensors for now
+            # if not replace_local_file and not checkpoint_file.endswith(".safetensors.znn"):
+            #     print("\033[91mZipNN only supports .safetensors.znn for now. Saving decompressed file locally.\033[0m")
+            #     replace_local_file = True
+
+            output_file = checkpoint_file.replace(".znn", "")
+            snapshot_path = os.path.dirname(checkpoint_file)
+            d_data = b""
+            if not os.path.exists(output_file):
+                znn = ZipNN(is_streaming=True)
+                with open(checkpoint_file, "rb") as infile:
+                    chunk = infile.read()
+                    d_data += znn.decompress(chunk)
+
+                    ### Save the decompressed file
+                    if replace_local_file:
+                        with open(output_file, "wb") as outfile:
+                            outfile.write(d_data)
+                            
+                ### Replace the local file with the decompressed file
+                if replace_local_file:
                     blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
                     os.rename(output_file, blob_name)
                     os.symlink(blob_name, output_file)
+            else:
+                print(f"Decompressed file already exists at {output_file}")
+                with open(output_file, "rb") as infile:
+                    d_data = infile.read()
+
+            ### Remove the compressed file and change the index name
+            if replace_local_file:
                 os.remove(checkpoint_file)
                 checkpoint_file = output_file
 
@@ -1147,39 +1172,93 @@ def zipnn_hf():
                     file_name = os.path.basename(output_file)
                     blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
                     replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
+            elif d_data:
+                if checkpoint_file.endswith(".safetensors.znn"):
+                    length_of_header = unpack('<Q', d_data[:8])[0]
+                    header_data = d_data[8:8 + length_of_header]
+                    header = json.loads(header_data)
+
+                    # Check safetensors metadata
+                    metadata = header.get("__metadata__", {})
+                    if metadata.get("format") not in ["pt", "tf", "flax", "mlx"]:
+                        raise OSError(
+                            f"The safetensors archive passed at {checkpoint_file} does not contain the valid metadata. Make sure "
+                            "you save your model with the `save_pretrained` method."
+                        )
+                    return load(d_data)
+                try:
+                    if map_location is None:
+                        if (
+                            (
+                                is_deepspeed_zero3_enabled()
+                                and torch.distributed.is_initialized()
+                                and torch.distributed.get_rank() > 0
+                            )
+                            or (is_fsdp_enabled() and not is_local_dist_rank_0())
+                        ) and not is_quantized:
+                            map_location = "meta"
+                        else:
+                            map_location = "cpu"
+                    extra_args = {}
+                    # mmap can only be used with files serialized with zipfile-based format.
+                    if (
+                        isinstance(checkpoint_file, str)
+                        and map_location != "meta"
+                        and version.parse(torch.__version__) >= version.parse("2.1.0")
+                        and is_zipfile(checkpoint_file)
+                    ):
+                        extra_args = {"mmap": True}
+                    weights_only_kwarg = {"weights_only": weights_only} if is_torch_greater_or_equal_than_1_13 else {}
+                    return torch.load(
+                        BytesIO(d_data),
+                        map_location=map_location,
+                        **weights_only_kwarg,
+                        **extra_args,
+                    )
+                except Exception as e:
+                    try:
+                        with open(checkpoint_file) as f:
+                            if f.read(7) == "version":
+                                raise OSError(
+                                    "You seem to have cloned a repository without having git-lfs installed. Please install "
+                                    "git-lfs and run `git lfs install` followed by `git lfs pull` in the folder "
+                                    "you cloned."
+                                )
+                            else:
+                                raise ValueError(
+                                    f"Unable to locate the file {checkpoint_file} which is necessary to load this pretrained "
+                                    "model. Make sure you have saved the model properly."
+                                ) from e
+                    except (UnicodeDecodeError, ValueError):
+                        raise OSError(
+                            f"Unable to load weights from pytorch checkpoint file for '{checkpoint_file}' "
+                            f"at '{checkpoint_file}'. "
+                            "If you tried to load a PyTorch model from a TF 2.0 checkpoint, please set from_tf=True."
+                        )
+                
+    if transformers_version >= "4.45.2":
+        # Define a monkey-patched version of load_state_dict
+        def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
+            # Decompress the checkpoint file
+            result = decompress_znn(checkpoint_file, replace_local_file, is_quantized=is_quantized, map_location=map_location, weights_only=weights_only)
+            if result:
+                return result
+
+            if not os.path.exists(checkpoint_file) and os.path.exists(checkpoint_file.replace(".znn", "")):
+                checkpoint_file = checkpoint_file.replace(".znn", "")
 
             # Call the original load_state_dict method
             return original_load_state_dict(checkpoint_file, is_quantized, map_location, weights_only)
     else:
         # Define a monkey-patched version of load_state_dict
         def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False):
-            if checkpoint_file.endswith(".znn"):
-                print(f"Decompressing {checkpoint_file.split('/')[-1]}")
-                output_file = checkpoint_file.replace(".znn", "")
-                snapshot_path = os.path.dirname(checkpoint_file)
-                if not os.path.exists(output_file):
-                    znn = ZipNN(is_streaming=True)
-                    with open(checkpoint_file, "rb") as infile, open(output_file, "wb") as outfile:
-                        d_data = b""
-                        chunk = infile.read()
-                        d_data += znn.decompress(chunk)
-                        outfile.write(d_data)
-                    blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
-                    os.rename(output_file, blob_name)
-                    os.symlink(blob_name, output_file)
-                os.remove(checkpoint_file)
-                checkpoint_file = output_file
-
-                # Change index name to the decompressed file
-                if os.path.exists(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)):
-                    file_name = os.path.basename(output_file)
-                    blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, SAFE_WEIGHTS_INDEX_NAME)))
-                    replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
-
-                elif os.path.exists(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)):
-                    file_name = os.path.basename(output_file)
-                    blob_name = os.path.join(snapshot_path, os.readlink(os.path.join(snapshot_path, WEIGHTS_INDEX_NAME)))
-                    replace_in_file(file_path=blob_name, old=f"{file_name}.znn", new=f"{file_name}")
+            # Decompress the checkpoint file
+            result = decompress_znn(checkpoint_file, replace_local_file, is_quantized=is_quantized)
+            if result:
+                return result
+            
+            if not os.path.exists(checkpoint_file) and os.path.exists(checkpoint_file.replace(".znn", "")):
+                checkpoint_file = checkpoint_file.replace(".znn", "")
 
             # Call the original load_state_dict method
             return original_load_state_dict(checkpoint_file, is_quantized)
@@ -1190,6 +1269,9 @@ def zipnn_hf():
 
     # save original from_pretrained
     original_from_pretrained = PreTrainedModel.from_pretrained
+
+    # Found paths to check
+    found_paths = []
 
     # class CustomPreTrainedModel(PreTrainedModel):
     def custom_from_pretrained(
@@ -1220,7 +1302,7 @@ def zipnn_hf():
         if from_pipeline is not None:
             user_agent["using_pipeline"] = from_pipeline
 
-        test_paths = [
+        test_paths_org = [
             TF_WEIGHTS_NAME + ".index",
             TF2_WEIGHTS_NAME,
             FLAX_WEIGHTS_NAME,
@@ -1233,7 +1315,7 @@ def zipnn_hf():
             pretrained_model_name_or_path + ".index",
         ]
 
-        test_paths = [path + ".znn" for path in test_paths]
+        test_paths = [path + ".znn" for path in test_paths_org]
 
         cached_file_kwargs = {
             "cache_dir": cache_dir,
@@ -1250,23 +1332,26 @@ def zipnn_hf():
             "_commit_hash": commit_hash,
         }
 
-        for filename in test_paths:
+        for i, filename in enumerate(test_paths):
             resolved_archive_file = cached_file(pretrained_model_name_or_path, filename, **cached_file_kwargs)
             if resolved_archive_file is not None:
-                print(f"Decompressing {resolved_archive_file.split('/')[-1]}")
-                output_file = resolved_archive_file.replace(".znn", "")
-                if not os.path.exists(output_file):
-                    znn = ZipNN(is_streaming=True)
-                    with open(resolved_archive_file, "rb") as infile, open(output_file, "wb") as outfile:
-                        d_data = b""
-                        chunk = infile.read()
-                        d_data += znn.decompress(chunk)
-                        outfile.write(d_data)
-                    snapshot_path = os.path.dirname(resolved_archive_file)
-                    blob_name = os.path.join(snapshot_path, os.readlink(resolved_archive_file))
-                    os.rename(output_file, blob_name)
-                    os.symlink(blob_name, output_file)
-                os.remove(resolved_archive_file)
+                if not replace_local_file:
+                    found_paths.append(test_paths_org[i])
+                else:
+                    print(f"Decompressing {resolved_archive_file.split('/')[-1]}")
+                    output_file = resolved_archive_file.replace(".znn", "")
+                    if not os.path.exists(output_file):
+                        znn = ZipNN(is_streaming=True)
+                        with open(resolved_archive_file, "rb") as infile, open(output_file, "wb") as outfile:
+                            d_data = b""
+                            chunk = infile.read()
+                            d_data += znn.decompress(chunk)
+                            outfile.write(d_data)
+                        snapshot_path = os.path.dirname(resolved_archive_file)
+                        blob_name = os.path.join(snapshot_path, os.readlink(resolved_archive_file))
+                        os.rename(output_file, blob_name)
+                        os.symlink(blob_name, output_file)
+                    os.remove(resolved_archive_file)
         # pack config, cache_dir, etc. into kwargs
         kwargs.update(
             {
@@ -1291,6 +1376,52 @@ def zipnn_hf():
 
     # Monkey patch the from_pretrained method in the transformers library
     PreTrainedModel.from_pretrained = classmethod(custom_from_pretrained)
+
+    # Monkey patch chached_file to add .znn extension if filename inputed
+    original_cached_file = modeling_utils.cached_file
+
+    def custom_cached_file(
+        path_or_repo_id: Union[str, os.PathLike],
+        filename: str,
+        cache_dir: Optional[Union[str, os.PathLike]] = None,
+        force_download: bool = False,
+        resume_download: Optional[bool] = None,
+        proxies: Optional[Dict[str, str]] = None,
+        token: Optional[Union[bool, str]] = None,
+        revision: Optional[str] = None,
+        local_files_only: bool = False,
+        subfolder: str = "",
+        repo_type: Optional[str] = None,
+        user_agent: Optional[Union[str, Dict[str, str]]] = None,
+        _raise_exceptions_for_gated_repo: bool = True,
+        _raise_exceptions_for_missing_entries: bool = True,
+        _raise_exceptions_for_connection_errors: bool = True,
+        _commit_hash: Optional[str] = None,
+        **deprecated_kwargs,
+    ):
+        if filename in found_paths:
+            filename = filename + ".znn"
+        return original_cached_file(
+            path_or_repo_id,
+            filename,
+            cache_dir,
+            force_download,
+            resume_download,
+            proxies,
+            token,
+            revision,
+            local_files_only,
+            subfolder,
+            repo_type,
+            user_agent,
+            _raise_exceptions_for_gated_repo,
+            _raise_exceptions_for_missing_entries,
+            _raise_exceptions_for_connection_errors,
+            _commit_hash,
+            **deprecated_kwargs,
+        )
+    
+    modeling_utils.cached_file = custom_cached_file
 
 
 def replace_in_file(file_path, old: str, new: str) -> None:
