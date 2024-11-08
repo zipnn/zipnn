@@ -37,8 +37,11 @@ python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Comp
 You can try other state-of-the-art compressed models from the updating list below:
 | ZipNN Compressed Models Hosted on Hugging Face                                                                                      |
 |-------------------------------------------------------------------------------------------------------------------------------------|
+| [ compressed FacebookAI/roberta-base ]( https://huggingface.co/royleibov/roberta-base-ZipNN-Compressed ) |
 | [ compressed meta-llama/Llama-3.2-11B-Vision-Instruct ]( https://huggingface.co/royleibov/Llama-3.2-11B-Vision-Instruct-ZipNN-Compressed ) |
 | [compressed ibm-granite/granite-3.0-8b-instruct](https://huggingface.co/royleibov/granite-3.0-8b-instruct-ZipNN-Compressed) |
+| [compressed openai/clip-vit-base-patch32](https://huggingface.co/royleibov/clip-vit-base-patch16-ZipNN-Compressed) |
+| [compressed jonatasgrosman/wav2vec2-large-xlsr-53-english](https://huggingface.co/royleibov/wav2vec2-large-xlsr-53-english-ZipNN-Compressed) |
 | [ compressed mistral-community/pixtral-12b ]( https://huggingface.co/royleibov/pixtral-12b-ZipNN-Compressed ) |
 | [ compressed meta-llama/Meta-Llama-3.1-8B-Instruct ]( https://huggingface.co/royleibov/Llama-3.1-8B-ZipNN-Compressed )              |
 | [ compressed Qwen/Qwen2-VL-7B-Instruct ]( https://huggingface.co/royleibov/Qwen2-VL-7B-Instruct-ZipNN-Compressed )                  |
