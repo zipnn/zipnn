@@ -312,6 +312,13 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 ## Change Log
 
+##### v0.4.0
+
+* Update the Hugging Face plugin to support loading compressed files and add an option to save them uncompressed.
+
+* Fix the Hugging Face plugin to support different versions of Hugging Face Transformers.
+
+
 ##### v0.3.6
 
 * Fix bug that causes memory leaks in corner cases
