@@ -1236,7 +1236,7 @@ def zipnn_hf(replace_local_file: bool = False):
                             "If you tried to load a PyTorch model from a TF 2.0 checkpoint, please set from_tf=True."
                         )
                 
-    if transformers_version >= "4.45.2":
+    if transformers_version > "4.45.2":
         # Define a monkey-patched version of load_state_dict
         def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
             # Decompress the checkpoint file
