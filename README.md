@@ -6,6 +6,23 @@
 
 **TL;DR - simple, fast, and effective model compression** 
 
+
+## PyPI Version 0.4.0 is Here with a New Hugging Face Plugin!!!
+
+You can now choose to save the model compressed on your local storage by using the default plugin. When loading, the model includes a fast decompression phase on the CPU while remaining compressed on your storage.
+
+**What this means:** Each time you load the model, less data is transferred to the GPU cluster, with decompression happening on the CPU.
+
+```python
+zipnn_hf()
+```
+
+Alternatively, you can decompress the model after downloading it from Hugging Face and save it uncompressed on your local storage. This way, future loads won’t require a decompression phase.
+
+```python
+zipnn_hf(replace_local_file=True)
+```
+
 ## Download compressed models from Hugging Face
 Try out yourself the [compressed ibm-granite granite-7b-instruct](https://huggingface.co/royleibov/granite-7b-instruct-ZipNN-Compressed) hosted on Hugging Face:
 ```bash
