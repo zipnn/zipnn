@@ -17,7 +17,7 @@ You can now choose to save the model compressed on your local storage by using t
 zipnn_hf()
 ```
 
-Alternatively, you can decompress the model after downloading it from Hugging Face and save it uncompressed on your local storage. This way, future loads won’t require a decompression phase.
+Alternatively, you can save the model uncompressed on your local storage. This way, future loads won’t require a decompression phase.
 
 ```python
 zipnn_hf(replace_local_file=True)
@@ -28,6 +28,9 @@ Try out yourself the [compressed ibm-granite granite-7b-instruct](https://huggin
 ```bash
 pip install zipnn
 ```
+
+The ZipNN plugin decompresses data on the CPU, saving the model in a compressed format on the local disk to reduce disk space. When loading, the model includes a quick decompression phase on the CPU.
+
 ```python
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from zipnn import zipnn_hf
@@ -37,16 +40,18 @@ zipnn_hf()
 tokenizer = AutoTokenizer.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
 model = AutoModelForCausalLM.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
 ```
-ZipNN also allows you to seamlessly save local disk space in your cache after the model is downloaded.
 
-To compress the cached model, simply run:
+**Alternatively**, you can save the model uncompressed on your local storage. This way, future loads won’t require a decompression phase.
+
+```python
+zipnn_hf(replace_local_file=True)
+```
+
+**To compress and decompress manually**, simply run:
 ```bash
 python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```
 
-The model will be decompressed automatically and safely as long as `zipnn_hf()` is added at the top of the file like in the example above.
-
-To decompress manually, simply run:
 ```bash
 python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```
