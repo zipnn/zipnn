@@ -388,10 +388,13 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 ## Cite
 ```
-@article{hershcovitch2024lossless,
-  title={Lossless and Near-Lossless Compression for Foundation Models},
-  author={Hershcovitch, Moshik and Choshen, Leshem and Wood, Andrew and Enmouri, Ilias and Chin, Peter and Sundararaman, Swaminathan and Harnik, Danny},
-  journal={arXiv preprint arXiv:2404.15198},
-  year={2024}
+@misc{hershcovitch2024zipnnlosslesscompressionai,
+      title={ZipNN: Lossless Compression for AI Models}, 
+      author={Moshik Hershcovitch and Andrew Wood and Leshem Choshen and Guy Girmonsky and Roy Leibovitz and Ilias Ennmouri and Michal Malka and Peter Chin and Swaminathan Sundararaman and Danny Harnik},
+      year={2024},
+      eprint={2411.05239},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2411.05239}, 
 }
 ```
