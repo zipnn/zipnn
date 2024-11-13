@@ -78,3 +78,19 @@ python zipnn_decompress_path.py --path data/
     - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache. Must either specify --model or --path to the model's snapshot cache.
 
 To use these scripts, simply copy the desired file to your project directory and run it as needed.
+
+
+**Examples of compressing Hugging Face models with ZipNN scripts:**
+
+Use --model to specify the full model name from Hugging Face, and --hf_cache for caching:
+
+Use --model to specify the full model name from Hugging Face, and --hf_cache zipnn hugging_face plugin.
+
+```bash
+python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
+```
+
+```bash
+python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
+```
+
