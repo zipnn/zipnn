@@ -6,6 +6,8 @@
 
 **TL;DR - simple, fast, and effective model compression** 
 
+**arXiv Paper**: ["ZipNN: Lossless Compression for AI Models"](https://arxiv.org/abs/2411.05239)
+
 
 ## PyPI Version 0.4.0 is Here with a New Hugging Face Plugin!!!
 
