@@ -10,11 +10,11 @@
 
 
 ////  Helper Functions ///////
-u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
-                                size_t numChunks, u_int8_t *header,
-                                u_int8_t *compressedData[numBuf][numChunks],
+uint8_t *prepare_split_results(size_t header_len, size_t numBuf,
+                                size_t numChunks, uint8_t *header,
+                                uint8_t *compressedData[numBuf][numChunks],
                                 uint32_t compChunksSize[numBuf][numChunks],
-                                const u_int8_t compChunksType[numBuf][numChunks],
+                                const uint8_t compChunksType[numBuf][numChunks],
                                 const size_t cumulativeChunksSize[numBuf][numChunks],
                                 const size_t *totalCompressedSize,
                                 size_t *resBufSize) {
@@ -33,7 +33,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
   // update compress_buffer_len
   memcpy(&header[24], resBufSize, sizeof(size_t));
 
-  u_int8_t *resultBuf = PyMem_Malloc(*resBufSize);
+  uint8_t *resultBuf = PyMem_Malloc(*resBufSize);
   if (!resultBuf) {
     PyErr_SetString(
         PyExc_MemoryError,
@@ -85,7 +85,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   int numBuf, bits_mode, bytes_mode, is_redata, checkThAfterPercent, threads;
   size_t origChunkSize;
   float compThreshold;
-  // u_int8_t isPrint = 0;
+  // uint8_t isPrint = 0;
   // clock_t startTime, endTime, startBGTime, endBGTime;
   // startTime = clock();
 
@@ -97,18 +97,18 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
 
   // Byte Group per chunk, Compress per bufChunk
   size_t numChunks = (data.len + origChunkSize - 1) / origChunkSize;
-  u_int8_t *buffers[numChunks][numBuf];
+  uint8_t *buffers[numChunks][numBuf];
   size_t curChunk = 0;
 
-  u_int8_t *compressedData[numBuf][numChunks];
+  uint8_t *compressedData[numBuf][numChunks];
   uint32_t compChunksSize[numBuf][numChunks];
   size_t unCompChunksSize[numChunks][numBuf];
   size_t totalCompressedSize[numBuf];
   size_t totalUnCompressedSize[numBuf];
-  u_int8_t compChunksType[numBuf][numChunks];
+  uint8_t compChunksType[numBuf][numChunks];
   size_t cumulativeChunksSize[numBuf][numChunks];
-  u_int8_t isThCheck[numBuf];
-  u_int8_t noNeedToCompress[numBuf];
+  uint8_t isThCheck[numBuf];
+  uint8_t noNeedToCompress[numBuf];
   uint32_t checkCompTh =
       (uint32_t)ceil((double)numChunks / checkThAfterPercent);
   // if (isPrint) {
@@ -216,7 +216,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   // double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
 
   PyObject *result;
-  u_int8_t *resultBuf;
+  uint8_t *resultBuf;
   size_t resBufSize;
   resultBuf = prepare_split_results(
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
@@ -294,16 +294,16 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     // TBD when support dynamic byte_reorder
   }
 
-  u_int8_t *ptrChunksType = (u_int8_t *)data.buf;
+  uint8_t *ptrChunksType = (uint8_t *)data.buf;
   size_t *ptrChunksCumulative = (size_t *)(ptrChunksType + numBuf * numChunks);
-  u_int8_t *ptrCompressData[numBuf];
-  ptrCompressData[0] = (u_int8_t *)(ptrChunksCumulative + numBuf * numChunks);
+  uint8_t *ptrCompressData[numBuf];
+  ptrCompressData[0] = (uint8_t *)(ptrChunksCumulative + numBuf * numChunks);
   size_t cumulativeChunksSize[numBuf][numChunks];
   uint32_t compChunksType[numBuf][numChunks];
   size_t compCumulativeChunksPos[numBuf][numChunks + 1];
   size_t compChunksLen[numBuf][numChunks];
-  u_int8_t *resultBuf = NULL;
-  u_int8_t *deCompressedData[numBuf][numChunks];
+  uint8_t *resultBuf = NULL;
+  uint8_t *deCompressedData[numBuf][numChunks];
   size_t decompLen[numChunks][numBuf];
   // clock_t startTime, endTime;
   // startTime = clock();
@@ -419,7 +419,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
       }
     }
     // Combine
-    u_int8_t *combinePtr = resultBuf + origChunkSize * c;
+    uint8_t *combinePtr = resultBuf + origChunkSize * c;
     if (numBuf == 2) {
       if (combine_buffers_dtype16(
               deCompressedData[0][c], deCompressedData[1][c], combinePtr,
