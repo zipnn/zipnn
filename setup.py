@@ -29,7 +29,7 @@ split_dtype_extension = Extension(
         "include/FiniteStateEntropy/lib/hist.c",
     ],
     include_dirs=["include/FiniteStateEntropy/lib/", "csrc/"],
-    extra_compile_args=["-O3", "-Wall", "-Wextra"],
+    extra_compile_args=["-O3"],
     extra_link_args=["-O3"],
 )
 
