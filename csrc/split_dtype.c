@@ -12,10 +12,10 @@
 ////  Helper Functions ///////
 uint8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                 size_t numChunks, uint8_t *header,
-                                uint8_t *compressedData[numBuf][numChunks],
-                                uint32_t compChunksSize[numBuf][numChunks],
-                                const uint8_t compChunksType[numBuf][numChunks],
-                                const size_t cumulativeChunksSize[numBuf][numChunks],
+                                uint8_t *compressedData[][],
+                                uint32_t compChunksSize[][],
+                                const uint8_t compChunksType[][],
+                                const size_t cumulativeChunksSize[][],
                                 const size_t *totalCompressedSize,
                                 size_t *resBufSize) {
   *resBufSize = header_len;
