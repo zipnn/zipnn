@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
+#include <cstdint>
 
 //// Helper function that count zero bytes
 static void count_zero_bytes(const u_int8_t *src, Py_ssize_t len,

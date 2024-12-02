@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>
+#include <cstdint>
 
 ///////////////////////////////////
 /// Split Helper Functions ///////
