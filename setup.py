@@ -30,7 +30,7 @@ split_dtype_extension = Extension(
     ],
     include_dirs=["include/FiniteStateEntropy/lib/", "csrc/"],
     extra_compile_args=["-O3", "-Wall", "-Wextra"],
-    extra_link_args=["-O3", "-Wall", "-Wextra"],
+    extra_link_args=["-O3"],
 )
 
 setup(
