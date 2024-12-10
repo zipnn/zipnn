@@ -636,17 +636,17 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
       mutex_initialized = 0;
       goto continue_processing;
 
-cleanup_threads:
+  cleanup_threads:
       if (thread_handles) free(thread_handles);
       if (thread_data) free(thread_data);
       if (mutex_initialized) pthread_mutex_destroy(&next_chunk_mutex);
       return NULL;
   }
 
-continue_processing:
   ////////////// Finish Multi threading /////////////////////////////
-  PyObject *py_result =
-      PyByteArray_FromStringAndSize((const char *)resultBuf, origSize);
+  PyObject *py_result;  // Move declaration before label
+  continue_processing:
+   py_result = PyByteArray_FromStringAndSize((const char *)resultBuf, origSize);
 
   for (size_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
