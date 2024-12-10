@@ -7,7 +7,7 @@
 #include "data_manipulation_dtype32.h"
 #include "huf.h"
 #include "split_dtype_functions.h"
-
+#include <pthread.h>
 
 ////  Helper Functions ///////
 u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
@@ -33,12 +33,12 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
   // update compress_buffer_len
   memcpy(&header[24], resBufSize, sizeof(size_t));
 
-  u_int8_t *resultBuf = PyMem_Malloc(*resBufSize);
+  u_int8_t *resultBuf = malloc(*resBufSize);
   if (!resultBuf) {
     PyErr_SetString(
         PyExc_MemoryError,
         "Failed to allocate memory for result buffer in split function");
-    PyMem_Free(resultBuf);
+    free(resultBuf);
     return NULL;
   }
 
@@ -123,8 +123,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     noNeedToCompress[b] = 0;
   }
 
-  /////////// start multi Threading - Each chunk to different thread
-  //////////////////
+  /////////// start multi Threading - Each chunk to different thread ////////////////
   for (size_t offset = 0; offset < (size_t)data.len; offset += origChunkSize) {
     size_t curOrigChunkSize = (data.len - offset > origChunkSize)
                                   ? origChunkSize
@@ -168,15 +167,15 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
         }
       }
 
-      compressedData[b][curChunk] = PyMem_Malloc(origChunkSize);
+      compressedData[b][curChunk] = malloc(origChunkSize);
       if (!compressedData[b][curChunk]) {
         PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
         for (int j = 0; j < numBuf; j++) {
           for (uint32_t c = 0; c < curChunk - 1; c++) {
-            PyMem_Free(compressedData[j][c]);
+            free(compressedData[j][c]);
           }
           for (int j = 0; j < b; j++) {
-            PyMem_Free(compressedData[j][curChunk]);
+            free(compressedData[j][curChunk]);
           }
         }
         return NULL;
@@ -196,7 +195,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
              unCompChunksSize[curChunk][b] * compThreshold)) {
           compChunksType[b][curChunk] = 1;  // Compress with Huffman
         } else {                            // the buffer was not compressed
-          PyMem_Free(compressedData[b][curChunk]);
+          free(compressedData[b][curChunk]);
           compChunksSize[b][curChunk] = unCompChunksSize[curChunk][b];
           compChunksType[b][curChunk] = 0;  // not compressed
           compressedData[b][curChunk] = buffers[curChunk][b];
@@ -234,7 +233,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   for (uint32_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       if (buffers[c][b] != NULL) {
-        PyMem_Free(buffers[c][b]);
+        free(buffers[c][b]);
       }
     }
   }
@@ -242,15 +241,148 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   for (uint32_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       if (compChunksType[b][c] == 1) {
-        PyMem_Free(compressedData[b][c]);
+        free(compressedData[b][c]);
       }
     }
   }
   PyBuffer_Release(&header);
   PyBuffer_Release(&data);
-  PyMem_Free(resultBuf);
+  free(resultBuf);
   return result;
 }
+
+
+typedef struct {
+    size_t chunk_id;
+    int numBuf;
+    int bits_mode;
+    int bytes_mode;
+    uint8_t **ptrCompressData;
+    uint32_t (*compChunksType);         
+    size_t (*compCumulativeChunksPos);  
+    size_t (*compChunksLen);            
+    uint8_t *resultBuf;
+    uint8_t ***deCompressedDataPtr;
+    size_t (*decompLen);                
+    size_t origChunkSize;
+    pthread_mutex_t *next_chunk_mutex;
+    size_t *next_chunk;
+} ChunkThreadData;
+
+static void* process_chunk_worker(void* arg) {
+    ChunkThreadData* data = (ChunkThreadData*)arg;
+    size_t current_chunk;
+//    printf("data->deCompressedDataPtr[0][0] %zu\n", data->deCompressedDataPtr[0][0]);	
+//    printf("data->deCompressedDataPtr[1][0] %zu\n", data->deCompressedDataPtr[1][0]);	
+    
+    while (1) {
+        // Get next chunk to process
+        pthread_mutex_lock(data->next_chunk_mutex);
+        current_chunk = (*data->next_chunk)++;
+        pthread_mutex_unlock(data->next_chunk_mutex);
+        
+        if (current_chunk >= data->chunk_id) {
+            break;
+        }
+//        printf ("help4\n"); 
+        // Decompress each buffer for this chunk
+        for (int b = 0; b < data->numBuf; b++) {
+
+//        printf ("help 290\n");
+//	printf ("b %d current_chunk %zu\n ", b, current_chunk);
+//        printf ("data->compChunksType[b * data->chunk_id + current_chunk] %zu\n", data->compChunksType[b * data->chunk_id + current_chunk]);
+//        printf (" data->ptrCompressData[b]%zu \n ", data->ptrCompressData[b]);
+//        printf ("data->compCumulativeChunksPos[b * (data->chunk_id + 1)] %zu \n", data->compCumulativeChunksPos[b * (data->chunk_id + 1)]);
+//	printf ("data->decompLen[current_chunk * data->numBuf + b] %zu\n", data->decompLen[current_chunk * data->numBuf + b]);
+//	printf("data->deCompressedDataPtr[0][0] %zu\n", data->deCompressedDataPtr[0][0]);	
+//	printf("data->deCompressedDataPtr[1][0] %zu\n", data->deCompressedDataPtr[1][0]);	
+        			
+            // Access 2D array [b][current_chunk]
+            if (data->compChunksType[b * data->chunk_id + current_chunk] == 0) {
+//		printf ("help 299\n");
+//		printf ("data->ptrCompressData[b] + data->compCumulativeChunksPos[b * (data->chunk_id + 1) + current_chunk] %zu;\n", data->ptrCompressData[b] + data->compCumulativeChunksPos[b * (data->chunk_id + 1) +     current_chunk]);
+
+
+                data->deCompressedDataPtr[b][current_chunk] = 
+                    data->ptrCompressData[b] + 
+                    data->compCumulativeChunksPos[b * (data->chunk_id + 1) + current_chunk];
+//		printf ("help 302\n");
+            } else if (data->compChunksType[b * data->chunk_id + current_chunk] == 1) {
+                // Get decompLen[current_chunk][b]
+//		printf ("help 312\n");
+                size_t decomp_length = data->decompLen[current_chunk * data->numBuf + b];
+//                printf ("decomp_length %zu\n", decomp_length); 
+//	        printf("data->deCompressedDataPtr[0][0] %zu\n", data->deCompressedDataPtr[0][0]);	
+//	        printf("data->deCompressedDataPtr[1][0] %zu\n", data->deCompressedDataPtr[1][0]);
+
+//                printf("deCompressedDataPtr: %p\n", (void*)data->deCompressedDataPtr);
+               if (data->deCompressedDataPtr != NULL) {
+//                  printf("deCompressedDataPtr[1]: %p\n", (void*)data->deCompressedDataPtr[1]);
+              }
+
+  	       data->deCompressedDataPtr[b][current_chunk] = malloc(decomp_length);
+//               printf ("help 323\n"); 
+               if (!data->deCompressedDataPtr[b][current_chunk]) {
+                   pthread_exit((void*)-1);
+              }
+                
+//               printf ("help 329\n"); 
+	       size_t decompressedSize = HUF_decompress(
+			       data->deCompressedDataPtr[b][current_chunk],
+			       decomp_length,
+			       (void*)(data->ptrCompressData[b] + 
+				       data->compCumulativeChunksPos[b * (data->chunk_id + 1) + current_chunk]),
+			       data->compChunksLen[b * data->chunk_id + current_chunk]);
+                
+	       if (HUF_isError(decompressedSize)) {
+		       free(data->deCompressedDataPtr[b][current_chunk]);
+		       pthread_exit((void*)-1);
+                }
+//               printf ("help 340\n"); 
+            }
+//              printf ("help 341\n"); 
+        }
+        
+//        printf ("help5\n");
+        // Combine buffers
+        uint8_t *combinePtr = data->resultBuf + data->origChunkSize * current_chunk;
+        if (data->numBuf == 2) {
+            // Get decompLen array for current chunk
+            size_t *current_decompLen = &data->decompLen[current_chunk * data->numBuf];
+            
+            if (combine_buffers_dtype16(
+                    data->deCompressedDataPtr[0][current_chunk],
+                    data->deCompressedDataPtr[1][current_chunk],
+                    combinePtr,
+                    current_decompLen,
+                    data->bits_mode,
+                    data->bytes_mode,
+                    1) != 0) {
+                pthread_exit((void*)-1);
+            }
+        } else {
+            // Get decompLen array for current chunk
+            size_t *current_decompLen = &data->decompLen[current_chunk * data->numBuf];
+            
+            if (combine_buffers_dtype32(
+                    data->deCompressedDataPtr[0][current_chunk],
+                    data->deCompressedDataPtr[1][current_chunk],
+                    data->deCompressedDataPtr[2][current_chunk],
+                    data->deCompressedDataPtr[3][current_chunk],
+                    combinePtr,
+                    current_decompLen,
+                    data->bits_mode,
+                    data->bytes_mode,
+                    1) != 0) {
+                pthread_exit((void*)-1);
+            }
+        }
+//        printf ("help6\n"); 
+    }
+    
+    pthread_exit(NULL);
+}
+
 
 // Python callable function to combine four buffers into a single bytearray
 PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
@@ -303,8 +435,21 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   size_t compCumulativeChunksPos[numBuf][numChunks + 1];
   size_t compChunksLen[numBuf][numChunks];
   u_int8_t *resultBuf = NULL;
-  u_int8_t *deCompressedData[numBuf][numChunks];
   size_t decompLen[numChunks][numBuf];
+  uint8_t ***deCompressedDataPtr = malloc(numBuf * sizeof(uint8_t **));
+  if (deCompressedDataPtr == NULL) {
+//     Handle error
+  }
+  for(int i = 0; i < numBuf; i++) {
+    deCompressedDataPtr[i] = malloc(numChunks * sizeof(uint8_t *));
+    if (deCompressedDataPtr[i] == NULL) {
+        // Handle error
+    }
+    for(int j = 0; j < numChunks; j++) {
+        deCompressedDataPtr[i][j] = NULL;  
+    }
+  }
+
   // clock_t startTime, endTime;
   // startTime = clock();
 
@@ -370,87 +515,148 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     }
   }
 
-  resultBuf = PyMem_Malloc(origSize);
+  resultBuf = malloc(origSize);
   if (!resultBuf) {
     PyErr_SetString(
         PyExc_MemoryError,
         "Failed to allocate memory for result buffer in split function");
-    PyMem_Free(resultBuf);
+    free(resultBuf);
     return NULL;
   }
   // endTime = clock();
   // double decompressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+
   ////////////// Multi threading /////////////////////////////
+  if (threads <= 1) {
+      for (size_t c = 0; c < numChunks; c++) {
+          for (int b = 0; b < numBuf; b++) {
+              if (compChunksType[b][c] == 0) {  // No Need to compression
+                  deCompressedDataPtr[b][c] =
+                      ptrCompressData[b] + compCumulativeChunksPos[b][c];
+              } else if (compChunksType[b][c] == 1) {  // decompress using Huffman
+                  deCompressedDataPtr[b][c] = malloc(decompLen[c][b]);
+                  if (deCompressedDataPtr[b][c] == NULL) {
+                      PyErr_SetString(
+                          PyExc_MemoryError,
+                          "Failed to allocate memory - Function during decompression");
+                      free(deCompressedDataPtr[b][c]);
+                      return NULL;
+                  }
 
-  for (size_t c = 0; c < numChunks; c++) {
-    // decompress
-    for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 0) {  // No Need to compression
-        deCompressedData[b][c] =
-            ptrCompressData[b] + compCumulativeChunksPos[b][c];
-      } else if (compChunksType[b][c] == 1) {  // decompress using Huffman
-        deCompressedData[b][c] = PyMem_Malloc(decompLen[c][b]);
-        if (deCompressedData[b][c] == NULL) {
-          PyErr_SetString(
-              PyExc_MemoryError,
-              "Failed to allocate memory - Function during decompression");
-          PyMem_Free(deCompressedData[b][c]);
-          return NULL;
-        }
+                  size_t decompressedSize = HUF_decompress(
+                      deCompressedDataPtr[b][c], decompLen[c][b],
+                      (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
+                      compChunksLen[b][c]);
 
-        size_t decompressedSize = HUF_decompress(
-            deCompressedData[b][c], decompLen[c][b],
-            (void *)(ptrCompressData[b] + compCumulativeChunksPos[b][c]),
-            compChunksLen[b][c]);
+                  if (HUF_isError(decompressedSize)) {
+                      HUF_getErrorName(decompressedSize);
+                      PyErr_SetString(PyExc_MemoryError,
+                                    "Hufman decompression returned an error");
+                      return NULL;
+                  }
 
-        if (HUF_isError(decompressedSize)) {
-          HUF_getErrorName(decompressedSize);
-          PyErr_SetString(PyExc_MemoryError,
-                          "Hufman decompression returned an error");
-          return NULL;
-        }
-
-        if (decompressedSize != decompLen[c][b]) {
-          PyErr_SetString(
-              PyExc_MemoryError,
-              "decompressedSize is not equal the expected decompressedSize");
-          return NULL;
-        }
+                  if (decompressedSize != decompLen[c][b]) {
+                      PyErr_SetString(
+                          PyExc_MemoryError,
+                          "decompressedSize is not equal the expected decompressedSize");
+                      return NULL;
+                  }
+              }
+          }
+          
+          u_int8_t *combinePtr = resultBuf + origChunkSize * c;
+          if (numBuf == 2) {
+              if (combine_buffers_dtype16(
+                      deCompressedDataPtr[0][c], deCompressedDataPtr[1][c], combinePtr,
+                      decompLen[c], bits_mode, bytes_mode, threads) != 0) {
+                  PyErr_SetString(PyExc_MemoryError, "Failed to combine dtype16");
+                  return NULL;
+              }
+          } else {  // Assume numBuf == 4
+              if (combine_buffers_dtype32(
+                      deCompressedDataPtr[0][c], deCompressedDataPtr[1][c],
+                      deCompressedDataPtr[2][c], deCompressedDataPtr[3][c], combinePtr,
+                      decompLen[c], bits_mode, bytes_mode, threads) != 0) {
+                  PyErr_SetString(PyExc_MemoryError, "Failed to combine dtype16");
+                  return NULL;
+              }
+          }
       }
-    }
-    // Combine
-    u_int8_t *combinePtr = resultBuf + origChunkSize * c;
-    if (numBuf == 2) {
-      if (combine_buffers_dtype16(
-              deCompressedData[0][c], deCompressedData[1][c], combinePtr,
-              decompLen[c], bits_mode, bytes_mode, threads) != 0) {
-        PyErr_SetString(PyExc_MemoryError, "Failed to combine dtype16");
-        return NULL;
+  } else {
+      pthread_t *thread_handles = NULL;
+      ChunkThreadData *thread_data = NULL;
+      pthread_mutex_t next_chunk_mutex = PTHREAD_MUTEX_INITIALIZER;
+      size_t next_chunk = 0;
+      int mutex_initialized = 1;
+      thread_handles = malloc(threads * sizeof(pthread_t));
+      thread_data = malloc(threads * sizeof(ChunkThreadData));
+      if (!thread_handles || !thread_data) {
+          PyErr_SetString(PyExc_MemoryError, "Failed to allocate thread resources");
+          goto cleanup_threads;
       }
-    } else {  // Assume numBuf == 4
-      if (combine_buffers_dtype32(
-              deCompressedData[0][c], deCompressedData[1][c],
-              deCompressedData[2][c], deCompressedData[3][c], combinePtr,
-              decompLen[c], bits_mode, bytes_mode, threads) != 0) {
-        PyErr_SetString(PyExc_MemoryError, "Failed to combine dtype16");
-        return NULL;
+
+      // Create threads
+      for (int i = 0; i < threads; i++) {
+          thread_data[i] = (ChunkThreadData){
+              .chunk_id = numChunks,
+              .numBuf = numBuf,
+              .bits_mode = bits_mode,
+              .bytes_mode = bytes_mode,
+              .ptrCompressData = ptrCompressData,
+              .compChunksType = (uint32_t *)compChunksType,
+              .compCumulativeChunksPos = (size_t *)compCumulativeChunksPos,
+              .compChunksLen = (size_t *)compChunksLen,
+              .resultBuf = resultBuf,
+              .deCompressedDataPtr = deCompressedDataPtr,
+              .decompLen = (size_t *)decompLen,
+              .origChunkSize = origChunkSize,
+              .next_chunk_mutex = &next_chunk_mutex,
+              .next_chunk = &next_chunk
+
+          };
+          if (pthread_create(&thread_handles[i], NULL, process_chunk_worker, &thread_data[i]) != 0) {
+              PyErr_SetString(PyExc_RuntimeError, "Failed to create thread");
+              goto cleanup_threads;
+          }
       }
-    }
+
+      // Wait for all threads
+      for (int i = 0; i < threads; i++) {
+          void *thread_result;
+          pthread_join(thread_handles[i], &thread_result);
+          if (thread_result != NULL) {
+              PyErr_SetString(PyExc_RuntimeError, "Thread processing failed");
+              goto cleanup_threads;
+          }
+      }
+
+      free(thread_handles);
+      free(thread_data);
+      pthread_mutex_destroy(&next_chunk_mutex);
+      mutex_initialized = 0;
+      goto continue_processing;
+
+cleanup_threads:
+      if (thread_handles) free(thread_handles);
+      if (thread_data) free(thread_data);
+      if (mutex_initialized) pthread_mutex_destroy(&next_chunk_mutex);
+      return NULL;
   }
-  ////////////// Finish Multi threading /////////////////////////////
 
+continue_processing:
+  ////////////// Finish Multi threading /////////////////////////////
   PyObject *py_result =
       PyByteArray_FromStringAndSize((const char *)resultBuf, origSize);
 
   for (size_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       if (compChunksType[b][c] > 0) {
-        PyMem_Free(deCompressedData[b][c]);
+        free(deCompressedDataPtr[b][c]);
       }
     }
   }
 
-  PyMem_Free(resultBuf);
-  PyBuffer_Release(&data);
+  free(resultBuf);
+//  PyBuffer_Release(&data);
   return py_result;
 }
