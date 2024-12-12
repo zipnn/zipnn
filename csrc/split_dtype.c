@@ -8,6 +8,7 @@
 #include "huf.h"
 #include "split_dtype_functions.h"
 #include <pthread.h>
+#include <sys/time.h>
 
 ////  Helper Functions ///////
 u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
@@ -284,49 +285,25 @@ static void* process_chunk_worker(void* arg) {
         if (current_chunk >= data->chunk_id) {
             break;
         }
-//        printf ("help4\n"); 
         // Decompress each buffer for this chunk
         for (int b = 0; b < data->numBuf; b++) {
-
-//        printf ("help 290\n");
-//	printf ("b %d current_chunk %zu\n ", b, current_chunk);
-//        printf ("data->compChunksType[b * data->chunk_id + current_chunk] %zu\n", data->compChunksType[b * data->chunk_id + current_chunk]);
-//        printf (" data->ptrCompressData[b]%zu \n ", data->ptrCompressData[b]);
-//        printf ("data->compCumulativeChunksPos[b * (data->chunk_id + 1)] %zu \n", data->compCumulativeChunksPos[b * (data->chunk_id + 1)]);
-//	printf ("data->decompLen[current_chunk * data->numBuf + b] %zu\n", data->decompLen[current_chunk * data->numBuf + b]);
-//	printf("data->deCompressedDataPtr[0][0] %zu\n", data->deCompressedDataPtr[0][0]);	
-//	printf("data->deCompressedDataPtr[1][0] %zu\n", data->deCompressedDataPtr[1][0]);	
         			
             // Access 2D array [b][current_chunk]
             if (data->compChunksType[b * data->chunk_id + current_chunk] == 0) {
-//		printf ("help 299\n");
-//		printf ("data->ptrCompressData[b] + data->compCumulativeChunksPos[b * (data->chunk_id + 1) + current_chunk] %zu;\n", data->ptrCompressData[b] + data->compCumulativeChunksPos[b * (data->chunk_id + 1) +     current_chunk]);
-
-
                 data->deCompressedDataPtr[b][current_chunk] = 
                     data->ptrCompressData[b] + 
                     data->compCumulativeChunksPos[b * (data->chunk_id + 1) + current_chunk];
-//		printf ("help 302\n");
             } else if (data->compChunksType[b * data->chunk_id + current_chunk] == 1) {
                 // Get decompLen[current_chunk][b]
-//		printf ("help 312\n");
                 size_t decomp_length = data->decompLen[current_chunk * data->numBuf + b];
-//                printf ("decomp_length %zu\n", decomp_length); 
-//	        printf("data->deCompressedDataPtr[0][0] %zu\n", data->deCompressedDataPtr[0][0]);	
-//	        printf("data->deCompressedDataPtr[1][0] %zu\n", data->deCompressedDataPtr[1][0]);
-
-//                printf("deCompressedDataPtr: %p\n", (void*)data->deCompressedDataPtr);
                if (data->deCompressedDataPtr != NULL) {
-//                  printf("deCompressedDataPtr[1]: %p\n", (void*)data->deCompressedDataPtr[1]);
               }
 
   	       data->deCompressedDataPtr[b][current_chunk] = malloc(decomp_length);
-//               printf ("help 323\n"); 
                if (!data->deCompressedDataPtr[b][current_chunk]) {
                    pthread_exit((void*)-1);
               }
                 
-//               printf ("help 329\n"); 
 	       size_t decompressedSize = HUF_decompress(
 			       data->deCompressedDataPtr[b][current_chunk],
 			       decomp_length,
@@ -338,12 +315,9 @@ static void* process_chunk_worker(void* arg) {
 		       free(data->deCompressedDataPtr[b][current_chunk]);
 		       pthread_exit((void*)-1);
                 }
-//               printf ("help 340\n"); 
             }
-//              printf ("help 341\n"); 
         }
         
-//        printf ("help5\n");
         // Combine buffers
         uint8_t *combinePtr = data->resultBuf + data->origChunkSize * current_chunk;
         if (data->numBuf == 2) {
@@ -377,7 +351,6 @@ static void* process_chunk_worker(void* arg) {
                 pthread_exit((void*)-1);
             }
         }
-//        printf ("help6\n"); 
     }
     
     pthread_exit(NULL);
@@ -387,7 +360,10 @@ static void* process_chunk_worker(void* arg) {
 // Python callable function to combine four buffers into a single bytearray
 PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   Py_buffer data;
-
+   
+  
+//  clock_t sTime, eTime;
+//  sTime = clock();
   int numBuf, bits_mode, bytes_mode, threads;
   size_t origChunkSize, origSize;
 
@@ -450,8 +426,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     }
   }
 
-  // clock_t startTime, endTime;
-  // startTime = clock();
 
   // Preparation for decompression
   for (int b = 0; b < numBuf; b++) {
@@ -523,12 +497,21 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     free(resultBuf);
     return NULL;
   }
-  // endTime = clock();
-  // double decompressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+//  eTime = clock();
+//  double metadataTime = (double)(eTime - sTime) / CLOCKS_PER_SEC;
+//  printf ("metadataTime %f\n", metadataTime);
+
+//  clock_t startTime, endTime;
+//  startTime = clock();
+  struct timeval startTimeReal, endTimeReal;
+  gettimeofday(&startTimeReal, NULL);
+
+
 
   ////////////// Multi threading /////////////////////////////
   if (threads <= 1) {
       for (size_t c = 0; c < numChunks; c++) {
+	      
           for (int b = 0; b < numBuf; b++) {
               if (compChunksType[b][c] == 0) {  // No Need to compression
                   deCompressedDataPtr[b][c] =
@@ -646,6 +629,16 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   ////////////// Finish Multi threading /////////////////////////////
   PyObject *py_result;  // Move declaration before label
   continue_processing:
+//   endTime = clock();
+//   double decompressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+   gettimeofday(&endTimeReal, NULL);
+   double decompressTimeReal = (endTimeReal.tv_sec - startTimeReal.tv_sec) + 
+                            (endTimeReal.tv_usec - startTimeReal.tv_usec) / 1e6;
+//   printf ("thread decompressTime %f\n", decompressTime);
+//   printf("Real thread time: %f seconds\n", decompressTimeReal);
+
+
+
    py_result = PyByteArray_FromStringAndSize((const char *)resultBuf, origSize);
 
   for (size_t c = 0; c < numChunks; c++) {
