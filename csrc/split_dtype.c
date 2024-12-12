@@ -273,8 +273,6 @@ typedef struct {
 static void* process_chunk_worker(void* arg) {
     ChunkThreadData* data = (ChunkThreadData*)arg;
     size_t current_chunk;
-//    printf("data->deCompressedDataPtr[0][0] %zu\n", data->deCompressedDataPtr[0][0]);	
-//    printf("data->deCompressedDataPtr[1][0] %zu\n", data->deCompressedDataPtr[1][0]);	
     
     while (1) {
         // Get next chunk to process
@@ -362,8 +360,8 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   Py_buffer data;
    
   
-//  clock_t sTime, eTime;
-//  sTime = clock();
+  clock_t sTime, eTime;
+  sTime = clock();
   int numBuf, bits_mode, bytes_mode, threads;
   size_t origChunkSize, origSize;
 
@@ -497,8 +495,8 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     free(resultBuf);
     return NULL;
   }
-//  eTime = clock();
-//  double metadataTime = (double)(eTime - sTime) / CLOCKS_PER_SEC;
+  eTime = clock();
+  double metadataTime = (double)(eTime - sTime) / CLOCKS_PER_SEC;
 //  printf ("metadataTime %f\n", metadataTime);
 
 //  clock_t startTime, endTime;
@@ -637,10 +635,17 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 //   printf ("thread decompressTime %f\n", decompressTime);
 //   printf("Real thread time: %f seconds\n", decompressTimeReal);
 
+  clock_t sT, eT;
+  sT = clock();
 
+  Py_buffer view; // create buffer to avoid copy
+  PyBuffer_FillInfo(&view, NULL, resultBuf, origSize, 0, PyBUF_WRITABLE);
+  py_result = PyMemoryView_FromBuffer(&view);
+  eT = clock();
+  double resultTime = (double)(eT - sT) / CLOCKS_PER_SEC;
+//  printf ("resultTime %f\n", resultTime);
 
-   py_result = PyByteArray_FromStringAndSize((const char *)resultBuf, origSize);
-
+  sT = clock();
   for (size_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       if (compChunksType[b][c] > 0) {
@@ -648,8 +653,12 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
       }
     }
   }
+  eT = clock();
+  double freeTime = (double)(eT - sT) / CLOCKS_PER_SEC;
+//  printf ("free %f\n", freeTime);
 
-  free(resultBuf);
+
+//  free(resultBuf);
 //  PyBuffer_Release(&data);
   return py_result;
 }
