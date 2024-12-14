@@ -286,20 +286,20 @@ static void* process_chunk_worker(void* arg) {
             break;
         }
         // Decompress each buffer for this chunk
+	int freeDeCompressedDataPtr[data->numBuf];
         for (int b = 0; b < data->numBuf; b++) {
-        			
             // Access 2D array [b][current_chunk]
             if (data->compChunksType[b * data->chunk_id + current_chunk] == 0) {
+	        freeDeCompressedDataPtr[b] = 0;
                 data->deCompressedDataPtr[b][current_chunk] = 
                     data->ptrCompressData[b] + 
                     data->compCumulativeChunksPos[b * (data->chunk_id + 1) + current_chunk];
             } else if (data->compChunksType[b * data->chunk_id + current_chunk] == 1) {
                 // Get decompLen[current_chunk][b]
                 size_t decomp_length = data->decompLen[current_chunk * data->numBuf + b];
-               if (data->deCompressedDataPtr != NULL) {
-              }
 
   	       data->deCompressedDataPtr[b][current_chunk] = malloc(decomp_length);
+	       freeDeCompressedDataPtr[b] = 1;
                if (!data->deCompressedDataPtr[b][current_chunk]) {
                    pthread_exit((void*)-1);
               }
@@ -310,7 +310,6 @@ static void* process_chunk_worker(void* arg) {
 			       (void*)(data->ptrCompressData[b] + 
 				       data->compCumulativeChunksPos[b * (data->chunk_id + 1) + current_chunk]),
 			       data->compChunksLen[b * data->chunk_id + current_chunk]);
-               free(data->deCompressedDataPtr[b][current_chunk]); 
 	       if (HUF_isError(decompressedSize)) {
 		       free(data->deCompressedDataPtr[b][current_chunk]);
 		       pthread_exit((void*)-1);
@@ -351,6 +350,11 @@ static void* process_chunk_worker(void* arg) {
                 pthread_exit((void*)-1);
             }
         }
+        for (int b = 0; b < data->numBuf; b++) {
+	  if (freeDeCompressedDataPtr[b] == 1){
+	    free(data->deCompressedDataPtr[b][current_chunk]);	  
+	  }	  
+	}
     }
     
     pthread_exit(NULL);
