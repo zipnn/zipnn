@@ -60,19 +60,19 @@ void reorder_all_floats_dtype32(u_int8_t *src, Py_ssize_t len) {
 //
 int allocate_4chunk_buffs(u_int8_t **chunk_buffs, Py_ssize_t *bufLens,
                           uint32_t num_buf) {
-  chunk_buffs[0] = (bufLens[0] > 0) ? PyMem_Malloc(bufLens[0]) : NULL;
-  chunk_buffs[1] = (bufLens[1] > 0) ? PyMem_Malloc(bufLens[1]) : NULL;
-  chunk_buffs[2] = (bufLens[2] > 0) ? PyMem_Malloc(bufLens[2]) : NULL;
-  chunk_buffs[3] = (bufLens[3] > 0) ? PyMem_Malloc(bufLens[3]) : NULL;
+  chunk_buffs[0] = (bufLens[0] > 0) ? malloc(bufLens[0]) : NULL;
+  chunk_buffs[1] = (bufLens[1] > 0) ? malloc(bufLens[1]) : NULL;
+  chunk_buffs[2] = (bufLens[2] > 0) ? malloc(bufLens[2]) : NULL;
+  chunk_buffs[3] = (bufLens[3] > 0) ? malloc(bufLens[3]) : NULL;
 
   if ((bufLens[0] > 0 && chunk_buffs[0] == NULL) ||
       (bufLens[1] > 0 && chunk_buffs[1] == NULL) ||
       (bufLens[2] > 0 && chunk_buffs[2] == NULL) ||
       (bufLens[3] > 0 && chunk_buffs[3] == NULL)) {
-    PyMem_Free(chunk_buffs[0]);
-    PyMem_Free(chunk_buffs[1]);
-    PyMem_Free(chunk_buffs[2]);
-    PyMem_Free(chunk_buffs[3]);
+    free(chunk_buffs[0]);
+    free(chunk_buffs[1]);
+    free(chunk_buffs[2]);
+    free(chunk_buffs[3]);
     PyErr_SetString(PyExc_MemoryError,
                     "Failed to allocate memory, allocate_4chunk_buffs");
     return -1;
@@ -300,7 +300,7 @@ void revert_all_floats_dtype32(u_int8_t *src, Py_ssize_t len) {
 }
 
 // static int allocate_buffer(u_int8_t **result, Py_ssize_t total_len) {
-//   *result = PyMem_Malloc(total_len);
+//   *result = malloc(total_len);
 //   if (*result == NULL) {
 //     PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory");
 //     return -1;

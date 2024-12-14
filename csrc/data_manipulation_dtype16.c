@@ -45,14 +45,14 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
 
   switch (bytes_mode) {
   case 10:  // 2b01_010 - Byte Group to two different groups
-    chunk_buffs[0] = PyMem_Malloc(lens[0]);
-    chunk_buffs[1] = PyMem_Malloc(lens[1]);
+    chunk_buffs[0] = malloc(lens[0]);
+    chunk_buffs[1] = malloc(lens[1]);
     unCompChunksSizeCurChunk[0] = lens[0];
     unCompChunksSizeCurChunk[1] = lens[1];
 
     if (chunk_buffs[0] == NULL || chunk_buffs[1] == NULL) {
-      PyMem_Free(chunk_buffs[0]);
-      PyMem_Free(chunk_buffs[1]);
+      free(chunk_buffs[0]);
+      free(chunk_buffs[1]);
       return -1;
     }
 
@@ -72,13 +72,13 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
            // We are refering to the MSBbyte as little endian, thus we omit buf2
   case 1:  // 4b1000 - Truncate LSByte
     // We are refering to the LSByte  as a little endian, thus we omit buf1
-    chunk_buffs[0] = PyMem_Malloc(half_len);
+    chunk_buffs[0] = malloc(half_len);
     chunk_buffs[1] = NULL;
     unCompChunksSizeCurChunk[0] = half_len;
     unCompChunksSizeCurChunk[1] = 0;
 
     if (chunk_buffs[0] == NULL) {
-      PyMem_Free(chunk_buffs[0]);
+      free(chunk_buffs[0]);
       return -1;
     }
 
