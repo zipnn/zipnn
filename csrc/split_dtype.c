@@ -34,7 +34,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
   // update compress_buffer_len
   memcpy(&header[24], resBufSize, sizeof(size_t));
 
-  u_int8_t *resultBuf = malloc(*resBufSize);
+  u_int8_t *resultBuf = (u_int8_t *)malloc(*resBufSize);
   if (!resultBuf) {
     PyErr_SetString(
         PyExc_MemoryError,
@@ -87,9 +87,9 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   size_t origChunkSize;
   float compThreshold;
   // u_int8_t isPrint = 0;
-  // clock_t startTime, endTime, startBGTime, endBGTime;
-  // startTime = clock();
 
+  struct timeval startTime, endTime;
+  gettimeofday(&startTime, NULL);
   if (!PyArg_ParseTuple(args, "y*y*iiiinfii", &header, &data, &numBuf,
                         &bits_mode, &bytes_mode, &is_redata, &origChunkSize,
                         &compThreshold, &checkThAfterPercent, &threads)) {
@@ -124,6 +124,8 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     noNeedToCompress[b] = 0;
   }
 
+  struct timeval startTimeReal, endTimeReal;
+  gettimeofday(&startTimeReal, NULL);
   /////////// start multi Threading - Each chunk to different thread ////////////////
   for (size_t offset = 0; offset < (size_t)data.len; offset += origChunkSize) {
     size_t curOrigChunkSize = (data.len - offset > origChunkSize)
@@ -212,15 +214,22 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   ////////////// The end of multi Threading part 1
   /////////////////////////////////
 
-  // endTime = clock();
-  // double compressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+  gettimeofday(&endTimeReal, NULL);
+  double compressMl1TimeReal = (endTimeReal.tv_sec - startTimeReal.tv_sec) + 
+                            (endTimeReal.tv_usec - startTimeReal.tv_usec) / 1e6;
+  printf("compress ML1: %f seconds\n", compressMl1TimeReal);
 
-  PyObject *result;
+  PyObject *py_result;
   u_int8_t *resultBuf;
   size_t resBufSize;
+
   resultBuf = prepare_split_results(
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
       compChunksType, cumulativeChunksSize, totalCompressedSize, &resBufSize);
+  gettimeofday(&endTimeReal, NULL);
+  double compressPrepareTimeReal = (endTimeReal.tv_sec - startTimeReal.tv_sec) + 
+                            (endTimeReal.tv_usec - startTimeReal.tv_usec) / 1e6;
+   printf("compress Prepare: %f seconds\n", compressPrepareTimeReal);
 
   if (resultBuf == NULL) {
     // Free all Mallocs
@@ -228,10 +237,13 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     return NULL;
   }
 
-  result = Py_BuildValue("y#", resultBuf, resBufSize);
+  gettimeofday(&startTimeReal, NULL);
+
+  Py_buffer view; // create buffer to avoid copy
+  PyBuffer_FillInfo(&view, NULL, resultBuf, resBufSize, 0, PyBUF_WRITABLE);
+  py_result = PyMemoryView_FromBuffer(&view);
 
   // Freeing compressedData array
-
    for (uint32_t c = 0; c < numChunks; c++) {
      for (int b = 0; b < numBuf; b++) {
        if (buffers[c][b] != NULL) {
@@ -248,11 +260,31 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
       }
     }
   }
-  PyBuffer_Release(&header);
-  PyBuffer_Release(&data);
-  free(resultBuf);
-  return result;
+//  PyBuffer_Release(&header);
+//  PyBuffer_Release(&data);
+//  free(resultBuf);
+
+  gettimeofday(&endTimeReal, NULL);
+  double freeTimeReal = (endTimeReal.tv_sec - startTimeReal.tv_sec) + 
+                            (endTimeReal.tv_usec - startTimeReal.tv_usec) / 1e6;
+  printf("compress free: %f seconds\n", freeTimeReal);
+
+
+
+  gettimeofday(&endTime, NULL);
+  double compressAll = (endTime.tv_sec - startTime.tv_sec) + 
+                            (endTime.tv_usec - startTime.tv_usec) / 1e6;
+  printf("compress All: %f seconds\n", compressAll);
+
+  return py_result;
 }
+
+
+////////////////////////////////////////////////////////////////////////////
+//////////////////////   Decompression ////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+
+
 
 
 typedef struct {
@@ -366,8 +398,8 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   Py_buffer data;
    
   
-  clock_t sTime, eTime;
-  sTime = clock();
+  //clock_t sTime, eTime;
+  //sTime = clock();
   int numBuf, bits_mode, bytes_mode, threads;
   size_t origChunkSize, origSize;
 
@@ -501,8 +533,8 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     free(resultBuf);
     return NULL;
   }
-  eTime = clock();
-  double metadataTime = (double)(eTime - sTime) / CLOCKS_PER_SEC;
+  //eTime = clock();
+  //double metadataTime = (double)(eTime - sTime) / CLOCKS_PER_SEC;
 //  printf ("metadataTime %f\n", metadataTime);
 
 //  clock_t startTime, endTime;
@@ -581,7 +613,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
    double decompressTimeReal = (endTimeReal.tv_sec - startTimeReal.tv_sec) + 
                             (endTimeReal.tv_usec - startTimeReal.tv_usec) / 1e6;
 //   printf ("thread decompressTime %f\n", decompressTime);
-//   printf("Real thread time: %f seconds\n", decompressTimeReal);
+   printf("Real thread time: %f seconds\n", decompressTimeReal);
 
   clock_t sT, eT;
   sT = clock();
