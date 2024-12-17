@@ -55,7 +55,9 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
   for (size_t b = 0; b < numBuf; b++) {
     for (uint32_t c = 0; c < numChunks; c++) {
       memcpy(resultBuf + offset, compressedData[b][c], compChunksSize[b][c]);
+      free(compressedData[b][c]);
       offset += compChunksSize[b][c];
+
     }
   }
 
@@ -244,25 +246,13 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   py_result = PyMemoryView_FromBuffer(&view);
 
   // Freeing compressedData array
-   for (uint32_t c = 0; c < numChunks; c++) {
-     for (int b = 0; b < numBuf; b++) {
-       if (buffers[c][b] != NULL) {
-         free(buffers[c][b]);
-       }
-     }
-   }
-
-
-  for (uint32_t c = 0; c < numChunks; c++) {
-    for (int b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 1) {
-        free(compressedData[b][c]);
-      }
-    }
-  }
-//  PyBuffer_Release(&header);
-//  PyBuffer_Release(&data);
-//  free(resultBuf);
+//   for (uint32_t c = 0; c < numChunks; c++) {
+//     for (int b = 0; b < numBuf; b++) {
+//       if (buffers[c][b] != NULL) {
+//         free(buffers[c][b]);
+//       }
+//     }
+//   }
 
   gettimeofday(&endTimeReal, NULL);
   double freeTimeReal = (endTimeReal.tv_sec - startTimeReal.tv_sec) + 
