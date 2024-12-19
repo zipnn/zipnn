@@ -85,7 +85,7 @@ def replace_in_file(file_path, old: str, new: str) -> None:
 
 def compress_files_with_suffix(
     suffix,
-    dtype="",
+    dtype="bfloat16",
     streaming_chunk_size=1048576,
     path=".",
     delete=False,
@@ -95,6 +95,10 @@ def compress_files_with_suffix(
     hf_cache=False,
     model="",
     branch="main",
+    method="HUFFMAN",
+    verification=False,#
+    test=False,#
+    is_streaming=False
 ):
     import zipnn
 
@@ -144,8 +148,8 @@ def compress_files_with_suffix(
                 compressed_path = (
                     file_name + ".znn"
                 )
-                if not force and os.path.exists(
-                    compressed_path
+                if not test and not force and os.path.exists(
+                    os.path.join(root, compressed_path)
                 ):
                     #
                     if overwrite_first:
@@ -170,7 +174,7 @@ def compress_files_with_suffix(
                             )
                             force=True
                     #
-                    if not force:
+                    if not force and not test:
                         user_input = (
                             input(
                                 f"{compressed_path} already exists; overwrite (y/n)? "
@@ -232,6 +236,10 @@ def compress_files_with_suffix(
                 delete,
                 True,
                 hf_cache,
+                method,
+                verification,
+                test,
+                is_streaming
             ): file
             for file in file_list[:max_processes]
         }
@@ -260,6 +268,10 @@ def compress_files_with_suffix(
                             delete,
                             True,
                             hf_cache,
+                            method,
+                            verification,
+                            test,
+                            is_streaming
                         )
                     ] = next_file
 
@@ -272,15 +284,6 @@ def compress_files_with_suffix(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(
-            "Usage: python compress_files.py <suffix>"
-        )
-        print(
-            "Example: python compress_files.py 'safetensors'"
-        )
-        sys.exit(1)
-
     parser = argparse.ArgumentParser(
         description="Enter a suffix to compress, (optional) dtype, (optional) streaming chunk size, (optional) path to files."
     )
@@ -290,9 +293,11 @@ if __name__ == "__main__":
         help="Specify the file suffix to compress all files with that suffix. If a single file name is provided, only that file will be compressed.",
     )
     parser.add_argument(
-        "--float32",
-        action="store_true",
-        help="A flag that triggers float32 compression",
+        "--dtype",
+        type=str,
+        choices=["bfloat16", "float16", "float32"],
+        default="bfloat16",
+        help="Specify the data type. Default is bfloat16.",
     )
     parser.add_argument(
         "--streaming_chunk_size",
@@ -345,10 +350,32 @@ if __name__ == "__main__":
         default="main",
         help="Only when using --model, specify the model branch. Default is 'main'",
     )
+    parser.add_argument(
+        "--method",
+        type=str,
+        choices=["HUFFMAN", "ZSTD", "FSE", "AUTO"],
+        default="HUFFMAN",
+        help="Specify the method to use. Default is HUFFMAN.",
+    )
+    parser.add_argument(#
+        "--verification",
+        action="store_true",
+        help="A flag that verifies that a compression can be decompressed correctly.",
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="A flag to not write the compression to a file.",
+    )#
+    parser.add_argument(
+        "--is_streaming",
+        action="store_true",
+        help="A flag to compress using streaming.",
+    )#
     args = parser.parse_args()
     optional_kwargs = {}
-    if args.float32:
-        optional_kwargs["dtype"] = 32
+    if args.dtype:
+        optional_kwargs["dtype"] = args.dtype
     if args.streaming_chunk_size is not None:
         optional_kwargs[
             "streaming_chunk_size"
@@ -373,6 +400,14 @@ if __name__ == "__main__":
         optional_kwargs[
             "branch"
         ] = args.model_branch
+    if args.method:
+        optional_kwargs["method"] = args.method
+    if args.verification:#
+        optional_kwargs["verification"] = args.verification
+    if args.test:
+        optional_kwargs["test"] = args.test#
+    if args.is_streaming:
+        optional_kwargs["is_streaming"] = args.is_streaming#
 
     check_and_install_zipnn()
     compress_files_with_suffix(
