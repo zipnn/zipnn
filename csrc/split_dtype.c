@@ -11,253 +11,6 @@
 #include <sys/time.h>
 
 ////  Helper Functions //////
-/*
-u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
-                                size_t numChunks, u_int8_t *header,
-                                u_int8_t ***compressedData,
-                                uint32_t **compChunksSize, 
-                                const u_int8_t **compChunksType,
-                                const size_t **cumulativeChunksSize,  // Ignore this
-                                const size_t *totalCompressedSize,
-                                size_t *resBufSize) {
-    
-    *resBufSize = header_len;
-    
-    // Calculate sizes
-    size_t compChunksTypeLen = numBuf * numChunks * sizeof(u_int8_t);
-    size_t cumulativeChunksSizeLen = numBuf * numChunks * sizeof(size_t);
-    
-    *resBufSize += compChunksTypeLen;
-    *resBufSize += cumulativeChunksSizeLen;
-    
-    for (size_t b = 0; b < numBuf; b++) {
-        *resBufSize += totalCompressedSize[b];
-        printf("Debug 3.%zu: totalCompressedSize[%zu] = %zu\n", b, b, totalCompressedSize[b]);
-    }
-    
-    memcpy(&header[24], resBufSize, sizeof(size_t));
-    
-    u_int8_t *resultBuf = (u_int8_t *)malloc(*resBufSize);
-    if (!resultBuf) {
-        PyErr_SetString(PyExc_MemoryError,
-            "Failed to allocate memory for result buffer in split function");
-        return NULL;
-    }
-    
-    size_t offset = 0;
-    memcpy(resultBuf + offset, header, header_len);
-    offset += header_len;
-    
-    // Copy compChunksType data
-    u_int8_t *typePtr = resultBuf + offset;
-    for (size_t b = 0; b < numBuf; b++) {
-        if (!compChunksType[b]) {
-            printf("Error: compChunksType[%zu] is NULL\n", b);
-            free(resultBuf);
-            return NULL;
-        }
-        memcpy(typePtr + b * numChunks, compChunksType[b], numChunks * sizeof(u_int8_t));
-    }
-    offset += compChunksTypeLen;
-    
-    // Calculate and write cumulative sizes
-    size_t *sizePtr = (size_t *)(resultBuf + offset);
-    for (size_t b = 0; b < numBuf; b++) {
-        size_t cumulative = 0;
-        for (size_t c = 0; c < numChunks; c++) {
-            cumulative += compChunksSize[b][c];
-            sizePtr[b * numChunks + c] = cumulative;
-        }
-    }
-    offset += cumulativeChunksSizeLen;
-    
-    // Copy compressed data chunks
-    for (size_t b = 0; b < numBuf; b++) {
-        if (!compressedData[b]) {
-            printf("Error: compressedData[%zu] is NULL\n", b);
-            continue;
-        }
-        for (uint32_t c = 0; c < numChunks; c++) {
-            if (compressedData[b][c] && compChunksSize[b][c] > 0) {
-                memcpy(resultBuf + offset, compressedData[b][c], compChunksSize[b][c]);
-                free(compressedData[b][c]);
-                offset += compChunksSize[b][c];
-            }
-        }
-    }
-    
-    return resultBuf;
-}
-
-
-#include <pthread.h>
-
-// Structure to hold thread data for compressed data copying
-typedef struct {
-    size_t b;
-    size_t numChunks;
-    u_int8_t ***compressedData;
-    uint32_t **compChunksSize;
-    u_int8_t *resultBuf;
-    size_t startOffset;
-    size_t *currentOffset;
-    pthread_mutex_t *offsetMutex;
-} CompressedDataCopyArgs;
-
-// Thread function for copying compressed data
-void* copy_compressed_data(void* arg) {
-    CompressedDataCopyArgs *args = (CompressedDataCopyArgs*)arg;
-    size_t localOffset = args->startOffset;
-    
-    if (!args->compressedData[args->b]) {
-        return NULL;
-    }
-
-    for (uint32_t c = 0; c < args->numChunks; c++) {
-        if (args->compressedData[args->b][c] && args->compChunksSize[args->b][c] > 0) {
-            memcpy(args->resultBuf + localOffset, 
-                   args->compressedData[args->b][c], 
-                   args->compChunksSize[args->b][c]);
-            free(args->compressedData[args->b][c]);
-            localOffset += args->compChunksSize[args->b][c];
-        }
-    }
-
-    // Update global offset
-    pthread_mutex_lock(args->offsetMutex);
-    *args->currentOffset = localOffset;
-    pthread_mutex_unlock(args->offsetMutex);
-
-    return NULL;
-}
-*/
-
-/*
-// Structure definition needs to be before functions
-typedef struct {
-    size_t b;
-    size_t numChunks;
-    u_int8_t ***compressedData;
-    uint32_t **compChunksSize;
-    u_int8_t *resultBuf;
-    size_t startOffset;
-    size_t *currentOffset;
-    pthread_mutex_t *offsetMutex;
-} CompressedDataCopyArgs;
-
-// Thread function definition
-void* copy_compressed_data(void* arg) {
-    CompressedDataCopyArgs *args = (CompressedDataCopyArgs*)arg;
-    size_t localOffset = args->startOffset;
-    
-    if (!args->compressedData[args->b]) {
-        return NULL;
-    }
-
-    for (uint32_t c = 0; c < args->numChunks; c++) {
-        if (args->compressedData[args->b][c] && args->compChunksSize[args->b][c] > 0) {
-            memcpy(args->resultBuf + localOffset, 
-                   args->compressedData[args->b][c], 
-                   args->compChunksSize[args->b][c]);
-            free(args->compressedData[args->b][c]);
-            localOffset += args->compChunksSize[args->b][c];
-        }
-    }
-
-    pthread_mutex_lock(args->offsetMutex);
-    *args->currentOffset = localOffset;
-    pthread_mutex_unlock(args->offsetMutex);
-
-    return NULL;
-}
-
-u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
-                               size_t numChunks, u_int8_t *header,
-                               u_int8_t ***compressedData,
-                               uint32_t **compChunksSize,
-                               const u_int8_t **compChunksType,
-                               const size_t **cumulativeChunksSize,
-                               const size_t *totalCompressedSize,
-                               size_t *resBufSize) {
-    // Rest of the implementation remains the same
-    *resBufSize = header_len;
-    size_t compChunksTypeLen = numBuf * numChunks * sizeof(u_int8_t);
-    size_t cumulativeChunksSizeLen = numBuf * numChunks * sizeof(size_t);
-    *resBufSize += compChunksTypeLen + cumulativeChunksSizeLen;
-    
-    for (size_t b = 0; b < numBuf; b++) {
-        *resBufSize += totalCompressedSize[b];
-    }
-
-    memcpy(&header[24], resBufSize, sizeof(size_t));
-    u_int8_t *resultBuf = (u_int8_t *)malloc(*resBufSize);
-    if (!resultBuf) {
-        PyErr_SetString(PyExc_MemoryError,
-            "Failed to allocate memory for result buffer in split function");
-        return NULL;
-    }
-
-    memcpy(resultBuf, header, header_len);
-    size_t offset = header_len;
-
-    for (size_t b = 0; b < numBuf; b++) {
-        if (!compChunksType[b]) {
-            free(resultBuf);
-            return NULL;
-        }
-        memcpy(resultBuf + offset + b * numChunks, 
-               compChunksType[b], 
-               numChunks * sizeof(u_int8_t));
-    }
-    offset += compChunksTypeLen;
-
-    size_t *sizePtr = (size_t *)(resultBuf + offset);
-    #pragma omp parallel for if(numBuf > 1)
-    for (size_t b = 0; b < numBuf; b++) {
-        size_t cumulative = 0;
-        for (size_t c = 0; c < numChunks; c++) {
-            cumulative += compChunksSize[b][c];
-            sizePtr[b * numChunks + c] = cumulative;
-        }
-    }
-    offset += cumulativeChunksSizeLen;
-
-    pthread_t threads[numBuf];
-    CompressedDataCopyArgs thread_args[numBuf];
-    pthread_mutex_t offsetMutex = PTHREAD_MUTEX_INITIALIZER;
-    size_t currentOffset = offset;
-
-    for (size_t b = 0; b < numBuf; b++) {
-        thread_args[b].b = b;
-        thread_args[b].numChunks = numChunks;
-        thread_args[b].compressedData = compressedData;
-        thread_args[b].compChunksSize = compChunksSize;
-        thread_args[b].resultBuf = resultBuf;
-        thread_args[b].startOffset = offset;
-        thread_args[b].currentOffset = &currentOffset;
-        thread_args[b].offsetMutex = &offsetMutex;
-
-        if (pthread_create(&threads[b], NULL, copy_compressed_data, &thread_args[b]) != 0) {
-            for (size_t i = 0; i < b; i++) {
-                pthread_join(threads[i], NULL);
-            }
-            free(resultBuf);
-            return NULL;
-        }
-        
-        for (uint32_t c = 0; c < numChunks; c++) {
-            offset += compChunksSize[b][c];
-        }
-    }
-
-    for (size_t b = 0; b < numBuf; b++) {
-        pthread_join(threads[b], NULL);
-    }
-
-    pthread_mutex_destroy(&offsetMutex);
-    return resultBuf;
-}
-*/
 
 struct CompressedDataCopyArgs {
     size_t b;                   // buffer index
@@ -581,24 +334,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
 
   // Byte Group per chunk, Compress per bufChunk
   size_t numChunks = (data.len + origChunkSize - 1) / origChunkSize;
-
-
-  uint8_t ***buffers = malloc(numChunks * sizeof(uint8_t **)); //[numChunks][numBuf]
-  size_t **unCompChunksSize = malloc(numChunks * sizeof(size_t *));//[numChunks][numBuf]
-  for(int c = 0; c < numChunks; c++) {
-    buffers[c] = malloc(numBuf * sizeof(uint8_t *));
-    unCompChunksSize[c] = malloc(numBuf * sizeof(size_t));
-  }
-
-  u_int8_t ***compressedData = malloc(numBuf * sizeof(uint8_t**)); // [numBuf][numChunks]
-  u_int8_t **compChunksType = malloc(numBuf * sizeof(uint8_t*));// [numBuf][numChunks]
-  uint32_t **compChunksSize = malloc(numBuf * sizeof(uint32_t*));// [numBuf][numChunks]
-  for(int b = 0; b < numBuf; b++) {
-    compressedData[b] = malloc( numChunks * sizeof(uint8_t*));	  
-    compChunksType[b] = malloc( numChunks * sizeof(uint8_t));
-    compChunksSize[b] = malloc( numChunks * sizeof(uint32_t));
-  }
-   
   size_t totalCompressedSize[numBuf];
   size_t totalUnCompressedSize[numBuf];
   size_t cumulativeChunksSize[numBuf][numChunks];
@@ -616,66 +351,125 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     isThCheck[b] = 0;
   }
 
-  struct timeval startTimeReal, endTimeReal;
-  gettimeofday(&startTimeReal, NULL);
-  pthread_t *thread_handles = NULL;
-  CompressionThreadData *thread_data = NULL;
-  pthread_mutex_t compression_mutex = PTHREAD_MUTEX_INITIALIZER;
-  pthread_mutex_t next_chunk_mutex = PTHREAD_MUTEX_INITIALIZER;
-  size_t next_chunk = 0;
 
-  thread_handles = malloc(threads * sizeof(pthread_t));
-  thread_data = malloc(threads * sizeof(CompressionThreadData));
-  if (!thread_handles || !thread_data) {
-    PyErr_SetString(PyExc_MemoryError, "Failed to allocate thread resources");
-    goto cleanup_threads;
+
+  uint8_t ***buffers = malloc(numChunks * sizeof(uint8_t **)); //[numChunks][numBuf]
+  size_t **unCompChunksSize = malloc(numChunks * sizeof(size_t *));//[numChunks][numBuf]
+  if (!buffers || !unCompChunksSize) goto error_initial_malloc;
+
+  for(int c = 0; c < numChunks; c++) {
+    buffers[c] = malloc(numBuf * sizeof(uint8_t *));
+    unCompChunksSize[c] = malloc(numBuf * sizeof(size_t));
+    if (!buffers[c] || !unCompChunksSize[c]) goto error_initial_malloc;
   }
 
-  // Create threads
-  for (int i = 0; i < threads; i++) {
-    thread_data[i] = (CompressionThreadData){
-        .data = &data,
-	.numChunks = numChunks,
-        .origChunkSize = origChunkSize,
-        .numBuf = numBuf,
-        .bits_mode = bits_mode,
-        .bytes_mode = bytes_mode,
-        .is_redata = is_redata,
-        .threads = threads,
-        .buffers = buffers,
-        .unCompChunksSize = unCompChunksSize,
-        .compressedData = compressedData,
-        .compChunksSize = compChunksSize,
-        .compChunksType = compChunksType,
-        .isThCheck = isThCheck,
-        .checkCompTh = checkCompTh,
-        .compThreshold = compThreshold,
-        .next_chunk_mutex = &next_chunk_mutex,
-        .next_chunk = &next_chunk
-    };
-    
-    if (pthread_create(&thread_handles[i], NULL, compression_worker, &thread_data[i]) != 0) {
-        PyErr_SetString(PyExc_RuntimeError, "Failed to create thread");
-        goto cleanup_threads;
+  u_int8_t ***compressedData = malloc(numBuf * sizeof(uint8_t**)); // [numBuf][numChunks]
+  u_int8_t **compChunksType = malloc(numBuf * sizeof(uint8_t*));// [numBuf][numChunks]
+  uint32_t **compChunksSize = malloc(numBuf * sizeof(uint32_t*));// [numBuf][numChunks]
+  if (!compressedData || !compChunksType || !compChunksSize) goto error_initial_malloc;
+
+  for(int b = 0; b < numBuf; b++) {
+    compressedData[b] = malloc( numChunks * sizeof(uint8_t*));	  
+    compChunksType[b] = malloc( numChunks * sizeof(uint8_t));
+    compChunksSize[b] = malloc( numChunks * sizeof(uint32_t));
+   if (!compressedData[b] || !compChunksType[b] || !compChunksSize[b]) goto error_initial_malloc;
+  }
+  
+  goto compression_threading;
+
+  error_initial_malloc:
+    if (buffers) {
+      for (int i = 0; i < numChunks; i++) {
+          free(buffers[i]);
+      }
+      free(buffers);
     }
-  }
-
-  // Wait for all threads
- for (int i = 0; i < threads; i++) {
-    void *thread_result;
-    pthread_join(thread_handles[i], &thread_result);
-    if (thread_result != NULL) {
-        PyErr_SetString(PyExc_RuntimeError, "Thread processing failed");
-        goto cleanup_threads;
+    if (unCompChunksSize) {
+        for (int i = 0; i < numChunks; i++) {
+            free(unCompChunksSize[i]);
+        }
+        free(unCompChunksSize);
     }
-  }
+    if (compressedData) {
+        for (int i = 0; i < numBuf; i++) {
+            free(compressedData[i]);
+        }
+        free(compressedData);
+    }
+    if (compChunksType) {
+        for (int i = 0; i < numBuf; i++) {
+            free(compChunksType[i]);
+        }
+        free(compChunksType);
+    }
+    if (compChunksSize) {
+        for (int i = 0; i < numBuf; i++) {
+            free(compChunksSize[i]);
+        }
+        free(compChunksSize);
+    }
+    return NULL;
 
-
-  free(thread_handles);
-  free(thread_data);
-  pthread_mutex_destroy(&next_chunk_mutex);
-  goto continue_processing;
-
+  compression_threading: 
+    struct timeval startTimeReal, endTimeReal;
+    gettimeofday(&startTimeReal, NULL);
+    pthread_t *thread_handles = NULL;
+    CompressionThreadData *thread_data = NULL;
+    pthread_mutex_t compression_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t next_chunk_mutex = PTHREAD_MUTEX_INITIALIZER;
+    size_t next_chunk = 0;
+  
+    thread_handles = malloc(threads * sizeof(pthread_t));
+    thread_data = malloc(threads * sizeof(CompressionThreadData));
+    if (!thread_handles || !thread_data) {
+      PyErr_SetString(PyExc_MemoryError, "Failed to allocate thread resources");
+      goto cleanup_threads;
+    }
+  
+    // Create threads
+    for (int i = 0; i < threads; i++) {
+      thread_data[i] = (CompressionThreadData){
+          .data = &data,
+  	.numChunks = numChunks,
+          .origChunkSize = origChunkSize,
+          .numBuf = numBuf,
+          .bits_mode = bits_mode,
+          .bytes_mode = bytes_mode,
+          .is_redata = is_redata,
+          .threads = threads,
+          .buffers = buffers,
+          .unCompChunksSize = unCompChunksSize,
+          .compressedData = compressedData,
+          .compChunksSize = compChunksSize,
+          .compChunksType = compChunksType,
+          .isThCheck = isThCheck,
+          .checkCompTh = checkCompTh,
+          .compThreshold = compThreshold,
+          .next_chunk_mutex = &next_chunk_mutex,
+          .next_chunk = &next_chunk
+      };
+      
+      if (pthread_create(&thread_handles[i], NULL, compression_worker, &thread_data[i]) != 0) {
+          PyErr_SetString(PyExc_RuntimeError, "Failed to create thread");
+          goto cleanup_threads;
+      }
+    }
+  
+    // Wait for all threads
+   for (int i = 0; i < threads; i++) {
+      void *thread_result;
+      pthread_join(thread_handles[i], &thread_result);
+      if (thread_result != NULL) {
+          PyErr_SetString(PyExc_RuntimeError, "Thread processing failed");
+          goto cleanup_threads;
+      }
+    }
+  
+    free(thread_handles);
+    free(thread_data);
+    pthread_mutex_destroy(&next_chunk_mutex);
+    goto continue_processing;
+  
   cleanup_threads:
     if (thread_handles) free(thread_handles);
     if (thread_data) free(thread_data);
