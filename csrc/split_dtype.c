@@ -59,17 +59,19 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                const u_int8_t **compChunksType,
                                const size_t **cumulativeChunksSize,
                                const size_t *totalCompressedSize,
-                               size_t *resBufSize) {
+                               size_t *resBufSize,
+                               int requested_threads) { 
+    // Previous buffer size calculations remain the same
     *resBufSize = header_len;
     size_t compChunksTypeLen = numBuf * numChunks * sizeof(u_int8_t);
     size_t cumulativeChunksSizeLen = numBuf * numChunks * sizeof(size_t);
     *resBufSize += compChunksTypeLen + cumulativeChunksSizeLen;
-    
+
     for (size_t b = 0; b < numBuf; b++) {
         *resBufSize += totalCompressedSize[b];
     }
 
-    // Allocate result buffer
+    // Allocate and setup result buffer (same as before)
     memcpy(&header[24], resBufSize, sizeof(size_t));
     u_int8_t *resultBuf = (u_int8_t *)malloc(*resBufSize);
     if (!resultBuf) {
@@ -78,23 +80,23 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
         return NULL;
     }
 
-    // Copy header and type data
+    // Copy header and type data (same as before)
     size_t offset = 0;
     memcpy(resultBuf, header, header_len);
     offset += header_len;
 
-    // Copy chunk types in parallel
+    // Copy chunk types in parallel (same as before)
     #pragma omp parallel for if(numBuf > 1)
     for (size_t b = 0; b < numBuf; b++) {
         if (compChunksType[b]) {
-            memcpy(resultBuf + offset + b * numChunks, 
-                   compChunksType[b], 
+            memcpy(resultBuf + offset + b * numChunks,
+                   compChunksType[b],
                    numChunks * sizeof(u_int8_t));
         }
     }
     offset += compChunksTypeLen;
 
-    // Calculate cumulative sizes in parallel
+    // Calculate cumulative sizes in parallel (same as before)
     size_t *sizePtr = (size_t *)(resultBuf + offset);
     #pragma omp parallel for
     for (size_t b = 0; b < numBuf; b++) {
@@ -106,16 +108,21 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
     }
     offset += cumulativeChunksSizeLen;
 
-    // Calculate number of threads per buffer
-    int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-    int threads_per_buffer = 4; // Default value
-    if (numChunks > 1000) {
-        threads_per_buffer = num_cores / numBuf;
-        if (threads_per_buffer < 2) threads_per_buffer = 2;
-        if (threads_per_buffer > 8) threads_per_buffer = 8;
+    // New thread calculation logic
+    size_t threads_per_buffer = requested_threads;
+    
+    // Ensure minimum chunk size per thread
+    size_t chunks_per_thread = numChunks / threads_per_buffer;
+    if (chunks_per_thread < 100) {
+        threads_per_buffer = numChunks / 100;
+        if (threads_per_buffer == 0) threads_per_buffer = 1;
+        chunks_per_thread = numChunks / threads_per_buffer;
     }
-
+    
+    size_t leftover_chunks = numChunks % threads_per_buffer;
     const size_t total_threads = numBuf * threads_per_buffer;
+
+    // Allocate thread resources
     pthread_t *threads = malloc(total_threads * sizeof(pthread_t));
     struct CompressedDataCopyArgs *thread_args = malloc(total_threads * sizeof(struct CompressedDataCopyArgs));
     size_t *threadOffsets = calloc(total_threads, sizeof(size_t));
@@ -131,20 +138,35 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
     // Launch threads for compressed data copy
     size_t thread_idx = 0;
     for (size_t b = 0; b < numBuf; b++) {
-        size_t chunks_per_thread = (numChunks + threads_per_buffer - 1) / threads_per_buffer;
         size_t base_offset = offset;
-        
+
         // Calculate base offset for this buffer
         for (size_t prev_b = 0; prev_b < b; prev_b++) {
             base_offset += totalCompressedSize[prev_b];
         }
 
-        for (int t = 0; t < threads_per_buffer; t++) {
+        for (size_t t = 0; t < threads_per_buffer; t++) {
+            size_t start_chunk = t * chunks_per_thread;
+            size_t end_chunk = (t + 1) * chunks_per_thread;
+
+            // Add leftover chunks to last thread
+            if (t == threads_per_buffer - 1) {
+                end_chunk += leftover_chunks;
+            }
+
+            // Safety check
+            if (end_chunk > numChunks) {
+                end_chunk = numChunks;
+            }
+
+            printf("Buffer %zu Thread %zu handling chunks %zu to %zu\n", 
+                   b, t, start_chunk, end_chunk - 1);
+
             thread_args[thread_idx] = (struct CompressedDataCopyArgs){
                 .b = b,
                 .thread_id = thread_idx,
-                .start_chunk = t * chunks_per_thread,
-                .end_chunk = (t + 1) * chunks_per_thread,
+                .start_chunk = start_chunk,
+                .end_chunk = end_chunk,
                 .numChunks = numChunks,
                 .compressedData = compressedData,
                 .compChunksSize = compChunksSize,
@@ -153,7 +175,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                 .threadOffsets = threadOffsets
             };
 
-            if (pthread_create(&threads[thread_idx], NULL, copy_compressed_data, 
+            if (pthread_create(&threads[thread_idx], NULL, copy_compressed_data,
                              &thread_args[thread_idx]) != 0) {
                 for (size_t i = 0; i < thread_idx; i++) {
                     pthread_join(threads[i], NULL);
@@ -177,10 +199,9 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
     free(threads);
     free(thread_args);
     free(threadOffsets);
-    
+
     return resultBuf;
 }
-
 
 
 ////////////////////////////////////////////////////////////
@@ -496,7 +517,7 @@ for (int b = 0; b < numBuf; b++) {
    printf ("compChunksSize[0][0] %u\n", compChunksSize[0][0]);
   resultBuf = prepare_split_results(
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
-      compChunksType, cumulativeChunksSize, totalCompressedSize, &resBufSize);
+      compChunksType, cumulativeChunksSize, totalCompressedSize, &resBufSize, threads);
   gettimeofday(&endTimeReal, NULL);
   double compressPrepareTimeReal = (endTimeReal.tv_sec - startTimeReal.tv_sec) + 
                             (endTimeReal.tv_usec - startTimeReal.tv_usec) / 1e6;
