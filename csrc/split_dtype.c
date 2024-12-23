@@ -232,32 +232,22 @@ static void* compression_worker(void* arg) {
     
     while (1) {
         // Get next chunk to process
-//	printf ("start\n");
         pthread_mutex_lock(thread_data->next_chunk_mutex);
         current_chunk = (*thread_data->next_chunk)++;
         pthread_mutex_unlock(thread_data->next_chunk_mutex);
 
         // Exit if all chunks have been processed
-//	printf ("current_chunk %zu\n", current_chunk);
-//	printf ("thread_data->numChunks %zu\n",thread_data->numChunks);
         if (current_chunk >= thread_data->numChunks) {
             break;
         }
 
         // Calculate offset and chunk size
         size_t offset = current_chunk * thread_data->origChunkSize;
-//	printf ("offset %zu\n", offset);
         size_t curOrigChunkSize = (current_chunk == thread_data->numChunks - 1) 
             ? (thread_data->data->len - offset)  // Last chunk
             : thread_data->origChunkSize;        // Regular chunk
         
-//        printf ("curOrigChunkSize %zu\n", curOrigChunkSize);	
-
         // Byte Grouping + Byte Ordering
-//	printf("thread_data->buffers: %p\n", (void*)thread_data->buffers);
-// printf("current_chunk: %zu\n", current_chunk);
-//uint8_t **chunk_ptr = thread_data->buffers[current_chunk];
-//printf("chunk_ptr: %p\n", (void*)chunk_ptr);
         if (thread_data->numBuf == 2) {
             if (split_bytearray_dtype16(thread_data->data->buf + offset, curOrigChunkSize,
                                       thread_data->buffers[current_chunk], 
@@ -278,7 +268,6 @@ static void* compression_worker(void* arg) {
 
        for (int b = 0; b < thread_data->numBuf; b++) {
         // Allocate memory for compressed data
-//             printf ("help0000 \n");
         thread_data->compressedData[b][current_chunk] = malloc(thread_data->origChunkSize);
         if (!thread_data->compressedData[b][current_chunk]) {
             pthread_exit((void*)-1);
@@ -287,13 +276,6 @@ static void* compression_worker(void* arg) {
         if (thread_data->buffers[current_chunk][b] != NULL) {
             // Always try to compress initially
             size_t uncompSize = thread_data->unCompChunksSize[current_chunk][b];
-//            printf ("help1000 \n");
-
-//            printf ("b %zu current_chunk %zu\n", b, current_chunk);
-//            printf ("thread_data->compressedData[b][current_chunk] %zu\n", thread_data->compressedData[b][current_chunk]);
-//            printf (" thread_data->origChunkSize %zu\n", thread_data->origChunkSize);
-//            printf (" thread_data->buffers[current_chunk][b] %zu\n", thread_data->buffers[current_chunk][b]);
-
             thread_data->compChunksSize[b][current_chunk] =
                 HUF_compress(thread_data->compressedData[b][current_chunk],
                            thread_data->origChunkSize,
@@ -552,7 +534,21 @@ for (int b = 0; b < numBuf; b++) {
   double compressAll = (endTime.tv_sec - startTime.tv_sec) + 
                             (endTime.tv_usec - startTime.tv_usec) / 1e6;
   printf("compress All: %f seconds\n", compressAll);
-
+  cleaning:
+      for (int i = 0; i < numChunks; i++) {
+          free(buffers[i]);
+          free(unCompChunksSize[i]);
+      }
+      free(buffers);
+      free(unCompChunksSize);
+      for (int i = 0; i < numBuf; i++) {
+            free(compressedData[i]);
+            free(compChunksType[i]);
+            free(compChunksSize[i]);
+      }
+      free(compressedData);
+      free(compChunksType);
+      free(compChunksSize);
   return py_result;
 }
 
@@ -815,7 +811,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   }
   //eTime = clock();
   //double metadataTime = (double)(eTime - sTime) / CLOCKS_PER_SEC;
-//  printf ("metadataTime %f\n", metadataTime);
+  // printf ("metadataTime %f\n", metadataTime);
 
 //  clock_t startTime, endTime;
 //  startTime = clock();
