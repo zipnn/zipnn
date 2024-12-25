@@ -413,8 +413,8 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     }
     return NULL;
 
+  struct timeval startTimeReal, endTimeReal;
   compression_threading: 
-    struct timeval startTimeReal, endTimeReal;
     gettimeofday(&startTimeReal, NULL);
     pthread_t *thread_handles = NULL;
     CompressionThreadData *thread_data = NULL;
