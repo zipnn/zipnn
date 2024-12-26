@@ -307,6 +307,7 @@ static void* compression_worker(void* arg) {
                 thread_data->compChunksSize[b][current_chunk] <
                 (uncompSize * thread_data->compThreshold)) {  // Fixed parentheses
                 thread_data->compChunksType[b][current_chunk] = 1;  // Compress with Huffman
+		free(thread_data->buffers[current_chunk][b]);
             } else {  // the buffer was not compressed
                 free(thread_data->compressedData[b][current_chunk]);
                 thread_data->compChunksSize[b][current_chunk] = uncompSize;
@@ -750,7 +751,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   size_t compChunksLen[numBuf][numChunks];
   u_int8_t *resultBuf = NULL;
   size_t decompLen[numChunks][numBuf];
-  uint8_t ***deCompressedDataPtr = malloc(numBuf * sizeof(uint8_t **));
+  uint8_t ***deCompressedDataPtr = malloc(numBuf * sizeof(uint8_t **)); //[numBuf][numChunks]
   if (deCompressedDataPtr == NULL) {
 //     Handle error
   }
@@ -933,6 +934,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   for(int b = 0; b < numBuf; b++) {
         free(deCompressedDataPtr[b]);
   }
+  free(deCompressedDataPtr);
   eT = clock();
   double freeTime = (double)(eT - sT) / CLOCKS_PER_SEC;
 //  printf ("free %f\n", freeTime);
