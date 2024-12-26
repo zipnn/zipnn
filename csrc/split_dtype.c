@@ -368,13 +368,13 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
 
   u_int8_t ***compressedData = malloc(numBuf * sizeof(uint8_t**)); // [numBuf][numChunks]
   u_int8_t **compChunksType = malloc(numBuf * sizeof(uint8_t*));// [numBuf][numChunks]
-  uint32_t **compChunksSize = malloc(numBuf * sizeof(uint32_t*));// [numBuf][numChunks]
+  uint32_t **compChunksSize = calloc(numBuf, sizeof(uint32_t*));// [numBuf][numChunks]
   if (!compressedData || !compChunksType || !compChunksSize) goto error_initial_malloc;
 
   for(int b = 0; b < numBuf; b++) {
     compressedData[b] = malloc( numChunks * sizeof(uint8_t*));	  
     compChunksType[b] = malloc( numChunks * sizeof(uint8_t));
-    compChunksSize[b] = malloc( numChunks * sizeof(uint32_t));
+    compChunksSize[b] = calloc( numChunks,  sizeof(uint32_t));
    if (!compressedData[b] || !compChunksType[b] || !compChunksSize[b]) goto error_initial_malloc;
   }
   
@@ -556,16 +556,27 @@ for (int b = 0; b < numBuf; b++) {
                             (endTime.tv_usec - startTime.tv_usec) / 1e6;
   printf("compress All: %f seconds\n", compressAll);
   cleaning:
-      for (int i = 0; i < numChunks; i++) {
-          free(buffers[i]);
-          free(unCompChunksSize[i]);
+      for (int c = 0; c < numChunks; c++) {
+	      for (int b = 0; b < numBuf; b++) {
+		      if (buffers[c][b]) {
+			      free(buffers[c][b]);
+		      }
+	      }	     
+	      if (buffers[c]) {
+		      free(buffers[c]);
+	      }
+	      free(unCompChunksSize[c]);
       }
+
       free(buffers);
       free(unCompChunksSize);
-      for (int i = 0; i < numBuf; i++) {
-            free(compressedData[i]);
-            free(compChunksType[i]);
-            free(compChunksSize[i]);
+
+      for (int b = 0; b < numBuf; b++) {
+	    if(compressedData[b]) {	    
+	      free(compressedData[b]);    
+	    }
+            free(compChunksType[b]);
+            free(compChunksSize[b]);
       }
       free(compressedData);
       free(compChunksType);
