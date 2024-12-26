@@ -206,8 +206,8 @@ class ZipNNDtypeEnum(Enum):
     QINT8 = (torch.qint8, None, None, "qint8", 26)
     QINT32 = (torch.qint32, None, None, "qint32", 27)
     QUINT4X2 = (torch.quint4x2, None, None, "quint4x2", 28)
-    FLOAT8_E4M3FN = (torch.float8_e4m3fn, None, None, "float8_e4m3fn", 29)
-    FLOAT8_E5M2 = (torch.float8_e5m2, None, None, "float8_e5m2", 30)
+#    FLOAT8_E4M3FN = (torch.float8_e4m3fn, None, None, "float8_e4m3fn", 29)
+#    FLOAT8_E5M2 = (torch.float8_e5m2, None, None, "float8_e5m2", 30)
 
     def __init__(self, torch_dtype, numpy_dtype, python_dtype, dtype_str, code):
         self.torch_dtype = torch_dtype
