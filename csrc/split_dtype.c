@@ -45,6 +45,9 @@ void* copy_compressed_data(void* arg) {
             free(args->compressedData[args->b][c]);
             localOffset += args->compChunksSize[args->b][c];
         }
+	else{
+		printf("args->compressedData[args->b][c] && args->compChunksSize[args->b][c] > 0 in csrc");
+	}
     }
     
     // Store final offset
@@ -158,9 +161,6 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
             if (end_chunk > numChunks) {
                 end_chunk = numChunks;
             }
-
-            printf("Buffer %zu Thread %zu handling chunks %zu to %zu\n", 
-                   b, t, start_chunk, end_chunk - 1);
 
             thread_args[thread_idx] = (struct CompressedDataCopyArgs){
                 .b = b,
@@ -483,8 +483,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   /////////////////////////////////
 continue_processing: 
 
-printf("compChunksSize[%zu][%zu] %zu\n ", 0, 0, compChunksSize[0][0]);
-printf("compChunksSize[%zu][%zu] %zu\n ", 0, 1, compChunksSize[0][1]);
 
 for (int b = 0; b < numBuf; b++) {
     size_t totalCompressed = 0;
@@ -559,7 +557,7 @@ for (int b = 0; b < numBuf; b++) {
       for (int c = 0; c < numChunks; c++) {
 	      for (int b = 0; b < numBuf; b++) {
 		      if (buffers[c][b]) {
-			      free(buffers[c][b]);
+	//		      free(buffers[c][b]);
 		      }
 	      }	     
 	      if (buffers[c]) {
