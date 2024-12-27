@@ -18,9 +18,9 @@ struct CompressedDataCopyArgs {
     size_t start_chunk;        // starting chunk for this thread
     size_t end_chunk;          // ending chunk for this thread
     size_t numChunks;
-    u_int8_t ***compressedData;
+    uint8_t ***compressedData;
     uint32_t **compChunksSize;
-    u_int8_t *resultBuf;
+    uint8_t *resultBuf;
     size_t baseOffset;         // base offset for this buffer
     size_t *threadOffsets;     // array to store offsets for each thread
 };
@@ -55,17 +55,17 @@ void* copy_compressed_data(void* arg) {
     return NULL;
 }
 
-u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
-                               size_t numChunks, u_int8_t *header,
-                               u_int8_t ***compressedData,
+uint8_t *prepare_split_results(size_t header_len, size_t numBuf,
+                               size_t numChunks, uint8_t *header,
+                               uint8_t ***compressedData,
                                uint32_t **compChunksSize,
-                               const u_int8_t **compChunksType,
+                               uint8_t **compChunksType,
                                const size_t *totalCompressedSize,
                                size_t *resBufSize,
                                int requested_threads) { 
     // Previous buffer size calculations remain the same
     *resBufSize = header_len;
-    size_t compChunksTypeLen = numBuf * numChunks * sizeof(u_int8_t);
+    size_t compChunksTypeLen = numBuf * numChunks * sizeof(uint8_t);
     size_t cumulativeChunksSizeLen = numBuf * numChunks * sizeof(size_t);
     *resBufSize += compChunksTypeLen + cumulativeChunksSizeLen;
 
@@ -75,7 +75,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
 
     // Allocate and setup result buffer (same as before)
     memcpy(&header[24], resBufSize, sizeof(size_t));
-    u_int8_t *resultBuf = (u_int8_t *)malloc(*resBufSize);
+    uint8_t *resultBuf = (uint8_t *)malloc(*resBufSize);
     if (!resultBuf) {
         PyErr_SetString(PyExc_MemoryError,
             "Failed to allocate memory for result buffer in split function");
@@ -93,7 +93,7 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
         if (compChunksType[b]) {
             memcpy(resultBuf + offset + b * numChunks,
                    compChunksType[b],
-                   numChunks * sizeof(u_int8_t));
+                   numChunks * sizeof(uint8_t));
         }
     }
     offset += compChunksTypeLen;
@@ -325,7 +325,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   int numBuf, bits_mode, bytes_mode, is_redata, checkThAfterPercent, threads;
   size_t origChunkSize;
   float compThreshold;
-  // u_int8_t isPrint = 0;
+  // uint8_t isPrint = 0;
 
   struct timeval startTime, endTime;
   gettimeofday(&startTime, NULL);
@@ -365,8 +365,8 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     if (!buffers[c] || !unCompChunksSize[c]) goto error_initial_malloc;
   }
 
-  u_int8_t ***compressedData = malloc(numBuf * sizeof(uint8_t**)); // [numBuf][numChunks]
-  u_int8_t **compChunksType = malloc(numBuf * sizeof(uint8_t*));// [numBuf][numChunks]
+  uint8_t ***compressedData = malloc(numBuf * sizeof(uint8_t**)); // [numBuf][numChunks]
+  uint8_t **compChunksType = malloc(numBuf * sizeof(uint8_t*));// [numBuf][numChunks]
   uint32_t **compChunksSize = calloc(numBuf, sizeof(uint32_t*));// [numBuf][numChunks]
   if (!compressedData || !compChunksType || !compChunksSize) goto error_initial_malloc;
 
@@ -506,7 +506,7 @@ for (int b = 0; b < numBuf; b++) {
     printf("compress ML1: %f seconds\n", compressMl1TimeReal);
 
   PyObject *py_result;
-  u_int8_t *resultBuf;
+  uint8_t *resultBuf;
   size_t resBufSize;
 
   printf("start prepare: %f seconds\n", compressMl1TimeReal);
@@ -738,15 +738,15 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     // TBD when support dynamic byte_reorder
   }
 
-  u_int8_t *ptrChunksType = (u_int8_t *)data.buf;
+  uint8_t *ptrChunksType = (uint8_t *)data.buf;
   size_t *ptrChunksCumulative = (size_t *)(ptrChunksType + numBuf * numChunks);
-  u_int8_t *ptrCompressData[numBuf];
-  ptrCompressData[0] = (u_int8_t *)(ptrChunksCumulative + numBuf * numChunks);
+  uint8_t *ptrCompressData[numBuf];
+  ptrCompressData[0] = (uint8_t *)(ptrChunksCumulative + numBuf * numChunks);
   size_t cumulativeChunksSize[numBuf][numChunks];
   uint32_t compChunksType[numBuf][numChunks];
   size_t compCumulativeChunksPos[numBuf][numChunks + 1];
   size_t compChunksLen[numBuf][numChunks];
-  u_int8_t *resultBuf = NULL;
+  uint8_t *resultBuf = NULL;
   size_t decompLen[numChunks][numBuf];
   uint8_t ***deCompressedDataPtr = malloc(numBuf * sizeof(uint8_t **)); //[numBuf][numChunks]
   if (deCompressedDataPtr == NULL) {
@@ -936,7 +936,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   double freeTime = (double)(eT - sT) / CLOCKS_PER_SEC;
 //  printf ("free %f\n", freeTime);
 
-
+/
 //  free(resultBuf);
 //  PyBuffer_Release(&data);
   return py_result;

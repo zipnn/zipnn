@@ -20,7 +20,7 @@ static uint32_t reorder_float_bits_dtype16(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void reorder_all_floats_dtype16(u_int8_t *src, size_t len) {
+static void reorder_all_floats_dtype16(uint8_t *src, size_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   size_t num_floats = len / sizeof(uint32_t);
   for (size_t i = 0; i < num_floats; i++) {
@@ -29,8 +29,8 @@ static void reorder_all_floats_dtype16(u_int8_t *src, size_t len) {
 }
 
 // Helper function to split a bytearray into groups
-int split_bytearray_dtype16(u_int8_t *src, size_t len,
-                            u_int8_t **chunk_buffs,
+int split_bytearray_dtype16(uint8_t *src, size_t len,
+                            uint8_t **chunk_buffs,
                             size_t *unCompChunksSizeCurChunk, int bits_mode,
                             int bytes_mode, int is_review) {
   if (bits_mode == 1) {  // reoreder exponent
@@ -56,8 +56,8 @@ int split_bytearray_dtype16(u_int8_t *src, size_t len,
       return -1;
     }
 
-    u_int8_t *dst0 = chunk_buffs[0];
-    u_int8_t *dst1 = chunk_buffs[1];
+    uint8_t *dst0 = chunk_buffs[0];
+    uint8_t *dst1 = chunk_buffs[1];
 
     for (size_t i = 0; i < len; i += 2) {
       *dst0++ = src[i];
@@ -120,7 +120,7 @@ static uint32_t revert_float_bits_dtype16(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void revert_all_floats_dtype16(u_int8_t *src, size_t len) {
+static void revert_all_floats_dtype16(uint8_t *src, size_t len) {
   uint32_t *uint_array = (uint32_t *)src;
   size_t num_floats = len / sizeof(uint32_t);
   for (size_t i = 0; i < num_floats; i++) {
@@ -129,13 +129,13 @@ static void revert_all_floats_dtype16(u_int8_t *src, size_t len) {
 }
 
 // Helper function to combine four chunk_buffs into a single bytearray
-int combine_buffers_dtype16(const u_int8_t *buf1, const u_int8_t *buf2,
-                            u_int8_t *combinePtr, const size_t *bufLens,
+int combine_buffers_dtype16(const uint8_t *buf1, const uint8_t *buf2,
+                            uint8_t *combinePtr, const size_t *bufLens,
                             int bits_mode, int bytes_mode) {
   size_t total_len = bufLens[0] + bufLens[1];
   size_t half_len = total_len / 2;
 
-  u_int8_t *dst;
+  uint8_t *dst;
   dst = combinePtr;
 
   switch (bytes_mode) {
