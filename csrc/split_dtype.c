@@ -359,7 +359,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   size_t **unCompChunksSize = malloc(numChunks * sizeof(size_t *));//[numChunks][numBuf]
   if (!buffers || !unCompChunksSize) goto error_initial_malloc;
 
-  for(int c = 0; c < numChunks; c++) {
+  for(size_t c = 0; c < numChunks; c++) {
     buffers[c] = malloc(numBuf * sizeof(uint8_t *));
     unCompChunksSize[c] = malloc(numBuf * sizeof(size_t));
     if (!buffers[c] || !unCompChunksSize[c]) goto error_initial_malloc;
@@ -381,32 +381,32 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
 
   error_initial_malloc:
     if (buffers) {
-      for (int i = 0; i < numChunks; i++) {
-          free(buffers[i]);
+      for (size_t c = 0; c < numChunks; c++) {
+          free(buffers[c]);
       }
       free(buffers);
     }
     if (unCompChunksSize) {
-        for (int i = 0; i < numChunks; i++) {
-            free(unCompChunksSize[i]);
+        for (size_t c = 0; c < numChunks; c++) {
+            free(unCompChunksSize[c]);
         }
         free(unCompChunksSize);
     }
     if (compressedData) {
-        for (int i = 0; i < numBuf; i++) {
-            free(compressedData[i]);
+        for (uint32_t b = 0; b < numBuf; b++) {
+            free(compressedData[b]);
         }
         free(compressedData);
     }
     if (compChunksType) {
-        for (int i = 0; i < numBuf; i++) {
-            free(compChunksType[i]);
+        for (uint32_t b = 0; b < numBuf; b++) {
+            free(compChunksType[b]);
         }
         free(compChunksType);
     }
     if (compChunksSize) {
-        for (int i = 0; i < numBuf; i++) {
-            free(compChunksSize[i]);
+        for (int b = 0; b < numBuf; b++) {
+            free(compChunksSize[b]);
         }
         free(compChunksSize);
     }
@@ -417,7 +417,6 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
     gettimeofday(&startTimeReal, NULL);
     pthread_t *thread_handles = NULL;
     CompressionThreadData *thread_data = NULL;
-    pthread_mutex_t compression_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_t next_chunk_mutex = PTHREAD_MUTEX_INITIALIZER;
     size_t next_chunk = 0;
   
@@ -552,7 +551,7 @@ for (int b = 0; b < numBuf; b++) {
                             (endTime.tv_usec - startTime.tv_usec) / 1e6;
   printf("compress All: %f seconds\n", compressAll);
   cleaning:
-      for (int c = 0; c < numChunks; c++) {
+      for (size_t c = 0; c < numChunks; c++) {
 	      for (int b = 0; b < numBuf; b++) {
 		      if (buffers[c][b]) {
 	//		      free(buffers[c][b]);
@@ -729,7 +728,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
       oneBufRatio[b] = numBuf;
       oneUnCompChunkSize[b] = origChunkSize / oneBufRatio[b];
     }
-    for (uint32_t c = 0; c < numChunks; c++) {
+    for (size_t c = 0; c < numChunks; c++) {
       for (int b = 0; b < numBuf; b++) {
         unCompChunkSize[c][b] = oneUnCompChunkSize[b];
       }
@@ -752,13 +751,13 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   if (deCompressedDataPtr == NULL) {
 //     Handle error
   }
-  for(int i = 0; i < numBuf; i++) {
-    deCompressedDataPtr[i] = malloc(numChunks * sizeof(uint8_t *));
-    if (deCompressedDataPtr[i] == NULL) {
+  for(int b = 0; b < numBuf; b++) {
+    deCompressedDataPtr[b] = malloc(numChunks * sizeof(uint8_t *));
+    if (deCompressedDataPtr[b] == NULL) {
         // Handle error
     }
-    for(int j = 0; j < numChunks; j++) {
-        deCompressedDataPtr[i][j] = NULL;  
+    for(size_t c = 0; c < numChunks; c++) {
+        deCompressedDataPtr[b][c] = NULL;  
     }
   }
 
@@ -769,12 +768,12 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   }
 
   for (int b = 0; b < numBuf; b++) {
-    for (uint32_t c = 0; c < numChunks; c++) {
+    for (size_t c = 0; c < numChunks; c++) {
       compChunksType[b][c] = (*ptrChunksType++);
       cumulativeChunksSize[b][c] = (*ptrChunksCumulative++);
     }
   }
-  for (uint32_t c = 0; c < numChunks; c++) {
+  for (size_t c = 0; c < numChunks; c++) {
     for (int b = 0; b < numBuf; b++) {
       compCumulativeChunksPos[b][c + 1] = cumulativeChunksSize[b][c];
       compChunksLen[b][c] =
@@ -801,11 +800,11 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     }
   }
 
-  for (int b = 1; b < numBuf; b++) {
+  for (uint32_t b = 1; b < numBuf; b++) {
     ptrCompressData[b] =
         ptrCompressData[b - 1] + cumulativeChunksSize[b - 1][numChunks - 1];
   }
-  for (uint32_t c = 0; c < numChunks; c++) {
+  for (size_t c = 0; c < numChunks; c++) {
     if (c < numChunks - 1) {
       for (int b = 0; b < numBuf; b++) {
         decompLen[c][b] = unCompChunkSize[c][b];
@@ -936,7 +935,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   double freeTime = (double)(eT - sT) / CLOCKS_PER_SEC;
 //  printf ("free %f\n", freeTime);
 
-/
+
 //  free(resultBuf);
 //  PyBuffer_Release(&data);
   return py_result;
