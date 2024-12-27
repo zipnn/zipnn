@@ -20,24 +20,24 @@ static uint32_t reorder_float_bits_dtype16(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void reorder_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
+static void reorder_all_floats_dtype16(u_int8_t *src, size_t len) {
   uint32_t *uint_array = (uint32_t *)src;
-  Py_ssize_t num_floats = len / sizeof(uint32_t);
-  for (Py_ssize_t i = 0; i < num_floats; i++) {
+  size_t num_floats = len / sizeof(uint32_t);
+  for (size_t i = 0; i < num_floats; i++) {
     uint_array[i] = reorder_float_bits_dtype16(*(float *)&uint_array[i]);
   }
 }
 
 // Helper function to split a bytearray into groups
-int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
+int split_bytearray_dtype16(u_int8_t *src, size_t len,
                             u_int8_t **chunk_buffs,
                             size_t *unCompChunksSizeCurChunk, int bits_mode,
-                            int bytes_mode, int is_review, int threads) {
+                            int bytes_mode, int is_review) {
   if (bits_mode == 1) {  // reoreder exponent
     reorder_all_floats_dtype16(src, len);
   }
-  Py_ssize_t half_len = len / 2;
-  Py_ssize_t lens[] = {half_len, half_len};
+  size_t half_len = len / 2;
+  size_t lens[] = {half_len, half_len};
   int remainder = len % 2;
   if (remainder > 0) {
     lens[0] += 1;
@@ -59,7 +59,7 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
     u_int8_t *dst0 = chunk_buffs[0];
     u_int8_t *dst1 = chunk_buffs[1];
 
-    for (Py_ssize_t i = 0; i < len; i += 2) {
+    for (size_t i = 0; i < len; i += 2) {
       *dst0++ = src[i];
       *dst1++ = src[i + 1];
     }
@@ -85,11 +85,11 @@ int split_bytearray_dtype16(u_int8_t *src, Py_ssize_t len,
     dst0 = chunk_buffs[0];
 
     if (bytes_mode == 1) {
-      for (Py_ssize_t i = 0; i < len; i += 2) {
+      for (size_t i = 0; i < len; i += 2) {
         *dst0++ = src[i];
       }
     } else {
-      for (Py_ssize_t i = 0; i < len; i += 2) {
+      for (size_t i = 0; i < len; i += 2) {
         *dst0++ = src[i + 1];
       }
     }
@@ -120,27 +120,27 @@ static uint32_t revert_float_bits_dtype16(float number) {
 }
 
 // Helper function to reorder all floats in a bytearray
-static void revert_all_floats_dtype16(u_int8_t *src, Py_ssize_t len) {
+static void revert_all_floats_dtype16(u_int8_t *src, size_t len) {
   uint32_t *uint_array = (uint32_t *)src;
-  Py_ssize_t num_floats = len / sizeof(uint32_t);
-  for (Py_ssize_t i = 0; i < num_floats; i++) {
+  size_t num_floats = len / sizeof(uint32_t);
+  for (size_t i = 0; i < num_floats; i++) {
     uint_array[i] = revert_float_bits_dtype16(*(float *)&uint_array[i]);
   }
 }
 
 // Helper function to combine four chunk_buffs into a single bytearray
 int combine_buffers_dtype16(const u_int8_t *buf1, const u_int8_t *buf2,
-                            u_int8_t *combinePtr, const Py_ssize_t *bufLens,
-                            int bits_mode, int bytes_mode, int threads) {
-  Py_ssize_t total_len = bufLens[0] + bufLens[1];
-  Py_ssize_t half_len = total_len / 2;
+                            u_int8_t *combinePtr, const size_t *bufLens,
+                            int bits_mode, int bytes_mode) {
+  size_t total_len = bufLens[0] + bufLens[1];
+  size_t half_len = total_len / 2;
 
   u_int8_t *dst;
   dst = combinePtr;
 
   switch (bytes_mode) {
   case 10:  // 2b01_010 - Byte Group to two different groups
-    for (Py_ssize_t i = 0; i < half_len; i++) {
+    for (size_t i = 0; i < half_len; i++) {
       *dst++ = buf1[i];
       *dst++ = buf2[i];
     }
@@ -155,12 +155,12 @@ int combine_buffers_dtype16(const u_int8_t *buf1, const u_int8_t *buf2,
            // We are refering to the LSByte as a little endian, thus we omit buf1
 
     if (bytes_mode == 8) {
-      for (Py_ssize_t i = 0; i < bufLens[0]; i++) {
+      for (size_t i = 0; i < bufLens[0]; i++) {
         *dst++ = 0;
         *dst++ = buf1[i];
       }
     } else {
-      for (Py_ssize_t i = 0; i < bufLens[0]; i++) {
+      for (size_t i = 0; i < bufLens[0]; i++) {
         *dst++ = buf1[i];
         *dst++ = 0;
       }

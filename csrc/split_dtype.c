@@ -60,7 +60,6 @@ u_int8_t *prepare_split_results(size_t header_len, size_t numBuf,
                                u_int8_t ***compressedData,
                                uint32_t **compChunksSize,
                                const u_int8_t **compChunksType,
-                               const size_t **cumulativeChunksSize,
                                const size_t *totalCompressedSize,
                                size_t *resBufSize,
                                int requested_threads) { 
@@ -240,7 +239,7 @@ typedef struct {
     uint8_t ***compressedData;
     uint32_t **compChunksSize;
     uint8_t **compChunksType;
-    int *isThCheck;
+    uint8_t *isThCheck;
     int checkCompTh;
     double compThreshold;
     pthread_mutex_t *next_chunk_mutex;
@@ -274,7 +273,7 @@ static void* compression_worker(void* arg) {
                                       thread_data->buffers[current_chunk], 
                                       thread_data->unCompChunksSize[current_chunk],
                                       thread_data->bits_mode, thread_data->bytes_mode, 
-                                      thread_data->is_redata, thread_data->threads) != 0) {
+                                      thread_data->is_redata) != 0) {
                 pthread_exit((void*)-1);
             }
         } else {  // numBuf == 4
@@ -282,7 +281,7 @@ static void* compression_worker(void* arg) {
                                       thread_data->buffers[current_chunk], 
                                       thread_data->unCompChunksSize[current_chunk],
                                       thread_data->bits_mode, thread_data->bytes_mode, 
-                                      thread_data->is_redata, thread_data->threads) != 0) {
+                                      thread_data->is_redata) != 0) {
                 pthread_exit((void*)-1);
             }
         }
@@ -340,8 +339,7 @@ PyObject *py_split_dtype(PyObject *self, PyObject *args) {
   size_t numChunks = (data.len + origChunkSize - 1) / origChunkSize;
   size_t totalCompressedSize[numBuf];
   size_t totalUnCompressedSize[numBuf];
-  size_t cumulativeChunksSize[numBuf][numChunks];
-  u_int8_t isThCheck[numBuf];
+  uint8_t isThCheck[numBuf];
   uint32_t checkCompTh =
       (uint32_t)ceil((double)numChunks / checkThAfterPercent);
   // if (isPrint) {
@@ -492,7 +490,6 @@ for (int b = 0; b < numBuf; b++) {
     for (size_t chunk = 0; chunk < numChunks; chunk++) {
         totalCompressed += compChunksSize[b][chunk];
         totalUncompressed += unCompChunksSize[chunk][b];
-        cumulativeChunksSize[b][chunk] = totalCompressed;
         
         // Check if compression is beneficial after checkCompTh chunks
         if (chunk == checkCompTh && 
@@ -516,7 +513,7 @@ for (int b = 0; b < numBuf; b++) {
    printf ("compChunksSize[0][0] %u\n", compChunksSize[0][0]);
   resultBuf = prepare_split_results(
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
-      compChunksType, cumulativeChunksSize, totalCompressedSize, &resBufSize, threads);
+      compChunksType, totalCompressedSize, &resBufSize, threads);
   gettimeofday(&endTimeReal, NULL);
   double compressPrepareTimeReal = (endTimeReal.tv_sec - startTimeReal.tv_sec) + 
                             (endTimeReal.tv_usec - startTimeReal.tv_usec) / 1e6;
@@ -665,8 +662,8 @@ static void* process_chunk_worker(void* arg) {
                     combinePtr,
                     current_decompLen,
                     data->bits_mode,
-                    data->bytes_mode,
-                    1) != 0) {
+                    data->bytes_mode
+                    ) != 0) {
                 pthread_exit((void*)-1);
             }
         } else {
@@ -681,8 +678,8 @@ static void* process_chunk_worker(void* arg) {
                     combinePtr,
                     current_decompLen,
                     data->bits_mode,
-                    data->bytes_mode,
-                    1) != 0) {
+                    data->bytes_mode
+                    ) != 0) {
                 pthread_exit((void*)-1);
             }
         }
