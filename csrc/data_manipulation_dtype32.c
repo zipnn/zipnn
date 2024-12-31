@@ -3,15 +3,15 @@
 #include <time.h>
 
 //// Helper function that count zero bytes
-static void count_zero_bytes(const uint8_t *src, size_t len,
-                             size_t *msb_zeros, size_t *mid_high,
-                             size_t *mid_low, size_t *lsb_zeros) {
+static void count_zero_bytes(const uint8_t *src, size_t len, size_t *msb_zeros,
+                             size_t *mid_high, size_t *mid_low,
+                             size_t *lsb_zeros) {
   size_t num_uint32 =
       len /
       sizeof(
-          uint32_t);  // Calculate how many uint32_t elements are in the buffer
+          uint32_t); // Calculate how many uint32_t elements are in the buffer
   const uint32_t *uint32_array =
-      (uint32_t *)src;  // Cast the byte buffer to a uint32_t array
+      (uint32_t *)src; // Cast the byte buffer to a uint32_t array
 
   *msb_zeros = 0;
   *mid_high = 0;
@@ -58,8 +58,7 @@ void reorder_all_floats_dtype32(uint8_t *src, size_t len) {
 }
 
 //
-int allocate_4chunk_buffs(uint8_t **chunk_buffs, size_t *bufLens
-                          ) {
+int allocate_4chunk_buffs(uint8_t **chunk_buffs, size_t *bufLens) {
   chunk_buffs[0] = (bufLens[0] > 0) ? malloc(bufLens[0]) : NULL;
   chunk_buffs[1] = (bufLens[1] > 0) ? malloc(bufLens[1]) : NULL;
   chunk_buffs[2] = (bufLens[2] > 0) ? malloc(bufLens[2]) : NULL;
@@ -98,7 +97,7 @@ int handle_split_mode_220(const uint8_t *src, size_t total_len,
     return -1;
 
   uint8_t *dst1 = chunk_buffs[0], *dst2 = chunk_buffs[1],
-           *dst3 = chunk_buffs[2], *dst4 = chunk_buffs[3];
+          *dst3 = chunk_buffs[2], *dst4 = chunk_buffs[3];
 
   for (size_t i = 0; i < total_len; i += 4) {
     *dst1++ = src[i];
@@ -221,24 +220,23 @@ int handle_split_mode_220(const uint8_t *src, size_t total_len,
 //}
 //
 //// Helper function to split a bytearray into four chunk_buffs
-int split_bytearray_dtype32(uint8_t *src, size_t len,
-                            uint8_t **chunk_buffs, size_t *bufLens,
-                            int bits_mode, int bytes_mode, int is_review
-                            ) {
+int split_bytearray_dtype32(uint8_t *src, size_t len, uint8_t **chunk_buffs,
+                            size_t *bufLens, int bits_mode, int bytes_mode,
+                            int is_review) {
   uint32_t num_buf = 4;
-  if (bits_mode == 1) {  // reoreder exponent
+  if (bits_mode == 1) { // reoreder exponent
     reorder_all_floats_dtype32(src, len);
   }
 
   if (is_review == 1) {
-//    clock_t start, end;
-//    double cpu_time_used;
+    //    clock_t start, end;
+    //    double cpu_time_used;
     size_t msb_zeros, mid_high, mid_low, low;
-//    start = clock();
+    //    start = clock();
     count_zero_bytes(src, len, &msb_zeros, &mid_high, &mid_low, &low);
 
-//    end = clock();  // End the timer
-//    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    //    end = clock();  // End the timer
+    //    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
   }
 
   switch (bytes_mode) {
@@ -395,9 +393,9 @@ void revert_all_floats_dtype32(uint8_t *src, size_t len) {
 //
 //// Helper function to combine four chunk_buffs into a single bytearray
 uint8_t combine_buffers_dtype32(uint8_t *buf1, uint8_t *buf2, uint8_t *buf3,
-                                 uint8_t *buf4, uint8_t *combinePtr,
-                                 const size_t *bufLens, int bits_mode,
-                                 int bytes_mode) {
+                                uint8_t *buf4, uint8_t *combinePtr,
+                                const size_t *bufLens, int bits_mode,
+                                int bytes_mode) {
   uint32_t num_buf = 4;
   uint8_t *bufs[] = {buf1, buf2, buf3, buf4};
   size_t total_len = 0;
@@ -463,7 +461,7 @@ uint8_t combine_buffers_dtype32(uint8_t *buf1, uint8_t *buf2, uint8_t *buf3,
 
 int buffer_ratio_dtype32(int bytes_mode, uint32_t *buf_ratio) {
   switch (bytes_mode) {
-  case 220:  // 8b1_10_11_100 - Byte Group to two different groups
+  case 220: // 8b1_10_11_100 - Byte Group to two different groups
     buf_ratio[0] = 4;
     buf_ratio[1] = 4;
     buf_ratio[2] = 4;
