@@ -421,13 +421,13 @@ PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
   size_t **unCompChunksSize =
       malloc(numChunks * sizeof(size_t *)); //[numChunks][numBuf]
   if (!buffers || !unCompChunksSize)
-    goto error_initial_malloc;
+    goto compression_error;
 
   for (size_t c = 0; c < numChunks; c++) {
     buffers[c] = malloc(numBuf * sizeof(uint8_t *));
     unCompChunksSize[c] = malloc(numBuf * sizeof(size_t));
     if (!buffers[c] || !unCompChunksSize[c])
-      goto error_initial_malloc;
+      goto compression_error;
   }
 
   uint8_t ***compressedData =
@@ -437,55 +437,19 @@ PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
   uint32_t **compChunksSize =
       calloc(numBuf, sizeof(uint32_t *)); // [numBuf][numChunks]
   if (!compressedData || !compChunksType || !compChunksSize)
-    goto error_initial_malloc;
+    goto compression_error;
 
   for (uint32_t b = 0; b < numBuf; b++) {
     compressedData[b] = malloc(numChunks * sizeof(uint8_t *));
     compChunksType[b] = malloc(numChunks * sizeof(uint8_t));
     compChunksSize[b] = calloc(numChunks, sizeof(uint32_t));
     if (!compressedData[b] || !compChunksType[b] || !compChunksSize[b])
-      goto error_initial_malloc;
+      goto compression_error;
   }
-
-  goto compression_threading;
-
-error_initial_malloc:
-  if (buffers) {
-    for (size_t c = 0; c < numChunks; c++) {
-      free(buffers[c]);
-    }
-    free(buffers);
-  }
-  if (unCompChunksSize) {
-    for (size_t c = 0; c < numChunks; c++) {
-      free(unCompChunksSize[c]);
-    }
-    free(unCompChunksSize);
-  }
-  if (compressedData) {
-    for (uint32_t b = 0; b < numBuf; b++) {
-      free(compressedData[b]);
-    }
-    free(compressedData);
-  }
-  if (compChunksType) {
-    for (uint32_t b = 0; b < numBuf; b++) {
-      free(compChunksType[b]);
-    }
-    free(compChunksType);
-  }
-  if (compChunksSize) {
-    for (uint32_t b = 0; b < numBuf; b++) {
-      free(compChunksSize[b]);
-    }
-    free(compChunksSize);
-  }
-  return NULL;
 
   // struct timeval startTimeReal, endTimeReal;
 
   // Start compression threads
-compression_threading:
   // gettimeofday(&startTimeReal, NULL);
   pthread_t *thread_handles = NULL;
   CompressionThreadData *thread_data = NULL;
@@ -549,6 +513,7 @@ cleanup_threads:
   if (thread_data)
     free(thread_data);
   pthread_mutex_destroy(&next_chunk_mutex);
+  goto compression_error;  
   return NULL;
 
   ////////////// The end of multi Threading part 1
@@ -589,6 +554,8 @@ continue_processing:
   resultBuf = prepare_python_return_buffer(
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
       compChunksType, totalCompressedSize, &resBufSize, threads);
+
+  if (resultBuf == NULL) goto compression_error; 
   // gettimeofday(&endTimeReal, NULL);
   // double compressPrepareTimeReal =
   //    (endTimeReal.tv_sec - startTimeReal.tv_sec) +
@@ -617,8 +584,8 @@ continue_processing:
   //                     (endTime.tv_usec - startTime.tv_usec) / 1e6;
   // printf("compress All: %f seconds\n", compressAll);
   //
-// Cleanup and return
-cleaning:
+
+  // Cleanup and return
   for (size_t c = 0; c < numChunks; c++) {
     for (uint32_t b = 0; b < numBuf; b++) {
       if (buffers[c][b]) {
@@ -630,7 +597,6 @@ cleaning:
     }
     free(unCompChunksSize[c]);
   }
-
   free(buffers);
   free(unCompChunksSize);
 
@@ -645,6 +611,57 @@ cleaning:
   free(compChunksType);
   free(compChunksSize);
   return py_result;
+
+  compression_error:
+    PyErr_SetString(PyExc_MemoryError, "Failed to allocate Memory");
+
+    if (buffers) {
+      for (size_t c = 0; c < numChunks; c++) {
+	if (buffers[c] != NULL) {
+	  free(buffers[c]);
+	  for (uint32_t b = 0; b < numBuf; b++) {
+	    if (buffers[c][b] != NULL) {
+	      free(buffers[c][b]);
+	    }
+	  }
+	}
+      }
+      free(buffers);
+    }
+    
+    if (unCompChunksSize) {
+      for (size_t c = 0; c < numChunks; c++) {
+	if (unCompChunksSize[c] != NULL) {
+          free(unCompChunksSize[c]);
+	}
+      }
+      free(unCompChunksSize);
+    }
+    if (compressedData) {
+      for (uint32_t b = 0; b < numBuf; b++) {
+	if (compressedData[b] != NULL) {
+          free(compressedData[b]);
+	}
+      }
+      free(compressedData);
+    }
+    if (compChunksType) {
+      for (uint32_t b = 0; b < numBuf; b++) {
+	if (compChunksType[b] != NULL) {
+          free(compChunksType[b]);
+	}
+      }
+      free(compChunksType);
+    }
+    if (compChunksSize) {
+      for (uint32_t b = 0; b < numBuf; b++) {
+	if (compChunksSize[b]) {
+          free(compChunksSize[b]);
+	}
+      }
+      free(compChunksSize);
+    }
+    return NULL;
 }
 
 ////////////////////////////////////////////////////////////////////////////

@@ -51,7 +51,9 @@ int split_bytearray_dtype16(uint8_t *src, size_t len, uint8_t **chunk_buffs,
 
     if (chunk_buffs[0] == NULL || chunk_buffs[1] == NULL) {
       free(chunk_buffs[0]);
-      free(chunk_buffs[1]);
+     PyErr_SetString(PyExc_MemoryError,
+                    "Failed to allocate memory, allocate 2 buffers");
+     free(chunk_buffs[1]);
       return -1;
     }
 

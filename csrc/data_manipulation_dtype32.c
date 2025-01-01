@@ -68,12 +68,8 @@ int allocate_4chunk_buffs(uint8_t **chunk_buffs, const size_t *bufLens) {
       (bufLens[1] > 0 && chunk_buffs[1] == NULL) ||
       (bufLens[2] > 0 && chunk_buffs[2] == NULL) ||
       (bufLens[3] > 0 && chunk_buffs[3] == NULL)) {
-    free(chunk_buffs[0]);
-    free(chunk_buffs[1]);
-    free(chunk_buffs[2]);
-    free(chunk_buffs[3]);
     PyErr_SetString(PyExc_MemoryError,
-                    "Failed to allocate memory, allocate_4chunk_buffs");
+                    "Failed to allocate memory, allocate 4 buffs");
     return -1;
   }
   return 0;
