@@ -10,8 +10,30 @@
 #include "huf.h"
 #include "zipnn_core_functions.h"
 
+/////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
+////////////////////////// Compression /////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 
+// This code implements a multi-threaded compression that:
+
+// 1. Splits input data into chunks
+// 2. Processes each chunk in parallel using worker threads
+// 3. Applies Huffman compression when beneficial
+// 4. Manages memory and thread resources safely
+// 5. Returns compressed data as a Python buffer
+// The implementation uses mutex locks for thread synchronization and includes
+// comprehensive error handling and resource cleanup
+
+/////////////////////////////////////////////////////////////////////////////////////
 ////  Helper Functions //////
+/////////////////////////////////////////////////////////////////////////////////////
+
+/*
+ * Structure to hold arguments for parallel compressed data copying
+ * Used to pass multiple parameters to thread function efficiently
+ */
 
 struct CompressedDataCopyArgs {
   size_t chunk_start; // starting chunk number
@@ -25,6 +47,11 @@ struct CompressedDataCopyArgs {
   size_t *bufferOffsets; // starting offset for each buffer
   size_t *threadOffsets; // array to store offsets for each thread
 };
+
+/*
+ * Thread function that copies compressed data chunks into final buffer
+ * Handles interleaved copying from multiple buffers in a thread-safe manner
+ */
 
 void *copy_compressed_data_interleaved(void *arg) {
   struct CompressedDataCopyArgs *args = (struct CompressedDataCopyArgs *)arg;
@@ -58,13 +85,28 @@ void *copy_compressed_data_interleaved(void *arg) {
   return NULL;
 }
 
-uint8_t *prepare_split_results(size_t header_len, uint32_t numBuf,
-                               size_t numChunks, uint8_t *header,
-                               uint8_t ***compressedData,
-                               uint32_t **compChunksSize,
-                               uint8_t **compChunksType,
-                               const size_t *totalCompressedSize,
-                               size_t *resBufSize, int requested_threads) {
+/*
+ * Prepares and combines split compressed data into a single buffer
+ * Handles parallel processing of multiple compressed buffers
+ *
+ * Parameters:
+ * - header_len: Length of the header data
+ * - numBuf: Number of compression buffers
+ * - numChunks: Number of chunks per buffer
+ * - header: Header data to prepend
+ * - compressedData: The data of the compressed chunks
+ * - compChunksSize: Size of each compressed chunk
+ * - compChunksType: Compression Type for each chunk
+ * - totalCompressedSize: Total size of compressed data per buffer
+ * - resBufSize: Output parameter for final buffer size
+ * - requested_threads: Number of threads to use for processing
+ */
+
+uint8_t *prepare_python_return_buffer(
+    size_t header_len, uint32_t numBuf, size_t numChunks, uint8_t *header,
+    uint8_t ***compressedData, uint32_t **compChunksSize,
+    uint8_t **compChunksType, const size_t *totalCompressedSize,
+    size_t *resBufSize, int requested_threads) {
   // Calculate buffer size
   *resBufSize = header_len;
   size_t compChunksTypeLen = numBuf * numChunks * sizeof(uint8_t);
@@ -115,8 +157,8 @@ uint8_t *prepare_split_results(size_t header_len, uint32_t numBuf,
   size_t chunks_per_thread = numChunks / num_threads;
 
   // Ensure minimum chunk size per thread
-  if (chunks_per_thread < 100) {
-    num_threads = numChunks / 100;
+  if (chunks_per_thread < 10) {
+    num_threads = numChunks / 10;
     if (num_threads == 0)
       num_threads = 1;
     chunks_per_thread = numChunks / num_threads;
@@ -206,42 +248,48 @@ uint8_t *prepare_split_results(size_t header_len, uint32_t numBuf,
 /////////////////////////////////////////////////////////////
 
 // Python callable function to split a bytearray into four buffers
+// Bit Mode Settings:
 // bits_mode:
 //     0 - no ordering of the bits
 //     1 - /ereorder of the exponent (eponent, sign_bit, mantissa)
-// bytes_mode:
-//     [we are referring to the bytes order as first 2bits refer to the MSByte
-//     and the second two bits to the LSByte] 2b [MSB Byte],2b[LSB Byte] 0 -
-//     truncate this byte 1 or 2 - a group of bytes 4b0110 [6] - bytegroup to
-//     two groups 4b0001 [1] - truncate the MSByte 4b1000 [8] - truncate the
-//     LSByte
-// is_review:
-//     Even if you have the Byte mode, you can change it if needed.
-//     0 - No review, take the bit_mode and byte_mode
-//     1 - the function can change the Bytes_mode
+// bytes_mode: Controls how bytes are grouped and ordered
+//     Format: 2bits[MSB Byte], 2bits[LSB Byte] where:
+//     0 - truncate this byte
+//     1 or 2 - a group of bytes
+//     4b0110 [6] - bytegroup to two groups
+//     4b0001 [1] - truncate the MSByte
+//     4b1000 [8] - truncate the LSByte
 
-// Compression //
+/*
+ * Structure holding all thread-specific data for compression
+ * Used to pass parameters to worker threads efficiently
+ */
 
 typedef struct {
-  Py_buffer *data;
-  size_t numChunks;
-  size_t origChunkSize;
-  uint32_t numBuf;
-  int bits_mode;
-  int bytes_mode;
-  int is_redata;
-  uint32_t threads;
-  uint8_t ***buffers;
-  size_t **unCompChunksSize;
-  uint8_t ***compressedData;
-  uint32_t **compChunksSize;
-  uint8_t **compChunksType;
-  uint8_t *isThCheck;
-  int checkCompTh;
-  double compThreshold;
-  pthread_mutex_t *next_chunk_mutex;
-  size_t *next_chunk;
+  Py_buffer *data;                   // Input data buffer
+  size_t numChunks;                  // Total number of chunks to process
+  size_t origChunkSize;              // Original size of each chunk
+  uint32_t numBuf;                   // Number of buffers (2 or 4)
+  int bits_mode;                     // Bit reordering mode
+  int bytes_mode;                    // Byte grouping mode
+  int is_redata;                     // Flag for data reprocessing
+  uint32_t threads;                  // Number of worker threads
+  uint8_t ***buffers;                // array for ibyte grouped data
+  size_t **unCompChunksSize;         // Sizes of uncompressed chunks
+  uint8_t ***compressedData;         // Compressed data output
+  uint32_t **compChunksSize;         // Sizes of compressed chunks
+  uint8_t **compChunksType;          // Compression type for each chunk
+  uint8_t *isThCheck;                // Threshold check flags - TBD
+  int checkCompTh;                   // Compression threshold check
+  double compThreshold;              // Compression ratio threshold
+  pthread_mutex_t *next_chunk_mutex; // Mutex for thread synchronization
+  size_t *next_chunk;                // Next chunk to be processed
 } CompressionThreadData;
+
+/*
+ * Worker thread function that performs the actual compression
+ * Each thread processes chunks in a thread-safe manner
+ */
 
 static void *compression_worker(void *arg) {
   CompressionThreadData *thread_data = (CompressionThreadData *)arg;
@@ -267,6 +315,7 @@ static void *compression_worker(void *arg) {
 
     // Byte Grouping + Byte Ordering
     if (thread_data->numBuf == 2) {
+      // Handle 16-bit data type splitting
       if (split_bytearray_dtype16(
               thread_data->data->buf + offset, curOrigChunkSize,
               thread_data->buffers[current_chunk],
@@ -276,6 +325,7 @@ static void *compression_worker(void *arg) {
         pthread_exit((void *)-1);
       }
     } else { // numBuf == 4
+      // Handle 32-bit data type splitting
       if (split_bytearray_dtype32(
               thread_data->data->buf + offset, curOrigChunkSize,
               thread_data->buffers[current_chunk],
@@ -286,6 +336,7 @@ static void *compression_worker(void *arg) {
       }
     }
 
+    // Process each buffer
     for (uint32_t b = 0; b < thread_data->numBuf; b++) {
       // Allocate memory for compressed data
       thread_data->compressedData[b][current_chunk] =
@@ -297,19 +348,22 @@ static void *compression_worker(void *arg) {
       if (thread_data->buffers[current_chunk][b] != NULL) {
         // Always try to compress initially
         size_t uncompSize = thread_data->unCompChunksSize[current_chunk][b];
+        // Attempt Huffman compression
         thread_data->compChunksSize[b][current_chunk] =
             HUF_compress(thread_data->compressedData[b][current_chunk],
                          thread_data->origChunkSize,
                          thread_data->buffers[current_chunk][b], uncompSize);
 
+        // Check if compression was beneficial
         if (thread_data->compChunksSize[b][current_chunk] != 0 &&
             thread_data->compChunksSize[b][current_chunk] <
-                (uncompSize *
-                 thread_data->compThreshold)) { // Fixed parentheses
+                (uncompSize * thread_data->compThreshold)) {
+          // Compression not beneficial - use original data
           thread_data->compChunksType[b][current_chunk] =
-              1; // Compress with Huffman
+              1; // Compressed with Huffman
           free(thread_data->buffers[current_chunk][b]);
-        } else { // the buffer was not compressed
+        } else {
+          // Compression not beneficial - use original data
           free(thread_data->compressedData[b][current_chunk]);
           thread_data->compChunksSize[b][current_chunk] = uncompSize;
           thread_data->compChunksType[b][current_chunk] = 0; // not compressed
@@ -322,6 +376,15 @@ static void *compression_worker(void *arg) {
   pthread_exit(NULL);
 }
 
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+/*
+ * Main Python-callable compression function
+ * Handles initialization, thread management, and cleanup
+ */
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+
 PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
   Py_buffer header, data;
   uint32_t numBuf, bits_mode, bytes_mode, is_redata, checkThAfterPercent,
@@ -332,19 +395,22 @@ PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
 
   // struct timeval startTime, endTime;
   // gettimeofday(&startTime, NULL);
+
+  // Parse Python arguments
   if (!PyArg_ParseTuple(args, "y*y*iiiinfii", &header, &data, &numBuf,
                         &bits_mode, &bytes_mode, &is_redata, &origChunkSize,
                         &compThreshold, &checkThAfterPercent, &threads)) {
     return NULL;
   }
 
-  // Byte Group per chunk, Compress per bufChunk
+  // Initialize compression parameters
   size_t numChunks = (data.len + origChunkSize - 1) / origChunkSize;
   size_t totalCompressedSize[numBuf];
   uint8_t isThCheck[numBuf];
   uint32_t checkCompTh =
       (uint32_t)ceil((double)numChunks / checkThAfterPercent);
-  // initialize:
+
+  // Memory allocation and initialization
   for (uint32_t b = 0; b < numBuf; b++) {
     totalCompressedSize[b] = 0;
     isThCheck[b] = 0;
@@ -417,6 +483,8 @@ error_initial_malloc:
   return NULL;
 
   // struct timeval startTimeReal, endTimeReal;
+
+  // Start compression threads
 compression_threading:
   // gettimeofday(&startTimeReal, NULL);
   pthread_t *thread_handles = NULL;
@@ -484,7 +552,9 @@ cleanup_threads:
   return NULL;
 
   ////////////// The end of multi Threading part 1
-  /////////////////////////////////
+  ////////////////////////////////
+
+// Process results and calculate total sizes
 continue_processing:
 
   for (uint32_t b = 0; b < numBuf; b++) {
@@ -509,13 +579,14 @@ continue_processing:
   //    (endTimeReal.tv_usec - startTimeReal.tv_usec) / 1e6;
   // printf("compress ML1: %f seconds\n", compressMl1TimeReal);
 
+  // Prepare final result buffe
   PyObject *py_result;
   uint8_t *resultBuf;
   size_t resBufSize;
 
   // printf("start prepare: %f seconds\n", compressMl1TimeReal);
   // printf("compChunksSize[0][0] %u\n", compChunksSize[0][0]);
-  resultBuf = prepare_split_results(
+  resultBuf = prepare_python_return_buffer(
       header.len, numBuf, numChunks, header.buf, compressedData, compChunksSize,
       compChunksType, totalCompressedSize, &resBufSize, threads);
   // gettimeofday(&endTimeReal, NULL);
@@ -531,7 +602,7 @@ continue_processing:
   }
 
   // gettimeofday(&startTimeReal, NULL);
-
+  // Create Python buffer view
   Py_buffer view; // create buffer to avoid copy
   PyBuffer_FillInfo(&view, NULL, resultBuf, resBufSize, 0, PyBUF_WRITABLE);
   py_result = PyMemoryView_FromBuffer(&view);
@@ -545,6 +616,8 @@ continue_processing:
   // double compressAll = (endTime.tv_sec - startTime.tv_sec) +
   //                     (endTime.tv_usec - startTime.tv_usec) / 1e6;
   // printf("compress All: %f seconds\n", compressAll);
+  //
+// Cleanup and return
 cleaning:
   for (size_t c = 0; c < numChunks; c++) {
     for (uint32_t b = 0; b < numBuf; b++) {
@@ -575,25 +648,68 @@ cleaning:
 }
 
 ////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 //////////////////////   Decompression ////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+// The decompression code implements a highly efficient multi-threaded that:
+
+// 1. Performs a single initial pass to parse compressed data format and
+// calculate metadata (positions, sizes, compression types)
+// 2. Enables fully parallel chunk processing since each thread can
+// independently:
+//    - Know exactly where to read from the compressed buffer
+//    - Know exactly where to write in the output buffer
+//    - No need for thread coordination beyond getting next chunk ID
+// 3. Decompresses data chunks in parallel using worker threads, with each
+// thread:
+//    --  Handling both Huffman-compressed and uncompressed data (in the Future
+//    adding other compression methods)
+//    --  Having direct access to its input/output locations
+//    -- Working completely independently once it has its chunk assignment
+// 4. Combines multiple buffers back into original format without requiring
+// additional passes
+// 5.  Manages memory safely with proper cleanup at each stage
+// 6. Supports both 16-bit (2 buffer) and 32-bit (4 buffer) data types
+
+// 1. Parses compressed data format including metadata
+// 2. Decompresses data chunks in parallel using worker threads
+// 3. Handles both Huffman-compressed and uncompressed data
+// 4. Combines multiple buffers back into original format
+// 5. Manages memory safely with proper cleanup
+// 6. Supports both 16-bit (2 buffer) and 32-bit (4 buffer) data types
+//
+// The implementation includes thread synchronization, error handling, and
+// careful memory management to ensure reliable decompression of data. Cop
+
+/*
+ * Structure for thread-specific decompression data
+ * Holds all necessary information for parallel decompression of data chunks
+ */
 
 typedef struct {
-  size_t chunk_id;
-  uint32_t numBuf;
-  uint32_t bits_mode;
-  uint32_t bytes_mode;
-  uint8_t **ptrCompressData;
-  uint32_t(*compChunksType);
-  size_t(*compCumulativeChunksPos);
-  size_t(*compChunksLen);
-  uint8_t *resultBuf;
-  uint8_t ***deCompressedDataPtr;
-  size_t(*decompLen);
-  size_t origChunkSize;
-  pthread_mutex_t *next_chunk_mutex;
-  size_t *next_chunk;
+  size_t chunk_id;           // Total number of chunks to process
+  uint32_t numBuf;           // Number of buffers (2 or 4)
+  uint32_t bits_mode;        // Bit reordering mode
+  uint32_t bytes_mode;       // Byte grouping mode
+  uint8_t **ptrCompressData; // Array of pointers to compressed data buffers
+  uint32_t(*compChunksType); // Array of compression types for each chunk
+  size_t(
+      *compCumulativeChunksPos);  // Cumulative positions for compressed chunks
+  size_t(*compChunksLen);         // Length of each compressed chunk
+  uint8_t *resultBuf;             // Final output buffer
+  uint8_t ***deCompressedDataPtr; // array for decompressed data
+  size_t(*decompLen);             // Length of decompressed chunks
+  size_t origChunkSize;           // Original size of each chunk
+  pthread_mutex_t *next_chunk_mutex; // Mutex for thread synchronization
+  size_t *next_chunk;                // Next chunk to be processed
 } ChunkThreadData;
+
+/*
+ * Worker thread function for parallel decompression
+ * Each thread processes chunks independently using thread-safe mechanisms
+ */
 
 static void *decompression_chunk_worker(void *arg) {
   ChunkThreadData *data = (ChunkThreadData *)arg;
@@ -606,30 +722,36 @@ static void *decompression_chunk_worker(void *arg) {
     pthread_mutex_unlock(data->next_chunk_mutex);
 
     if (current_chunk >= data->chunk_id) {
-      break;
+      break; // No more chunks to process
     }
-    // Decompress each buffer for this chunk
+
+    // Track which buffers need cleanup
     int freeDeCompressedDataPtr[data->numBuf];
+
+    // Process each buffer for current chunk
     for (uint32_t b = 0; b < data->numBuf; b++) {
-      // Access 2D array [b][current_chunk]
+      // Handle uncompressed data
       if (data->compChunksType[b * data->chunk_id + current_chunk] == 0) {
         freeDeCompressedDataPtr[b] = 0;
+        // Calculate pointer to uncompressed data
         data->deCompressedDataPtr[b][current_chunk] =
             data->ptrCompressData[b] +
             data->compCumulativeChunksPos[b * (data->chunk_id + 1) +
                                           current_chunk];
+        // Handle Huffman compressed data
       } else if (data->compChunksType[b * data->chunk_id + current_chunk] ==
                  1) {
-        // Get decompLen[current_chunk][b]
         size_t decomp_length =
             data->decompLen[current_chunk * data->numBuf + b];
 
+        // Allocate buffer for decompressed data
         data->deCompressedDataPtr[b][current_chunk] = malloc(decomp_length);
         freeDeCompressedDataPtr[b] = 1;
         if (!data->deCompressedDataPtr[b][current_chunk]) {
           pthread_exit((void *)-1);
         }
 
+        // Huffman decompression
         size_t decompressedSize = HUF_decompress(
             data->deCompressedDataPtr[b][current_chunk], decomp_length,
             (void *)(data->ptrCompressData[b] +
@@ -643,8 +765,10 @@ static void *decompression_chunk_worker(void *arg) {
       }
     }
 
-    // Combine buffers
+    // Combine decompressed buffers into final output
     uint8_t *combinePtr = data->resultBuf + data->origChunkSize * current_chunk;
+
+    // Handle 16-bit (2 buffer) or 32-bit (4 buffer) data types
     if (data->numBuf == 2) {
       // Get decompLen array for current chunk
       size_t *current_decompLen =
@@ -656,7 +780,7 @@ static void *decompression_chunk_worker(void *arg) {
                                   data->bits_mode, data->bytes_mode) != 0) {
         pthread_exit((void *)-1);
       }
-    } else {
+    } else { // 4 buffer case
       // Get decompLen array for current chunk
       size_t *current_decompLen =
           &data->decompLen[current_chunk * data->numBuf];
@@ -680,12 +804,30 @@ static void *decompression_chunk_worker(void *arg) {
   pthread_exit(NULL);
 }
 
-// Python callable function to combine four buffers into a single bytearray
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+/*
+ * Main Python-callable decompression function
+ * Handles decompression of data compressed by py_zipnn_core
+ *
+ * Parameters:
+ * - data: Input compressed data buffer
+ * - numBuf: Number of buffers (2 for 16-bit, 4 for 32-bit data)
+ * - bits_mode: Bit reordering mode
+ * - bytes_mode: Byte grouping mode
+ * - origChunkSize: Original size of each chunk
+ * - origSize: Original total data size
+ * - threads: Number of worker threads to use
+ */
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+
 PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   Py_buffer data;
 
   // clock_t sTime, eTime;
   // sTime = clock();
+  // Calculate chunk and buffer sizes
   uint32_t numBuf, bits_mode, bytes_mode, threads;
   size_t origChunkSize, origSize;
 
@@ -698,6 +840,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   uint32_t oneBufRatio[numBuf];
   uint32_t oneUnCompChunkSize[numBuf];
 
+  // Handle buffer ratio calculations based on data type (16-bit or 32-bit)
   if (1) { // TBD when support auto byte_reorder
     if (numBuf == 2) {
       if (buffer_ratio_dtype16(bytes_mode, oneBufRatio) == -1) {
@@ -723,16 +866,25 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     // TBD when support dynamic byte_reorder
   }
 
+  // Parse input buffer layout - data is organized as:
+  // [chunk types][cumulative sizes][compressed data for each buffer]
   uint8_t *ptrChunksType = (uint8_t *)data.buf;
   size_t *ptrChunksCumulative = (size_t *)(ptrChunksType + numBuf * numChunks);
   uint8_t *ptrCompressData[numBuf];
   ptrCompressData[0] = (uint8_t *)(ptrChunksCumulative + numBuf * numChunks);
-  size_t cumulativeChunksSize[numBuf][numChunks];
-  uint32_t compChunksType[numBuf][numChunks];
-  size_t compCumulativeChunksPos[numBuf][numChunks + 1];
-  size_t compChunksLen[numBuf][numChunks];
-  uint8_t *resultBuf = NULL;
-  size_t decompLen[numChunks][numBuf];
+
+  // Arrays to track compression metadata
+  size_t cumulativeChunksSize[numBuf]
+                             [numChunks];     // Cumulative size for each chunk
+  uint32_t compChunksType[numBuf][numChunks]; // Compression type for each chunk
+  size_t compCumulativeChunksPos[numBuf]
+                                [numChunks + 1]; // Position markers for chunks
+  size_t compChunksLen[numBuf][numChunks]; // Length of each compressed chunk
+
+  // Initialize decompression buffers and metadata
+  uint8_t *resultBuf = NULL; // Final output buffer
+  size_t decompLen[numChunks]
+                  [numBuf]; // Decompressed length for each chunk/buffer
   uint8_t ***deCompressedDataPtr =
       malloc(numBuf * sizeof(uint8_t **)); //[numBuf][numChunks]
   if (deCompressedDataPtr == NULL) {
@@ -748,7 +900,7 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     }
   }
 
-  // Preparation for decompression
+  // Calculate positions for the decompression
   for (uint32_t b = 0; b < numBuf; b++) {
     compCumulativeChunksPos[b][0] = 0;
     compCumulativeChunksPos[b][0] = 0;
@@ -906,24 +1058,24 @@ continue_processing:
   //   printf ("thread decompressTime %f\n", decompressTime);
   // printf("Real thread time: %f seconds\n", decompressTimeReal);
 
-  //clock_t sT, eT;
-  //sT = clock();
+  // clock_t sT, eT;
+  // sT = clock();
 
   Py_buffer view; // create buffer to avoid copy
   PyBuffer_FillInfo(&view, NULL, resultBuf, origSize, 0, PyBUF_WRITABLE);
   py_result = PyMemoryView_FromBuffer(&view);
-  //eT = clock();
-  //double resultTime = (double)(eT - sT) / CLOCKS_PER_SEC;
-  //  printf ("resultTime %f\n", resultTime);
+  // eT = clock();
+  // double resultTime = (double)(eT - sT) / CLOCKS_PER_SEC;
+  //   printf ("resultTime %f\n", resultTime);
 
-  //sT = clock();
+  // sT = clock();
   for (uint32_t b = 0; b < numBuf; b++) {
     free(deCompressedDataPtr[b]);
   }
   free(deCompressedDataPtr);
-  //eT = clock();
-  //double freeTime = (double)(eT - sT) / CLOCKS_PER_SEC;
-  //  printf ("free %f\n", freeTime);
+  // eT = clock();
+  // double freeTime = (double)(eT - sT) / CLOCKS_PER_SEC;
+  //   printf ("free %f\n", freeTime);
 
   //  free(resultBuf);
   //  PyBuffer_Release(&data);
