@@ -1,5 +1,5 @@
 #define PY_SSIZE_T_CLEAN
-#include "split_dtype_functions.h"
+#include "zipnn_core_functions.h"
 #include <Python.h>
 #include <stdint.h>
 #include <time.h>

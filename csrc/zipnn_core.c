@@ -8,7 +8,7 @@
 #include "data_manipulation_dtype16.h"
 #include "data_manipulation_dtype32.h"
 #include "huf.h"
-#include "split_dtype_functions.h"
+#include "zipnn_core_functions.h"
 
 
 ////  Helper Functions //////
@@ -322,7 +322,7 @@ static void *compression_worker(void *arg) {
   pthread_exit(NULL);
 }
 
-PyObject *py_split_dtype(PyObject *self, PyObject *args) {
+PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
   Py_buffer header, data;
   uint32_t numBuf, bits_mode, bytes_mode, is_redata, checkThAfterPercent,
       threads;

@@ -4,7 +4,7 @@ import math
 import numpy as np
 import torch
 import zstandard as zstd
-import split_dtype
+import zipnn_core
 from zipnn.util_header import EnumMethod, EnumFormat, EnumLossy
 from zipnn.util_torch import (
     ZipNNDtypeEnum,
@@ -202,7 +202,7 @@ class ZipNN:
         self.lz4_compression_level = lz4_compression_level
 
         self._version_major = 0
-        self._version_minor = 4
+        self._version_minor = 5
         self._version_tiny = 0
         self._import_dependencies(zstd_level)
 
@@ -580,7 +580,7 @@ class ZipNN:
             if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                 self._update_data_shape(shape)
             python_header = self._header + self._ext_header
-            ba_comp = split_dtype.split_dtype(
+            ba_comp = zipnn_core.zipnn_core(
                 python_header,
                 ba,
                 num_buf,
@@ -1010,7 +1010,7 @@ class ZipNN:
                 elif bfloat16 or float16:
                     num_buf = 2
                 mv = memoryview(ba_compress)
-                ba_decom = split_dtype.combine_dtype(
+                ba_decom = zipnn_core.combine_dtype(
                     mv[after_header:],
                     num_buf,
                     self._bit_reorder,
