@@ -58,7 +58,7 @@ void reorder_all_floats_dtype32(uint8_t *src, size_t len) {
 }
 
 //
-int allocate_4chunk_buffs(uint8_t **chunk_buffs, size_t *bufLens) {
+int allocate_4chunk_buffs(uint8_t **chunk_buffs, const size_t *bufLens) {
   chunk_buffs[0] = (bufLens[0] > 0) ? malloc(bufLens[0]) : NULL;
   chunk_buffs[1] = (bufLens[1] > 0) ? malloc(bufLens[1]) : NULL;
   chunk_buffs[2] = (bufLens[2] > 0) ? malloc(bufLens[2]) : NULL;
