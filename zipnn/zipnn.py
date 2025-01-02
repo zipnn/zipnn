@@ -21,7 +21,7 @@ class ZipNN:
 
     def __init__(
         self,
-        method: str = "auto",
+        method: str = "AUTO",
         input_format: str = "byte",
         bytearray_dtype: str = "bfloat16",
         is_monotonic: int = 0,
@@ -167,9 +167,7 @@ class ZipNN:
         self.input_format = EnumFormat(input_format).value
         self.bytearray_dtype = bytearray_dtype
         self.is_monotonic = is_monotonic
-
         self.threads = threads
-        print (self.threads)
         self.compression_threshold = compression_threshold
         self.check_th_after_percent = check_th_after_percent
         self.byte_reorder = byte_reorder
@@ -231,7 +229,9 @@ class ZipNN:
         -------------------------------------
         None.
         """
-        if self.method == EnumMethod.ZSTD.value or self.method == EnumMethod.AUTO.value:
+        if self.method == EnumMethod.HUFFMAN.value or self.method == EnumMethod.AUTO.value:
+            pass 
+        elif self.method == EnumMethod.ZSTD.value:
             self._zstd_compress = zstd.ZstdCompressor(level=zstd_level, threads=self.threads)
             self._zstd_decompress = zstd.ZstdDecompressor()
 
@@ -688,6 +688,8 @@ class ZipNN:
         -------------------------------------
         Compression of the data in the chosen method.
         """
+        if self.method == EnumMethod.HUFFMAN.value or self.method == EnumMethod.AUTO.value:
+            pass 
         if self.method in (EnumMethod.ZSTD.value, EnumMethod.AUTO.value):
             return self._zstd_compress.compress(data)
 
