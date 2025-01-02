@@ -35,7 +35,7 @@ class ZipNN:
         lossy_compressed_factor=27,
         compression_chunk=256 * 1024,
         is_streaming: bool = False,
-        streaming_chunk_kb: int = 1024 * 1024,
+        streaming_chunk: int = 1024 * 1024,
         input_file: str = None,
         compressed_file: str = None,
         decompressed_file: str = None,
@@ -127,7 +127,7 @@ class ZipNN:
                  If true – signals compression is for a stream of data.
                  Default is False.
 
-         streaming_chunk_kb: int
+         streaming_chunk: int
                  Chunk size for streaming.
                  Only relevant if is_steaming is True.
                  Default is 1MB.
@@ -189,12 +189,12 @@ class ZipNN:
         else:
             self.is_streaming = is_streaming
 
-        if (streaming_chunk_kb & (streaming_chunk_kb - 1)) == 0:
-            self.streaming_chunk_kb = streaming_chunk_kb
+        if (streaming_chunk & (streaming_chunk - 1)) == 0:
+            self.streaming_chunk = streaming_chunk
         else:
-            raise ValueError("streaming_chunk_kb must be a number that is a power of 2.")
+            raise ValueError("streaming_chunk must be a number that is a power of 2.")
 
-        self.streaming_chunk_kb = streaming_chunk_kb
+        self.streaming_chunk = streaming_chunk
 
         self.input_file = input_file
         self.compressed_file = compressed_file
@@ -285,7 +285,7 @@ class ZipNN:
     # [11] 1 Byte [lossy_compress_factor]
     # [12] 1 Byte [lossy_is_int]
     # [13] 1 Byte [Compression Chunk]
-    # [14] 1 Byte [is_streaming, streaming_chunk_kb]
+    # [14] 1 Byte [is_streaming, streaming_chunk]
     # [15] = self.dtype
     # [16-23] = original size
     # [24-32] = compressed file size
@@ -376,7 +376,7 @@ class ZipNN:
         #        self._header[11] = self.lossy_compressed_factor
         #        self._header[12] = self._lossy_is_int
         if self.is_streaming:  # MSB is streaming, unsigned & is streaming
-            self._header[13] = 128 + int(math.log(self.streaming_chunk_kb, 2))
+            self._header[13] = 128 + int(math.log(self.streaming_chunk, 2))
         else:
             self._header[13] = 0
         self._header[14] = int(math.log(self.compression_chunk, 2))
@@ -415,7 +415,7 @@ class ZipNN:
         streaming_vals = int(header[13])
         if streaming_vals > 127:
             self.is_streaming = 1
-            # self.streaming_chunk_kb = 2 ** (128 - streaming_vals)
+            # self.streaming_chunk = 2 ** (128 - streaming_vals)
         else:
             self.is_streaming = 0
         self.compression_chunk = 2 ** header[14]
@@ -425,6 +425,166 @@ class ZipNN:
         if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
             self.shape_bytes, self._shape_size = zipnn_unpack_shape(mv[self.header_length :])
         return self.header_length + self._shape_size
+
+
+    def __metadata__(self):
+        """
+        Retrieves metadata values of zipnn class instance in a dictionary and returns it.
+
+        Parameters
+        -------------------------------------
+
+        Returns
+        -------------------------------------
+        A dictionary containing the header values.
+        
+        """
+        header_dict = {
+            "ZipNN version":str(self._version_major)+"."+str(self._version_minor)+"."+str(self._version_tiny),
+            "Byte reorder": self.byte_reorder,
+            "Bit reorder": self.reorder_signbit,
+            "Method": self.method, 
+            "Input format": self.input_format,
+            "Data type": self.bytearray_dtype,
+            "Is monotonic": self.is_monotonic,
+            "Threads": self.threads,
+            "Compression threshold": self.compression_threshold,
+            "Check threshold after percent": self.check_th_after_percent,
+            "Delta compressed type":self.delta_compressed_type,
+            "Lossy compressed type":self.lossy_compressed_type,
+            "Lossy compressed factor":self.lossy_compressed_factor,
+            "Compression chunk":self.compression_chunk,
+            "Is streaming":self.is_streaming,
+            "Streaming chunk":self.streaming_chunk,
+            "Input file path":self.input_file,
+            "Compressedfile path":self.compressed_file,
+            "Decompressed file path":self.decompressed_file
+            #"Zstd level":self.zstd_level,
+            #"Lz4 compression level":self.lz4_compression_level
+        }
+        
+
+        print(header_dict)  # Print the dictionary for inspection
+        return header_dict
+
+    def __version__(self):
+        """
+        Retrieves Zipnn instance class version and prints it.
+
+        Parameters
+        -------------------------------------
+
+        Returns
+        -------------------------------------
+        
+        """
+
+        print("ZipNN version: "+str(self._version_major)+"."+str(self._version_minor)+"."+str(self._version_tiny))  # Print the dictionary for inspection
+        return
+
+
+    def metadata(self,file,version=False):
+        """
+        Retrieves metadata values of compressed file and in a dictionary and returns it.
+
+        Parameters
+        -------------------------------------
+        ba_compress: byte
+            Header data compressed to byte array.
+
+        Returns
+        -------------------------------------
+        A dictionary containing the header values.
+        """
+        if type(file)==str:
+            with open(file, "rb") as f:
+                header_data = f.read(self.header_length)
+                mv = memoryview(header_data)
+                header = mv[: self.header_length]
+        else:
+            mv = memoryview(file)
+            header = mv[: self.header_length]
+
+        if header[0:2].tobytes().decode("ascii") != "ZN":
+            raise ValueError("Header should start with ZN")
+
+        if version:
+            print("ZipNN version: "+str(header[2])+"."+str(header[3])+"."+str(header[4]))
+            return
+        
+        header_dict = {
+            "zipnn version": str(header[2])+"."+str(header[3])+"."+str(header[4]),
+            "byte_reorder": int(header[5]), #too many options?
+            "bit_reorder": int(header[6]), #unrecognized number
+            "method": "AUTO" if int(header[7])==0 else "HUFFMAN" if int(header[7])==1 else "ZSTD" if int(header[7])==2 else "LZ4" if int(header[7])==3 else "SNAPPY" if int(header[7])==4 else 0, 
+            "input_format": "BYTE" if int(header[8])==1 else "TORCH" if int(header[8])==2 else "NUMPY" if int(header[8])==3 else "FILE" if int(header[8])==4 else 0,
+            "delta_compressed_type": (
+                0 if header[9] == 0 else "byte" if header[9] == 1 else "file" if header[9] == 2 else 0
+            ),
+            "lossy_compressed_type": "NONE" if int(header[10])==0 else "INTEGER" if int(header[10])==1 else "UNSIGNED" if int(header[10])==2 else 0,
+            "lossy_compressed_factor": int(header[11]),
+            "lossy_is_int": int(header[12]), #
+        }
+        
+        streaming_vals = int(header[13])
+        if streaming_vals > 127:
+            header_dict["is_streaming"] = True
+        else:
+            header_dict["is_streaming"] = False
+
+        header_dict["compression_chunk"] = str(2 ** header[14])+" Bytes"
+
+        dtype_mapping = {
+            0: "NONE",
+            1: "FLOAT32",
+            2: "FLOAT",
+            3: "FLOAT64",
+            4: "FLOAT16",
+            5: "HALF",
+            6: "BFLOAT16",
+            7: "COMPLEX32",
+            8: "CHALF",
+            9: "COMPLEX64",
+            10: "CFLOAT",
+            11: "COMPLEX128",
+            12: "CDOUBLE",
+            13: "UINT8",
+            14: "UINT16",
+            15: "UINT32",
+            16: "UINT64",
+            17: "INT8",
+            18: "INT16",
+            19: "SHORT",
+            20: "INT32",
+            21: "INT",
+            22: "INT64",
+            23: "LONG",
+            24: "BOOL",
+            25: "QUINT8",
+            26: "QINT8",
+            27: "QINT32",
+            28: "QUINT4X2",
+            29: "FLOAT8_E4M3FN",
+            30: "FLOAT8_E5M2"
+        }
+
+        # Get the dtype from the header using the mapping
+        header_dict["dtype"] = dtype_mapping.get(int(header[15]), "UNKNOWN")
+
+        
+        header_dict["original_len"] = str(int.from_bytes(header[16:24], byteorder="little"))+" Bytes"
+
+        if int(header[8]) in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
+            shape_bytes, shape_size = zipnn_unpack_shape(mv[self.header_length:])
+            header_dict["shape_bytes"] = shape_bytes
+            header_dict["shape_size"] = shape_size
+            return_size = self.header_length + shape_size
+        else:
+            return_size = self.header_length
+
+        print(header_dict)  # Print the dictionary for inspection
+        return header_dict
+
 
     #################
     ## compression ##
@@ -486,7 +646,7 @@ class ZipNN:
             mv_data = memoryview(data)
             if delta_second_data:
                 mv_delta = memoryview(delta_second_data)
-            CHUNK_SIZE = self.streaming_chunk_kb
+            CHUNK_SIZE = self.streaming_chunk
             # Compression into bytearray
             compressed_buffer = bytearray()
             remaining_bytes = len(data)
