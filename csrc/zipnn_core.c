@@ -1073,7 +1073,6 @@ cleanup_threads:
 
   ////////////// Finish Multi threading /////////////////////////////
   PyObject *py_result;
-continue_processing:
   //   endTime = clock();
   //   double decompressTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
   // gettimeofday(&endTimeReal, NULL);
@@ -1087,6 +1086,7 @@ continue_processing:
   // sT = clock();
 
   Py_buffer view; // create buffer to avoid copy
+continue_processing:
   PyBuffer_FillInfo(&view, NULL, resultBuf, origSize, 0, PyBUF_WRITABLE);
   py_result = PyMemoryView_FromBuffer(&view);
   // eT = clock();
