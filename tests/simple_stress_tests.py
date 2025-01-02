@@ -64,7 +64,7 @@ def test_byte_torch_streaming():
         print(f"\nTesting chunk size: {size} Bytes")
         original_bytes = create_random_bytes(int(10*1024))
         copy_bytes=bytearray(original_bytes)
-        zpn_streaming = ZipNN(is_streaming=True,streaming_chunk_kb=size)
+        zpn_streaming = ZipNN(is_streaming=True,streaming_chunk=size)
         compressed_data = zpn_streaming.compress(original_bytes)
         decompressed_data = zpn_streaming.decompress(compressed_data)
         print("Are the original and decompressed byte strings the same [STREAMING BYTES]? ",copy_bytes == decompressed_data)
