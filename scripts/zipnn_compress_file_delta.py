@@ -58,11 +58,15 @@ def parse_streaming_chunk_size(
 def compress_file(
     input_file,
     delta_file,
-    dtype="",
+    dtype="bfloat16",
     streaming_chunk_size=1048576,
     delete=False,
     force=False,
     hf_cache=False,
+    method="HUFFMAN",
+    verification=False,#
+    test=False,#
+    is_streaming=False
 ):
     import zipnn
 
@@ -77,7 +81,7 @@ def compress_file(
         os.remove(full_path)
     else:
         compressed_path = full_path + ".znn"
-        if not force and os.path.exists(compressed_path):
+        if not test and not force and os.path.exists(compressed_path):#
             user_input = input(f"{compressed_path} already exists; overwrite (y/n)? ").strip().lower()
             if user_input not in ("yes", "y"):
                 print(f"Skipping {full_path}...")
@@ -90,17 +94,25 @@ def compress_file(
         output_file = os.path.join(folder_path, input_filename[:-4] + "_delta_" + delta_filename + ".znn")
         if dtype:
             zpn = zipnn.ZipNN(
-                bytearray_dtype="float32", is_streaming=True, streaming_chunk_kb=streaming_chunk_size, delta_compressed_type="file"
+                bytearray_dtype="float32", is_streaming=is_streaming, streaming_chunk=streaming_chunk_size, delta_compressed_type="file",method=method
             )
         else:
-            zpn = zipnn.ZipNN(is_streaming=True, streaming_chunk_kb=streaming_chunk_size, delta_compressed_type="file")
+            zpn = zipnn.ZipNN(is_streaming=is_streaming, streaming_chunk=streaming_chunk_size, delta_compressed_type="file",method=method)
         start_time = time.time()
         with open(input_file, "rb") as f:
             file_data = f.read()
         compressed_data = zpn.compress(file_data, delta_second_data=delta_file)
-        with open(output_file, "wb") as f_out:
-            f_out.write(compressed_data)
-        end_time = time.time() - start_time
+        end_time = time.time() - start_time#
+        #
+        if verification:
+            with open(input_file, "rb") as f:
+                file_data2 = f.read()
+            assert (zpn.decompress(compressed_data, delta_second_data=delta_file)==file_data2), "Decompressed file should be equal to original file."
+            print("Verification successful.")
+        if not test:
+            with open(output_file, "wb") as f_out:
+                f_out.write(compressed_data)
+        #
         print(f"Compressed {input_file} to {output_file}")
         file_size_before = len(file_data)
         file_size_after = len(compressed_data)
@@ -123,10 +135,6 @@ def compress_file(
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python zipnn_compress_file_delta.py file_path1 file_path2")
-        sys.exit(1)
-
     parser = argparse.ArgumentParser(description="Enter a file path to compress and the delta file.")
     parser.add_argument(
         "input_file",
@@ -139,9 +147,11 @@ if __name__ == "__main__":
         help="Specify the path to the delta file.",
     )
     parser.add_argument(
-        "--float32",
-        action="store_true",
-        help="A flag that triggers float32 compression",
+        "--dtype",
+        type=str,
+        choices=["bfloat16", "float16", "float32"],
+        default="bfloat16",
+        help="Specify the data type. Default is bfloat16.",
     )
     parser.add_argument(
         "--streaming_chunk_size",
@@ -163,10 +173,32 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag that indicates if the file is in the Hugging Face cache.",
     )
+    parser.add_argument(
+        "--method",
+        type=str,
+        choices=["HUFFMAN", "ZSTD", "FSE", "AUTO"],
+        default="HUFFMAN",
+        help="Specify the method to use. Default is HUFFMAN.",
+    )
+    parser.add_argument(#
+        "--verification",
+        action="store_true",
+        help="A flag that verifies that a compression can be decompressed correctly.",
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="A flag to not write the compression to a file.",
+    )#
+    parser.add_argument(
+        "--is_streaming",
+        action="store_true",
+        help="A flag to compress using streaming.",
+    )#
     args = parser.parse_args()
     optional_kwargs = {}
-    if args.float32:
-        optional_kwargs["dtype"] = 32
+    if args.dtype:
+        optional_kwargs["dtype"] = args.dtype
     if args.streaming_chunk_size is not None:
         optional_kwargs["streaming_chunk_size"] = args.streaming_chunk_size
     if args.delete:
@@ -175,6 +207,14 @@ if __name__ == "__main__":
         optional_kwargs["force"] = args.force
     if args.hf_cache:
         optional_kwargs["hf_cache"] = args.hf_cache
-
+    if args.method:
+        optional_kwargs["method"] = args.method
+    if args.verification:#
+        optional_kwargs["verification"] = args.verification
+    if args.test:
+        optional_kwargs["test"] = args.test#
+    if args.is_streaming:
+        optional_kwargs["is_streaming"] = args.is_streaming#
+        
     check_and_install_zipnn()
     compress_file(args.input_file, args.delta_file, **optional_kwargs)
