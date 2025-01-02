@@ -3,6 +3,7 @@ import subprocess
 import sys
 import argparse
 import time
+import multiprocessing
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -66,7 +67,8 @@ def compress_file(
     method="HUFFMAN",
     verification=False,#
     test=False,#
-    is_streaming=False
+    is_streaming=False,
+    threads=multiprocessing.cpu_count()
 ):
     import zipnn
 
@@ -94,10 +96,10 @@ def compress_file(
         output_file = os.path.join(folder_path, input_filename[:-4] + "_delta_" + delta_filename + ".znn")
         if dtype:
             zpn = zipnn.ZipNN(
-                bytearray_dtype="float32", is_streaming=is_streaming, streaming_chunk=streaming_chunk_size, delta_compressed_type="file",method=method
+                bytearray_dtype="float32", is_streaming=is_streaming, streaming_chunk=streaming_chunk_size, delta_compressed_type="file",method=method,threads=threads
             )
         else:
-            zpn = zipnn.ZipNN(is_streaming=is_streaming, streaming_chunk=streaming_chunk_size, delta_compressed_type="file",method=method)
+            zpn = zipnn.ZipNN(is_streaming=is_streaming, streaming_chunk=streaming_chunk_size, delta_compressed_type="file",method=method,threads=threads)
         start_time = time.time()
         with open(input_file, "rb") as f:
             file_data = f.read()
@@ -113,7 +115,7 @@ def compress_file(
             with open(output_file, "wb") as f_out:
                 f_out.write(compressed_data)
         #
-        print(f"Compressed {input_file} to {output_file}")
+        print(f"Compressed {input_file} to {output_file} using {threads} threads")
         file_size_before = len(file_data)
         file_size_after = len(compressed_data)
         print(
@@ -195,6 +197,12 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag to compress using streaming.",
     )#
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="The amount of threads to be used.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.dtype:
@@ -215,6 +223,8 @@ if __name__ == "__main__":
         optional_kwargs["test"] = args.test#
     if args.is_streaming:
         optional_kwargs["is_streaming"] = args.is_streaming#
+    if args.threads:
+        optional_kwargs["threads"] = args.threads#
         
     check_and_install_zipnn()
     compress_file(args.input_file, args.delta_file, **optional_kwargs)

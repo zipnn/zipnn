@@ -3,6 +3,7 @@ import subprocess
 import sys
 import argparse
 import time
+import multiprocessing
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -22,7 +23,7 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def decompress_file(input_file, delete=False, force=False, hf_cache=False):
+def decompress_file(input_file, delete=False, force=False, hf_cache=False,threads=multiprocessing.cpu_count()):
     import zipnn
 
     if not input_file.endswith(".znn"):
@@ -42,7 +43,7 @@ def decompress_file(input_file, delete=False, force=False, hf_cache=False):
         print(f"Decompressing {input_file}...")
 
         output_file = input_file[:-4]
-        zpn = zipnn.ZipNN(is_streaming=True)
+        zpn = zipnn.ZipNN(is_streaming=True,threads=threads)
 
         file_size_before = 0
         file_size_after = 0
@@ -54,7 +55,7 @@ def decompress_file(input_file, delete=False, force=False, hf_cache=False):
             d_data += zpn.decompress(chunk)
             file_size_after = len(d_data)
             outfile.write(d_data)
-            print(f"Decompressed {input_file} to {output_file}")
+            print(f"Decompressed {input_file} to {output_file} using {threads} threads")
         end_time = time.time() - start_time
 
         print(
@@ -102,6 +103,12 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag that indicates if the file is in the Hugging Face cache.",
     )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="The amount of threads to be used.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.delete:
@@ -110,5 +117,7 @@ if __name__ == "__main__":
         optional_kwargs["force"] = args.force
     if args.hf_cache:
         optional_kwargs["hf_cache"] = args.hf_cache
+    if args.threads:
+        optional_kwargs["threads"] = args.threads#
 
     decompress_file(args.input_file, **optional_kwargs)

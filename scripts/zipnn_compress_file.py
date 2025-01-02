@@ -3,6 +3,7 @@ import subprocess
 import sys
 import argparse
 import time
+import multiprocessing
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -64,7 +65,8 @@ def compress_file(
     method="HUFFMAN",
     verification=False,#
     test=False,#
-    is_streaming=False
+    is_streaming=False,
+    threads=multiprocessing.cpu_count()
 ):
     import zipnn
 
@@ -89,7 +91,8 @@ def compress_file(
             bytearray_dtype=dtype,
             is_streaming=is_streaming,
             streaming_chunk=streaming_chunk_size,
-            method=method
+            method=method,
+            threads=threads
         )
     file_size_before = 0
     file_size_after = 0
@@ -126,7 +129,7 @@ def compress_file(
         print("Verification successful.")
     #
     end_time = time.time() - start_time
-    print(f"Compressed {input_file} to {output_file}")
+    print(f"Compressed {input_file} to {output_file} using {threads} threads")
     print(
         f"{GREEN}Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}{RESET}"
     )
@@ -204,6 +207,12 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag to compress using streaming.",
     )#
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="The amount of threads to be used.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.dtype:
@@ -224,6 +233,7 @@ if __name__ == "__main__":
         optional_kwargs["test"] = args.test#
     if args.is_streaming:
         optional_kwargs["is_streaming"] = args.is_streaming#
-
+    if args.threads:
+        optional_kwargs["threads"] = args.threads#
     check_and_install_zipnn()
     compress_file(args.input_file, **optional_kwargs)

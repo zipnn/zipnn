@@ -8,7 +8,7 @@ from concurrent.futures import (
     as_completed,
 )
 from zipnn_compress_file import compress_file
-
+import multiprocessing
 sys.path.append(
     os.path.abspath(
         os.path.join(
@@ -98,7 +98,8 @@ def compress_files_with_suffix(
     method="HUFFMAN",
     verification=False,#
     test=False,#
-    is_streaming=False
+    is_streaming=False,
+    threads=multiprocessing.cpu_count()
 ):
     import zipnn
 
@@ -239,7 +240,8 @@ def compress_files_with_suffix(
                 method,
                 verification,
                 test,
-                is_streaming
+                is_streaming,
+                threads
             ): file
             for file in file_list[:max_processes]
         }
@@ -271,7 +273,8 @@ def compress_files_with_suffix(
                             method,
                             verification,
                             test,
-                            is_streaming
+                            is_streaming,
+                            threads
                         )
                     ] = next_file
 
@@ -372,6 +375,12 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag to compress using streaming.",
     )#
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="The amount of threads to be used.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.dtype:
@@ -408,7 +417,8 @@ if __name__ == "__main__":
         optional_kwargs["test"] = args.test#
     if args.is_streaming:
         optional_kwargs["is_streaming"] = args.is_streaming#
-
+    if args.threads:
+        optional_kwargs["threads"] = args.threads#
     check_and_install_zipnn()
     compress_files_with_suffix(
         args.suffix, **optional_kwargs
