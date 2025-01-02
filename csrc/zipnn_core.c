@@ -420,14 +420,18 @@ PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
       malloc(numChunks * sizeof(uint8_t **)); //[numChunks][numBuf]
   size_t **unCompChunksSize =
       malloc(numChunks * sizeof(size_t *)); //[numChunks][numBuf]
-  if (!buffers || !unCompChunksSize)
+  if (!buffers || !unCompChunksSize) {
+    PyErr_SetString(PyExc_MemoryError, "Failed to allocate buffers || unCompChunksSize");
     goto compression_error;
+  }
 
   for (size_t c = 0; c < numChunks; c++) {
     buffers[c] = malloc(numBuf * sizeof(uint8_t *));
     unCompChunksSize[c] = malloc(numBuf * sizeof(size_t));
-    if (!buffers[c] || !unCompChunksSize[c])
+    if (!buffers[c] || !unCompChunksSize[c]) {
+      PyErr_SetString(PyExc_MemoryError, "Failed to allocate buffers[c] || unCompChunksSize[c]");
       goto compression_error;
+    }
   }
 
   uint8_t ***compressedData =
@@ -436,15 +440,19 @@ PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
       malloc(numBuf * sizeof(uint8_t *)); // [numBuf][numChunks]
   uint32_t **compChunksSize =
       calloc(numBuf, sizeof(uint32_t *)); // [numBuf][numChunks]
-  if (!compressedData || !compChunksType || !compChunksSize)
+  if (!compressedData || !compChunksType || !compChunksSize) {
+    PyErr_SetString(PyExc_MemoryError, "Failed to allocate compressedData || compChunksType || compChunksSize");
     goto compression_error;
+  }
 
   for (uint32_t b = 0; b < numBuf; b++) {
     compressedData[b] = malloc(numChunks * sizeof(uint8_t *));
     compChunksType[b] = malloc(numChunks * sizeof(uint8_t));
     compChunksSize[b] = calloc(numChunks, sizeof(uint32_t));
-    if (!compressedData[b] || !compChunksType[b] || !compChunksSize[b])
+    if (!compressedData[b] || !compChunksType[b] || !compChunksSize[b]) {
+    PyErr_SetString(PyExc_MemoryError, "Failed to allocate compressedData[b] || compChunksType[b] || compChunksSize[b]");
       goto compression_error;
+    }
   }
 
   // struct timeval startTimeReal, endTimeReal;
@@ -612,9 +620,8 @@ continue_processing:
   free(compChunksSize);
   return py_result;
 
+  // Handle Error
   compression_error:
-    PyErr_SetString(PyExc_MemoryError, "Failed to allocate Memory");
-
     if (buffers) {
       for (size_t c = 0; c < numChunks; c++) {
 	if (buffers[c] != NULL) {
@@ -905,12 +912,14 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   uint8_t ***deCompressedDataPtr =
       malloc(numBuf * sizeof(uint8_t **)); //[numBuf][numChunks]
   if (deCompressedDataPtr == NULL) {
-    //     Handle error
+    PyErr_SetString(PyExc_MemoryError, "Failed to allocate deCompressedDataPtr");
+    goto decompression_error;
   }
   for (uint32_t b = 0; b < numBuf; b++) {
     deCompressedDataPtr[b] = malloc(numChunks * sizeof(uint8_t *));
     if (deCompressedDataPtr[b] == NULL) {
-      // Handle error
+       PyErr_SetString(PyExc_MemoryError, "Failed to allocate deCompressedDataPtr[b]");
+       goto decompression_error;
     }
     for (size_t c = 0; c < numChunks; c++) {
       deCompressedDataPtr[b][c] = NULL;
@@ -984,10 +993,8 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
   resultBuf = malloc(origSize);
   if (!resultBuf) {
-    PyErr_SetString(
-        PyExc_MemoryError,
-        "Failed to allocate memory for result buffer in split function");
-    free(resultBuf);
+        PyErr_SetString(PyExc_MemoryError, "Failed to allocate resultBuf");
+        goto decompression_error;
     return NULL;
   }
   // eTime = clock();
@@ -1061,6 +1068,7 @@ cleanup_threads:
     free(thread_data);
   if (mutex_initialized)
     pthread_mutex_destroy(&next_chunk_mutex);
+  goto decompression_error;
   return NULL;
 
   ////////////// Finish Multi threading /////////////////////////////
@@ -1097,4 +1105,25 @@ continue_processing:
   //  free(resultBuf);
   //  PyBuffer_Release(&data);
   return py_result;
+
+  // Handle Error
+  decompression_error:
+   if (deCompressedDataPtr) {
+     for (uint32_t b = 0; b < numBuf; b++) {
+       for (size_t c = 0; c < numChunks; c++) {
+         if (deCompressedDataPtr[b][c] != NULL) {	     
+           free(deCompressedDataPtr[b][c]);
+	 }
+       }
+       if (deCompressedDataPtr[b] != NULL) {	     
+           free(deCompressedDataPtr[b]);
+       }
+     }
+    free(deCompressedDataPtr);
+  }
+
+  if (resultBuf) {
+    free(resultBuf);	  
+  }
+  return NULL;
 }

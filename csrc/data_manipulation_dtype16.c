@@ -79,7 +79,9 @@ int split_bytearray_dtype16(uint8_t *src, size_t len, uint8_t **chunk_buffs,
     unCompChunksSizeCurChunk[1] = 0;
 
     if (chunk_buffs[0] == NULL) {
-      free(chunk_buffs[0]);
+       PyErr_SetString(PyExc_MemoryError,
+            "Failed to allocate memory, allocate 1 buffer");
+       free(chunk_buffs[0]);
       return -1;
     }
 
@@ -169,7 +171,9 @@ int combine_buffers_dtype16(const uint8_t *buf1, const uint8_t *buf2,
     break;
 
   default:
-    // we are not supporting this splitting bytes_mode
+    PyErr_SetString(
+        PyExc_MemoryError,
+        "Not supporting bytes_mode for 16bits");
     return -1;
   }
   //  Revert the reordering of all floats if needed

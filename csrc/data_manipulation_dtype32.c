@@ -444,8 +444,10 @@ uint8_t combine_buffers_dtype32(uint8_t *buf1, uint8_t *buf2, uint8_t *buf3,
     //    break;
     //
   default:
-    // we are not supportin this splitting bytes_mode
-    return 0;
+    PyErr_SetString(
+        PyExc_MemoryError,
+        "Not supporting bytes_mode for 32bits");
+    return -1;
   }
   if (bits_mode == 1) {
     revert_all_floats_dtype32(combinePtr, total_len);
