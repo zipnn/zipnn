@@ -15,7 +15,7 @@ from zipnn.util_torch import (
     zipnn_unpack_shape,
     zipnn_is_floating_point,
 )
-
+import multiprocessing
 
 class ZipNN:
 
@@ -25,7 +25,7 @@ class ZipNN:
         input_format: str = "byte",
         bytearray_dtype: str = "bfloat16",
         is_monotonic: int = 0,
-        threads: int = 1,
+        threads: int = multiprocessing.cpu_count(),
         compression_threshold=0.95,
         check_th_after_percent=10,
         byte_reorder: int = 0,
@@ -70,7 +70,7 @@ class ZipNN:
          threads: int
                  The maximum threads for th ecompression and the byte/bit reorder.
                  If 0, the code decide according to the dataset len.
-                 Default is 1
+                 Default is the number of logical CPU threads
 
          compression_threshold: float
                  Save original buffer if not compress above the threshold (default value = 0.95).
@@ -169,6 +169,7 @@ class ZipNN:
         self.is_monotonic = is_monotonic
 
         self.threads = threads
+        print (self.threads)
         self.compression_threshold = compression_threshold
         self.check_th_after_percent = check_th_after_percent
         self.byte_reorder = byte_reorder
