@@ -1300,16 +1300,21 @@ def zipnn_hf(replace_local_file: bool = False):
             snapshot_path = os.path.dirname(checkpoint_file)
             d_data = b""
             if not os.path.exists(output_file):
+                print (output_file)
                 znn = ZipNN(is_streaming=True)
+                start_time = time.time()
                 with open(checkpoint_file, "rb") as infile:
                     chunk = infile.read()
-                    d_data += znn.decompress(chunk)
-
+                    d_data = znn.decompress(chunk)
+                    print (time.time()-start_time)
                     ### Save the decompressed file
                     if replace_local_file:
                         with open(output_file, "wb") as outfile:
                             outfile.write(d_data)
-                            
+                st = time.time()            
+                d_data = d_data.tobytes()
+                print ("bytearray(d_data) " + str(time.time()-st))
+
                 ### Replace the local file with the decompressed file
                 if replace_local_file:
                     blob_name = os.path.join(snapshot_path, os.readlink(checkpoint_file))
@@ -1403,7 +1408,9 @@ def zipnn_hf(replace_local_file: bool = False):
         # Define a monkey-patched version of load_state_dict
         def custom_load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
             # Decompress the checkpoint file
+            start_time = time.time()
             result = decompress_znn(checkpoint_file, replace_local_file, is_quantized=is_quantized, map_location=map_location, weights_only=weights_only)
+            print ("decompression time " + str(time.time() - start_time))
             if result:
                 return result
 
@@ -1508,13 +1515,15 @@ def zipnn_hf(replace_local_file: bool = False):
                         with open(resolved_archive_file, "rb") as infile, open(output_file, "wb") as outfile:
                             d_data = b""
                             chunk = infile.read()
-                            d_data += znn.decompress(chunk)
+                            d_data = znn.decompress(chunk)
                             outfile.write(d_data)
                         snapshot_path = os.path.dirname(resolved_archive_file)
                         blob_name = os.path.join(snapshot_path, os.readlink(resolved_archive_file))
                         os.rename(output_file, blob_name)
                         os.symlink(blob_name, output_file)
                     os.remove(resolved_archive_file)
+                    stime = time.time()
+                    d_data = bytearray(d_data)
         # pack config, cache_dir, etc. into kwargs
         kwargs.update(
             {

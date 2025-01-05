@@ -109,10 +109,10 @@ def compress_file(
         test_buffer=bytearray()
         with open(input_file, "rb") as infile:
             chunk = infile.read()
-            file_size_before += len(chunk)
+            file_size_before = len(chunk)
             compressed_chunk = zpn.compress(chunk)
             if compressed_chunk:
-                file_size_after += len(compressed_chunk)
+                file_size_after = len(compressed_chunk)
                 test_buffer+=compressed_chunk
     #
     if verification:
