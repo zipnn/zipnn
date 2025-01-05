@@ -85,7 +85,6 @@ is_torch_numpy_byte = 0 # torch 2 / numpy 1/ byte = 0
 #dtype = torch.float32
 dtype = torch.bfloat16
 #dtype = torch.float16
-threads = 1
 
 if (dtype == torch.float32):
     bytearray_dtype = "float32"
@@ -101,11 +100,11 @@ num_elements = 1024*1024*1024 // element_size
 tensor_bytes = original_bytes
     
 if (is_torch_numpy_byte == 2): # Tensor
-    zipnn = ZipNN(input_format="torch", threads = threads, is_streaming=True)
+    zipnn = ZipNN(input_format="torch", is_streaming=False)
 elif (is_torch_numpy_byte == 1): # Numpy   
-    zipnn = ZipNN(input_format="numpy", threads = threads, is_streaming=True)
+    zipnn = ZipNN(input_format="numpy", is_streaming=False)
 elif (is_torch_numpy_byte == 0): # Byte 
-    zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = bytearray_dtype, is_streaming=True)
+    zipnn = ZipNN(input_format="byte", bytearray_dtype = bytearray_dtype, is_streaming=False)
     #zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = "float32", is_streaming=True)
     #zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = "float16", is_streaming=True)
 else: 
@@ -121,7 +120,7 @@ elif (is_torch_numpy_byte == 1): # Numpy
 elif (is_torch_numpy_byte == 0): # Byte 
     compressed_data = zipnn.compress(tensor_bytes)
 
-print ("compressed_data remain ", len(compressed_data)/len(tensor_bytes), " time ", time.time() - start_time)
+print ("compressed_data remain ", len(compressed_data)/len(tensor_bytes), " time ", time.time() - start_time, " threads ", zipnn.threads)
 #z = zstd.ZstdCompressor(level=3, threads=threads)
 #start_time = time.time()
 #c = z.compress(original_bytes_saved)
@@ -134,7 +133,7 @@ print ("compressed_data remain ", len(compressed_data)/len(tensor_bytes), " time
 #Decompress the byte string back
 start_time = time.time()
 decompressed_data = zipnn.decompress(compressed_data)
-print ("decompress zipnn data ", time.time() - start_time)
+print ("decompress zipnn data ", time.time() - start_time, " threads ", zipnn.threads)
 
 # Verify the result
 if (is_torch_numpy_byte == 2): # Tensor

@@ -14,11 +14,11 @@ def update_submodules():
 
 update_submodules()
 
-split_dtype_extension = Extension(
-    "split_dtype",
+zipnn_core_extension = Extension(
+    "zipnn_core",
     sources=[
-        "csrc/split_dtype_module.c",
-        "csrc/split_dtype.c",
+        "csrc/zipnn_core_module.c",
+        "csrc/zipnn_core.c",
         "csrc/data_manipulation_dtype16.c",
         "csrc/data_manipulation_dtype32.c",
         "include/FiniteStateEntropy/lib/fse_compress.c",
@@ -35,10 +35,9 @@ split_dtype_extension = Extension(
 
 setup(
     name="zipnn",
-    version="0.4.0",
+    version="0.5.0",
     author="ZipNN Contributors",
-    author_email="moshik1@gmail.com",
-    description="A lossless and near-lossless compression method optimized for numbers/tensors in the Foundation Models environment",
+    description="A Lossless Compression Library for AI pipelines",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/zipnn/zipnn",
@@ -54,5 +53,5 @@ setup(
         "zstandard",
         "torch",
     ],
-    ext_modules=[split_dtype_extension],  # Add the C extension module here
+    ext_modules=[zipnn_core_extension],  # Add the C extension module here
 )

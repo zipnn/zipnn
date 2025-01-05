@@ -10,7 +10,7 @@ from concurrent.futures import (
 from zipnn_decompress_file import (
     decompress_file,
 )
-
+import multiprocessing
 sys.path.append(
     os.path.abspath(
         os.path.join(
@@ -60,6 +60,7 @@ def decompress_znn_files(
     hf_cache=False,
     model="",
     branch="main",
+    threads=multiprocessing.cpu_count()
 ):
     import zipnn
 
@@ -198,6 +199,7 @@ def decompress_znn_files(
                     delete,
                     True,
                     hf_cache,
+                    threads,
                 ): file
                 for file in file_list[
                     :max_processes
@@ -231,6 +233,7 @@ def decompress_znn_files(
                                 delete,
                                 True,
                                 hf_cache,
+                                threads,
                             )
                         ] = next_file
                         #
@@ -279,6 +282,12 @@ if __name__ == "__main__":
         default="main",
         help="Only when using --model, specify the model branch. Default is 'main'",
     )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="The amount of threads to be used.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.path is not None:
@@ -299,5 +308,7 @@ if __name__ == "__main__":
         optional_kwargs[
             "branch"
         ] = args.model_branch
+    if args.threads:
+        optional_kwargs["threads"] = args.threads#
 
     decompress_znn_files(**optional_kwargs)

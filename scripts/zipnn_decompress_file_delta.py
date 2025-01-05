@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import argparse
+import multiprocessing
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -24,7 +25,7 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=False):
+def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=False,threads=multiprocessing.cpu_count()):
     import zipnn
 
     if not input_file.endswith(".znn"):
@@ -47,7 +48,7 @@ def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=
             print(f"Decompressing {input_file}...")
 
             output_file = input_file.split("_delta_")[0] + ".bin"
-            zpn = zipnn.ZipNN(is_streaming=True, delta_compressed_type="file")  ##
+            zpn = zipnn.ZipNN(is_streaming=True, delta_compressed_type="file",threads=threads)  ##
 
             #
             with open(input_file, "rb") as f:
@@ -56,7 +57,7 @@ def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=
             with open(output_file, "wb") as f_out:
                 f_out.write(decompressed_data)
             #
-            print(f"Decompressed {input_file} to {output_file}")
+            print(f"Decompressed {input_file} to {output_file} using {threads} threads")
             file_size_before = len(file_data)
             file_size_after = len(decompressed_data)
             print(
@@ -102,6 +103,12 @@ if __name__ == "__main__":
         action="store_true",
         help="A flag that indicates if the file is in the Hugging Face cache.",
     )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=multiprocessing.cpu_count(),
+        help="The amount of threads to be used.",
+    )
     args = parser.parse_args()
     optional_kwargs = {}
     if args.delete:
@@ -110,5 +117,7 @@ if __name__ == "__main__":
         optional_kwargs["force"] = args.force
     if args.hf_cache:
         optional_kwargs["hf_cache"] = args.hf_cache
-
+    if args.threads:
+        optional_kwargs["threads"] = args.threads#
+        
     decompress_file(args.input_file, args.delta_file, **optional_kwargs)
