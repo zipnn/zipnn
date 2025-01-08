@@ -10,6 +10,12 @@
 
 [![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/safetensors.svg)](https://pypi.org/pypi/zipnn/)
 
+## PyPI Version 0.5.0 is Here with Multithreading Support on the CPU!!!
+The default is set to the number of logical CPU threads.<br>
+**Note:** For compression, you might want to reduce the number of threads depending on your machine.
+
+
+
 ## Contents
 
 - [NEW: HuggingFace Integration](#huggingface-plugin)
@@ -206,7 +212,8 @@ If you use `zipnn` in your research or projects, please cite the repository:
 
 ##### v0.5.0
 
-* Add multithreading support for both compression and decompression, with the default set to the number of logical CPU threads.
+* Add multithreading support on the CPU for both compression and decompression, with the default set to the number of logical CPU threads.
+
 ##### v0.4.0
 
 * Update the Hugging Face plugin to support loading compressed files and add an option to save them uncompressed.
