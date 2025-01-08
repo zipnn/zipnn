@@ -123,7 +123,6 @@ class ZipNN:
                  Cefault is 256KB
 
          is_streaming: bool
-                 NOT IMPLEMENTED YET.
                  If true – signals compression is for a stream of data.
                  Default is False.
 
@@ -514,66 +513,22 @@ class ZipNN:
         
         header_dict = {
             "zipnn version": str(header[2])+"."+str(header[3])+"."+str(header[4]),
-            "byte_reorder": int(header[5]), #too many options?
-            "bit_reorder": int(header[6]), #unrecognized number
-            "method": "AUTO" if int(header[7])==0 else "HUFFMAN" if int(header[7])==1 else "ZSTD" if int(header[7])==2 else "LZ4" if int(header[7])==3 else "SNAPPY" if int(header[7])==4 else 0, 
-            "input_format": "BYTE" if int(header[8])==1 else "TORCH" if int(header[8])==2 else "NUMPY" if int(header[8])==3 else "FILE" if int(header[8])==4 else 0,
+            "byte_reorder": int(header[5]),
+            "bit_reorder": int(header[6]),
+            "method": EnumMethod(int(header[7])).name if int(header[7]) in EnumMethod._value2member_map_ else "UNKNOWN", 
+            "input_format": EnumFormat(int(header[8])).name if int(header[8]) in EnumMethod._value2member_map_ else "UNKNOWN",
             "delta_compressed_type": (
                 0 if header[9] == 0 else "byte" if header[9] == 1 else "file" if header[9] == 2 else 0
             ),
-            "lossy_compressed_type": "NONE" if int(header[10])==0 else "INTEGER" if int(header[10])==1 else "UNSIGNED" if int(header[10])==2 else 0,
+            "lossy_compressed_type": EnumLossy(int(header[10])).name if int(header[10]) in EnumMethod._value2member_map_ else "NONE",
             "lossy_compressed_factor": int(header[11]),
             "lossy_is_int": int(header[12]), #
+            "is_streaming": True if int(header[13]) > 127 else False,
+            "compression_chunk": f"{2 ** header[14]} Bytes",
+            "dtype" :ZipNNDtypeEnum.from_code(int(header[15])),
+            "original_len": f"{int.from_bytes(header[16:24], byteorder='little')} Bytes"
+
         }
-        
-        streaming_vals = int(header[13])
-        if streaming_vals > 127:
-            header_dict["is_streaming"] = True
-        else:
-            header_dict["is_streaming"] = False
-
-        header_dict["compression_chunk"] = str(2 ** header[14])+" Bytes"
-
-        dtype_mapping = {
-            0: "NONE",
-            1: "FLOAT32",
-            2: "FLOAT",
-            3: "FLOAT64",
-            4: "FLOAT16",
-            5: "HALF",
-            6: "BFLOAT16",
-            7: "COMPLEX32",
-            8: "CHALF",
-            9: "COMPLEX64",
-            10: "CFLOAT",
-            11: "COMPLEX128",
-            12: "CDOUBLE",
-            13: "UINT8",
-            14: "UINT16",
-            15: "UINT32",
-            16: "UINT64",
-            17: "INT8",
-            18: "INT16",
-            19: "SHORT",
-            20: "INT32",
-            21: "INT",
-            22: "INT64",
-            23: "LONG",
-            24: "BOOL",
-            25: "QUINT8",
-            26: "QINT8",
-            27: "QINT32",
-            28: "QUINT4X2",
-            29: "FLOAT8_E4M3FN",
-            30: "FLOAT8_E5M2"
-        }
-
-        # Get the dtype from the header using the mapping
-        header_dict["dtype"] = dtype_mapping.get(int(header[15]), "UNKNOWN")
-
-        
-        header_dict["original_len"] = str(int.from_bytes(header[16:24], byteorder="little"))+" Bytes"
-
         if int(header[8]) in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
             shape_bytes, shape_size = zipnn_unpack_shape(mv[self.header_length:])
             header_dict["shape_bytes"] = shape_bytes
@@ -763,42 +718,6 @@ class ZipNN:
             print(f"len ba {len(ba)}")
             print("compress_bin_time ", time.time() - compress_bin_time)
         return ba_comp
-
-    #    def prepare_file(self, filename: str):
-    #        """
-    #        Prepare file.
-    #
-    #        Parameters
-    #        -------------------------------------
-    #        filename: string
-    #                File name to compress.
-    #
-    #        Returns
-    #        -------------------------------------
-    #        Byte array of compressed data.
-    #        """
-    #
-    #        raise ImportError("Not implemented Yet")
-
-    #        if not os.path.exists(filename):
-    #         raise FileNotFoundError(f"The file at {filename} was not found.")
-    #     with open(filename, "rb") as in_file_handler:
-    #         data = in_file_handler.read()
-    #     ba = self.compress_bin(data)
-    #     return ba
-    #
-    #     # streaming
-    #       if (self.is_streaming): # streaming only for input_format == "file_streaming" and compress_ret_type == "file_streaming"
-    #          assert (self.compressed_ret_type == "file")
-    #          with open(input_path, 'rb') as infile, open(output_path, 'wb') as outfile:
-    #              while chunk := infile.read(CHUNK_SIZE):
-    #                  compressed_chunk = compressor.compress(chunk)
-    #                  if compressed_chunk:
-    #                      outfile.write(compressed_chunk)
-
-    # Write any remaining data in the buffer
-
-    #        return (ba_comp)
 
     def compress_torch_numpy_byte(self, data, lossy_compressed_type=None, lossy_compressed_factor=None):
         """

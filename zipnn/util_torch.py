@@ -224,3 +224,11 @@ class ZipNNDtypeEnum(Enum):
             if dtype == member.torch_dtype or dtype == member.numpy_dtype or dtype == member.python_dtype or dtype == member.dtype_str:
                 return member
         return cls.NONE
+
+    @classmethod
+    def from_code(cls, code):
+        for member in cls:
+            if member.code == code:
+                print(type(member.name))
+                return member.name
+        return cls.NONE
