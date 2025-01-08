@@ -68,7 +68,7 @@ class ZipNN:
                  Default is ‘False’.
 
          threads: int
-                 The maximum threads for th ecompression and the byte/bit reorder.
+                 The maximum threads for the compressio/decompression and for the byte/bit reorder.
                  If 0, the code decide according to the dataset len.
                  Default is the number of logical CPU threads
 

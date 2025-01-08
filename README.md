@@ -203,6 +203,10 @@ If you use `zipnn` in your research or projects, please cite the repository:
 
 ## Change Log
 
+
+##### v0.5.0
+
+* Add multithreading support for both compression and decompression, with the default set to the number of logical CPU threads.
 ##### v0.4.0
 
 * Update the Hugging Face plugin to support loading compressed files and add an option to save them uncompressed.
