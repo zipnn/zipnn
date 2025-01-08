@@ -189,12 +189,15 @@ You can contact us in this email: zipnn_compression@gmail.com
 
 If you use `zipnn` in your research or projects, please cite the repository:
 
-```text
-@software{zipnn,
-  author = {Guy Girmonsky},
-  title = {zipnn: A versatile data compression toolkit},
-  year = {2024},
-  url = {https://github.ibm.com/MOSHIKH/zipnn}
+```
+@misc{hershcovitch2024zipnnlosslesscompressionai,
+      title={ZipNN: Lossless Compression for AI Models}, 
+      author={Moshik Hershcovitch and Andrew Wood and Leshem Choshen and Guy Girmonsky and Roy Leibovitz and Ilias Ennmouri and Michal Malka and Peter Chin and Swaminathan Sundararaman and Danny Harnik},
+      year={2024},
+      eprint={2411.05239},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2411.05239}, 
 }
 ```
 
