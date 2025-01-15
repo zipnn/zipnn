@@ -8,7 +8,7 @@
 
 **arXiv Paper**: ["ZipNN: Lossless Compression for AI Models"](https://arxiv.org/abs/2411.05239)
 
-[![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/safetensors.svg)](https://pypi.org/pypi/zipnn/)
+[![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/zipnn.svg)](https://pypi.org/pypi/zipnn/)
 
 ## PyPI Version 0.5.0 is Here with Multithreading Support on the CPU!!!
 The default is set to the number of logical CPU threads.<br>
