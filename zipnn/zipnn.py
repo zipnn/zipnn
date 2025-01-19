@@ -1174,9 +1174,13 @@ def zipnn_hf(replace_local_file: bool = False):
     None.
     """
     try:
+        print("?")
         from transformers import modeling_utils
+        print("?")
         from typing import Union, Optional, Dict
+        print("?")
         from transformers.configuration_utils import PretrainedConfig
+        print("?")
         from transformers.utils import (
             FLAX_WEIGHTS_NAME,
             SAFE_WEIGHTS_INDEX_NAME,
@@ -1187,11 +1191,17 @@ def zipnn_hf(replace_local_file: bool = False):
             WEIGHTS_NAME,
             cached_file,
         )
-        from transformers.modeling_utils import _add_variant, PreTrainedModel, is_deepspeed_zero3_enabled, is_fsdp_enabled, is_torch_greater_or_equal_than_1_13, is_zipfile, is_local_dist_rank_0
+        import transformers.modeling_utils
+        print("?")
+        from transformers.modeling_utils import _add_variant, PreTrainedModel, is_deepspeed_zero3_enabled, is_fsdp_enabled, is_torch_greater_or_equal, is_zipfile, is_local_dist_rank_0
+        print("?")
         from safetensors.torch import load
         import json
+        print("?")
         from struct import unpack
+        print("?")
         from packaging import version
+        print("?")
         from io import BytesIO
 
     except ImportError as exc:
@@ -1207,6 +1217,7 @@ def zipnn_hf(replace_local_file: bool = False):
     transformers_version = transformers.__version__
 
     def decompress_znn(checkpoint_file: Union[str, os.PathLike], replace_local_file: bool = False, is_quantized: bool = False, map_location: Optional[Union[str, torch.device]] = None, weights_only: bool = True):
+        print(checkpoint_file)
         if checkpoint_file.endswith(".znn"):
             print(f"Decompressing {checkpoint_file.split('/')[-1]}")
 
@@ -1290,7 +1301,7 @@ def zipnn_hf(replace_local_file: bool = False):
                         and is_zipfile(checkpoint_file)
                     ):
                         extra_args = {"mmap": True}
-                    weights_only_kwarg = {"weights_only": weights_only} if is_torch_greater_or_equal_than_1_13 else {}
+                    weights_only_kwarg = {"weights_only": weights_only} if is_torch_greater_or_equal("1.13") else {}
                     return torch.load(
                         BytesIO(d_data),
                         map_location=map_location,
