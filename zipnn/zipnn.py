@@ -1103,7 +1103,7 @@ class ZipNN:
                 )
             else:
                 ba_decom = ba_bg[0]
-
+            
             if self.input_format == EnumFormat.BYTE.value:
                 return ba_decom
 
@@ -1120,8 +1120,9 @@ class ZipNN:
                 elif float16:
                     array = np.frombuffer(ba_decom, dtype=np.float16)
                     array = array.reshape(self.shape_bytes)
-                    tensor = torch.tensor(array, dtype=torch.float16)
+                    tensor = torch.from_numpy(array)
                 return tensor
+                exit(0)
 
             if self.input_format == EnumFormat.NUMPY.value:
                 if float32:
