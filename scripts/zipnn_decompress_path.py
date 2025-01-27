@@ -1,8 +1,6 @@
 import os
 import sys
 import argparse
-import subprocess
-from pathlib import Path
 from concurrent.futures import (
     ProcessPoolExecutor,
     as_completed,
@@ -11,6 +9,8 @@ from zipnn_decompress_file import (
     decompress_file,
 )
 import multiprocessing
+from util import check_and_install_zipnn, RED, RESET, GREEN, YELLOW
+
 sys.path.append(
     os.path.abspath(
         os.path.join(
@@ -19,27 +19,6 @@ sys.path.append(
         )
     )
 )
-
-RED = "\033[91m"
-YELLOW = "\033[93m"
-GREEN = "\033[92m"
-RESET = "\033[0m"
-
-def check_and_install_zipnn():
-    try:
-        import zipnn
-    except ImportError:
-        print("zipnn not found. Installing...")
-        subprocess.check_call(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                "zipnn",
-            ]
-        )
-        import zipnn
 
 def replace_in_file(file_path, old: str, new: str) -> None:
     """Given a file_path, replace all occurrences of `old` with `new` inpalce."""

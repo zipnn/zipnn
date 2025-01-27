@@ -1,27 +1,11 @@
 import os
-import subprocess
 import sys
 import argparse
 import time
 import multiprocessing
+from util import check_and_install_zipnn, RESET, GREEN, GB, YELLOW
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-RED = "\033[91m"
-YELLOW = "\033[93m"
-GREEN = "\033[92m"
-RESET = "\033[0m"
-
-GB = 1024 * 1024 * 1024
-
-def check_and_install_zipnn():
-    try:
-        import zipnn
-    except ImportError:
-        print("zipnn not found. Installing...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "zipnn"])
-        import zipnn
-
 
 def decompress_file(input_file, delete=False, force=False, hf_cache=False,threads=multiprocessing.cpu_count()):
     import zipnn
