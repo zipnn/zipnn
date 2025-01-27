@@ -630,7 +630,7 @@ class ZipNN:
             #            return self.compress_delta(data, delta_second_data, lossy_compressed_type, lossy_compressed_factor)
             return self.compress_torch_numpy_byte(data, lossy_compressed_type, lossy_compressed_factor)
 
-    def compress_method(self, data: bytes):
+    def compress_method(self, data: memoryview):
         """
         Chooses compression based on compression method.
 
@@ -657,7 +657,7 @@ class ZipNN:
 
     def compress_bin(
         self,
-        ba: bytes,
+        ba: memoryview,
         bit_reorder: int,
         byte_reorder: int,
         is_review: int,
@@ -672,7 +672,7 @@ class ZipNN:
 
         Parameters
         -------------------------------------
-        ba: byte
+        ba: memoryview
                 Byte data to compress.
 
         Returns
@@ -806,7 +806,7 @@ class ZipNN:
         start_time = time.time()
 
         if self.input_format == EnumFormat.TORCH.value:
-            ba = data.numpy().tobytes()
+            ba = memoryview(data.contiguous().view(-1).numpy()).cast("B")
         elif self.input_format == EnumFormat.NUMPY.value:
             ba = data.tobytes()
         elif self.input_format == EnumFormat.BYTE.value:
