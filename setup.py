@@ -52,6 +52,7 @@ setup(
         "numpy",
         "zstandard",
         "torch",
+        "safetensors"
     ],
     ext_modules=[zipnn_core_extension],  # Add the C extension module here
 )
