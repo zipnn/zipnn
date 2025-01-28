@@ -1,7 +1,9 @@
 import time
 import os
 import math
+import multiprocessing
 import numpy as np
+from safetensors.torch import safe_open
 import torch
 import zstandard as zstd
 import zipnn_core
@@ -15,7 +17,12 @@ from zipnn.util_torch import (
     zipnn_unpack_shape,
     zipnn_is_floating_point,
 )
-import multiprocessing
+from zipnn.util_safetensors import (
+    COMPRESSION_METHOD,
+    COMPRESSED_DTYPE,
+    get_compressed_tensors_metadata
+)
+
 
 class ZipNN:
 
@@ -1522,3 +1529,58 @@ def replace_in_file(file_path, old: str, new: str) -> None:
 
 #    def decompress_delta(self, base_path, delta_file):
 #        return 0
+
+
+def decompress_safetensors_tensor(tensor: torch.tensor) -> torch.tensor:
+    """
+    decompress a tensor from a compressed safetensors file.
+    """
+    znn = ZipNN(input_format="torch", bytearray_dtype=COMPRESSED_DTYPE, method=COMPRESSION_METHOD)
+    return znn.decompress(tensor.contiguous().numpy())
+
+
+class SafeOpen:
+    """
+    safetensors safe_open wrapper class for injecting tensor decompression support.
+    """
+
+    def __init__(self, filename, framework, device="cpu"):
+        self._f = safe_open(filename, framework, device)
+        self.compressed_tensors_metadata = get_compressed_tensors_metadata(self._f.metadata())
+
+    def get_tensor(self, name):
+        """
+        gets a (possibly compressed) tensor from the safetensors file.
+        """
+        if name not in self.compressed_tensors_metadata:
+            return self._f.get_tensor(name)
+        return decompress_safetensors_tensor(self._f.get_tensor(name))
+
+    def get_slice(self, name):
+        """
+        gets a alice of a (possibly compressed) tensor from the safetensors file.
+
+        Compressed tensors are currently unsupported by this function.
+        """
+        if name not in self.compressed_tensors_metadata:
+            return self._f.get_slice(name)
+        return NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self._f.__exit__(exc_type, exc_value, traceback)
+
+    def __getattr__(self, name):
+        return getattr(self._f, name)
+
+
+def zipnn_safetensors():
+    """
+    Plugin for the safetensors library to use ZipNN compression.
+    """
+
+    import safetensors.torch
+
+    safetensors.torch.safe_open = SafeOpen

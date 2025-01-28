@@ -1,3 +1,4 @@
 zstandard
 torch
 numpy
+safetensors
