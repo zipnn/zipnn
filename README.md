@@ -209,7 +209,11 @@ If you use `zipnn` in your research or projects, please cite the repository:
 
 ## Change Log
 
+##### v0.5.1
 
+* Add ZipNN Plugin to Safetensors (Monkey Patching)
+The compression is applied per layer rather than to the entire file and supports model saving with Safetensors. The new file suffix is .znn.safetensor. This method is compatible with Hugging Face Transformers and vLLM.
+ 
 ##### v0.5.0
 
 * Add multithreading support on the CPU for both compression and decompression, with the default set to the number of logical CPU threads.
