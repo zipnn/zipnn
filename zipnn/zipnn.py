@@ -22,6 +22,7 @@ from zipnn.util_safetensors import (
     COMPRESSED_DTYPE,
     get_compressed_tensors_metadata
 )
+from zipnn.util_patch import multi_process_patcher
 
 
 class ZipNN:
@@ -1576,11 +1577,18 @@ class SafeOpen:
         return getattr(self._f, name)
 
 
+def _zipnn_safetensors():
+    """
+    single process patching of safetensors library to use ZipNN compression.
+    """
+    import safetensors.torch
+
+    safetensors.torch.safe_open = SafeOpen
+
+
 def zipnn_safetensors():
     """
     Plugin for the safetensors library to use ZipNN compression.
     """
 
-    import safetensors.torch
-
-    safetensors.torch.safe_open = SafeOpen
+    multi_process_patcher(_zipnn_safetensors)
