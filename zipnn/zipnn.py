@@ -32,7 +32,7 @@ class ZipNN:
         input_format: str = "byte",
         bytearray_dtype: str = "bfloat16",
         is_monotonic: int = 0,
-        threads: int = multiprocessing.cpu_count(),
+        threads: int = 0,
         compression_threshold=0.95,
         check_th_after_percent=10,
         byte_reorder: int = 0,
@@ -173,7 +173,8 @@ class ZipNN:
         self.input_format = EnumFormat(input_format).value
         self.bytearray_dtype = bytearray_dtype
         self.is_monotonic = is_monotonic
-        self.threads = threads
+        # we've seen results deteriorate for threads > 16
+        self.threads = threads or min(multiprocessing.cpu_count(), 16)
         self.compression_threshold = compression_threshold
         self.check_th_after_percent = check_th_after_percent
         self.byte_reorder = byte_reorder
