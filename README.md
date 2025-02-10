@@ -209,6 +209,11 @@ If you use `zipnn` in your research or projects, please cite the repository:
 
 ## Change Log
 
+##### v0.5.2
+
+* Extends the zipnn_safetensors monkey patching to
+propagate to spawned processes and limits the default thread count during compression to 16
+
 ##### v0.5.1
 
 * Add ZipNN Plugin to Safetensors (Monkey Patching)
