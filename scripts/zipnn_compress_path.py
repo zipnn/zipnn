@@ -9,6 +9,8 @@ from concurrent.futures import (
     as_completed,
 )
 from zipnn_compress_file import compress_file
+from zipnn_compress_safetensors import compress_safetensors_file
+
 import multiprocessing
 sys.path.append(
     os.path.abspath(
@@ -100,7 +102,8 @@ def compress_files_with_suffix(
     verification=False,#
     test=False,#
     is_streaming=False,
-    threads=multiprocessing.cpu_count()
+    threads=multiprocessing.cpu_count(),
+    file_compression=False    
 ):
     import zipnn
 
@@ -147,9 +150,12 @@ def compress_files_with_suffix(
     for root, _, files in directories_to_search:
         for file_name in files:
             if file_name.endswith(suffix):
-                compressed_path = (
-                    file_name + ".znn"
-                )
+                if file_compression:
+                    compressed_path = (
+                        file_name + ".znn"
+                    )
+                else:
+                    compressed_path=file_name[: -(len(".safetensors"))] + ".znn.safetensors"
                 if not test and not force and os.path.exists(
                     os.path.join(root, compressed_path)
                 ):
@@ -209,13 +215,17 @@ def compress_files_with_suffix(
                 "Transformers not found. Please pip install transformers."
             )
         
+        if file_compression:
+            new_replace=f"{suffix}.znn"
+        else:
+            new_replace=f"znn.{suffix}"
         if os.path.exists(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)):
             print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
             blob_name = os.path.join(path, os.readlink(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)))
             replace_in_file(
                     file_path=blob_name,
                     old=f"{suffix}",
-                    new=f"{suffix}.znn"
+                    new=new_replace
                 )
         elif os.path.exists(os.path.join(path, WEIGHTS_INDEX_NAME)):
             print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
@@ -223,17 +233,12 @@ def compress_files_with_suffix(
             replace_in_file(
                     file_path=blob_name,
                     old=f"{suffix}",
-                    new=f"{suffix}.znn"
+                    new=new_replace
                 )
 
-    with ProcessPoolExecutor(
-        max_workers=max_processes
-    ) as executor:
-        future_to_file = {
-            executor.submit(
-                compress_file,
-                file,
-                dtype,
+    if file_compression:
+        compression_func=compress_file
+        args=(dtype,
                 streaming_chunk_size,
                 delete,
                 True,
@@ -242,7 +247,23 @@ def compress_files_with_suffix(
                 verification,
                 test,
                 is_streaming,
-                threads
+                threads)
+    else:
+        compression_func=compress_safetensors_file
+        args=(delete,
+                True,
+                hf_cache,
+                method,
+                threads)
+    
+    with ProcessPoolExecutor(
+        max_workers=max_processes
+    ) as executor:
+        future_to_file = {
+            executor.submit(
+                compression_func,
+                file,
+                *(args)
             ): file
             for file in file_list[:max_processes]
         }
@@ -264,18 +285,9 @@ def compress_files_with_suffix(
                     next_file = file_list.pop(0)
                     future_to_file[
                         executor.submit(
-                            compress_file,
+                            compression_func,
                             next_file,
-                            dtype,
-                            streaming_chunk_size,
-                            delete,
-                            True,
-                            hf_cache,
-                            method,
-                            verification,
-                            test,
-                            is_streaming,
-                            threads
+                            *(args)
                         )
                     ] = next_file
 
@@ -382,6 +394,11 @@ if __name__ == "__main__":
         default=multiprocessing.cpu_count(),
         help="The amount of threads to be used.",
     )
+    parser.add_argument(
+        "--file_compression",
+        action="store_true",
+        help="A flag to compress the file as a whole, not per safetensors file.",
+    )#
     args = parser.parse_args()
     optional_kwargs = {}
     if args.dtype:
@@ -420,6 +437,8 @@ if __name__ == "__main__":
         optional_kwargs["is_streaming"] = args.is_streaming#
     if args.threads:
         optional_kwargs["threads"] = args.threads#
+    if args.file_compression:
+        optional_kwargs["file_compression"] = args.file_compression#
     check_and_install_zipnn()
     compress_files_with_suffix(
         args.suffix, **optional_kwargs

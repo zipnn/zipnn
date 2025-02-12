@@ -97,21 +97,30 @@ def compress_file(
         )
     file_size_before = 0
     file_size_after = 0
-    start_time = time.time()
+    start_time=time.time()
+    write_time=0
     if not test:
         with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
             chunk = infile.read()
+            load_time=time.time()-start_time
             file_size_before += len(chunk)
+            start_time = time.time()
             compressed_chunk = zpn.compress(chunk)
+            end_time = time.time() - start_time
             if compressed_chunk:
                 file_size_after += len(compressed_chunk)
+                start_time=time.time()
                 outfile.write(compressed_chunk)
+                write_time=time.time()-start_time
     else:
         test_buffer=bytearray()
         with open(input_file, "rb") as infile:
             chunk = infile.read()
+            load_time=time.time()-start_time
             file_size_before += len(chunk)
+            start_time = time.time()
             compressed_chunk = zpn.compress(chunk)
+            end_time = time.time() - start_time
             if compressed_chunk:
                 file_size_after += len(compressed_chunk)
                 test_buffer+=compressed_chunk
@@ -129,8 +138,10 @@ def compress_file(
             assert (file_data1==decompressed_data), "Decompressed file should be equal to original file."
         print("Verification successful.")
     #
-    end_time = time.time() - start_time
+    
     print(f"Compressed {input_file} to {output_file} using {threads} threads")
+    print(f"sum of load times: {load_time}s")
+    print(f"comp file written in {write_time}s")
     print(
         f"{GREEN}Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}{RESET}"
     )

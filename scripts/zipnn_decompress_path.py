@@ -11,6 +11,8 @@ from concurrent.futures import (
 from zipnn_decompress_file import (
     decompress_file,
 )
+from zipnn_decompress_safetensors import decompress_safetensors_file
+
 import multiprocessing
 sys.path.append(
     os.path.abspath(
@@ -66,6 +68,7 @@ def decompress_znn_files(
     import zipnn
 
     overwrite_first=True
+    is_file_safetensors_compression={}
 
     if model:
         if not hf_cache:
@@ -108,10 +111,16 @@ def decompress_znn_files(
         files,
     ) in directories_to_search:
         for file_name in files:
-            if file_name.endswith(".znn"):
-                decompressed_path = file_name[:-4]
+            if file_name.endswith(".znn") or file_name.endswith(".znn.safetensors"):
+                if file_name.endswith(".znn"):
+                    decompressed_path = file_name[:-4]
+                    is_file_safetensors_compression[os.path.join(root,file_name)]=0
+                else:
+                    decompressed_path=file_name[: -(len(".znn.safetensors"))] + ".safetensors"
+                    is_file_safetensors_compression[os.path.join(root,file_name)]=1
+                    
                 if not force and os.path.exists(
-                    decompressed_path
+                    os.path.join(root,decompressed_path)
                 ):
                     #
                     if overwrite_first:
@@ -170,32 +179,49 @@ def decompress_znn_files(
                 "Transformers not found. Please pip install transformers."
             )
             
-        suffix = file_list[0].split('/')[-1].split('.')[-2] # get the one before .znn
-
-        if os.path.exists(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)):
-            print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
-            blob_name = os.path.join(path, os.readlink(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)))
-            replace_in_file(
-                    file_path=blob_name,
-                    old=f"{suffix}.znn",
-                    new=f"{suffix}"
-                )
-        elif os.path.exists(os.path.join(path, WEIGHTS_INDEX_NAME)):
-            print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
-            blob_name = os.path.join(path, os.readlink(os.path.join(path, WEIGHTS_INDEX_NAME)))
-            replace_in_file(
-                    file_path=blob_name,
-                    old=f"{suffix}.znn",
-                    new=f"{suffix}"
-                )
+        #suffix = file_list[0].split('/')[-1].split('.')[-2] # get the one before .  #######
+        #if suffix=="safetensors":
+        #    old="safetensors.znn"
+        #else:
+        #    old="znn.safetensors"
+        #new="safetensors"
+        
+        for file_name in file_list: ## NEED TO CHECK
+            if is_file_safetensors_compression[file_name]==1:
+                old="znn.safetensors"
+            else:
+                old="safetensors.znn"
+            
+            if os.path.exists(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)):
+                print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
+                blob_name = os.path.join(path, os.readlink(os.path.join(path, SAFE_WEIGHTS_INDEX_NAME)))
+                replace_in_file(
+                        file_path=blob_name,
+                        old=old, 
+                        new=new
+                    )
+            elif os.path.exists(os.path.join(path, WEIGHTS_INDEX_NAME)):
+                print(f"{YELLOW}Fixing Hugging Face model json...{RESET}")
+                blob_name = os.path.join(path, os.readlink(os.path.join(path, WEIGHTS_INDEX_NAME)))
+                replace_in_file(
+                        file_path=blob_name,
+                        old=old, 
+                        new=new
+                    )
 
     with ProcessPoolExecutor(
         max_workers=max_processes
     ) as executor:
         for file in file_list[:max_processes]:
+            #
+            if is_file_safetensors_compression[file]==0:
+                decompression_func=decompress_file
+            else:
+                decompression_func=decompress_safetensors_file
+            #
             future_to_file = {
                 executor.submit(
-                    decompress_file,
+                    decompression_func, ###
                     file,
                     delete,
                     True,
@@ -227,9 +253,15 @@ def decompress_znn_files(
                         next_file = file_list.pop(
                             0
                         )
+                        #
+                        if is_file_safetensors_compression[next_file]==0:
+                            decompression_func=decompress_file
+                        else:
+                            decompression_func=decompress_safetensors_file
+                        #
                         future_to_file[
                             executor.submit(
-                                decompress_file,
+                                decompression_func, ###
                                 next_file,
                                 delete,
                                 True,
