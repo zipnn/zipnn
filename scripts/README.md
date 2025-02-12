@@ -2,12 +2,14 @@
 
 This repository provides a set of command-line scripts designed to efficiently compress and decompress files using ZipNN. The scripts support multiple compression and decompression methods:
 
-- **Standard ZipNN compression**
-- **Delta compression**, which requires a delta file and compresses the difference between the input and the delta file
-- **Safetensors compression**, which allows tensor-by-tensor compression for safetensors files
-- **Path-based compression**, enabling batch compression/decompression for all files in a specified directory
+- **Standard ZipNN compression**.
+- **Delta compression**, which requires a delta file and compresses the difference between the input and the delta file.
+- **Safetensors compression**, which allows tensor-by-tensor compression for safetensors files.
+- **Path-based compression**, enabling batch compression/decompression for all files in a specified directory. As default, path-based compression uses Safetensors compression for safetensors files.
 
-Each script provides configurable options for fine-tuning performance and flexibility, as detailed below.
+Each script provides configurable options for fine-tuning performance and flexibility, as detailed [below.](#scripts-configuration)
+
+You can also use these scripts to compress and decompress models directly from Hugging Face, as demonstrated in [this example.](#huggingface-example)
 
 ## Available Scripts
 
@@ -26,7 +28,7 @@ Each script provides configurable options for fine-tuning performance and flexib
    ```
    python zipnn_compress_path.py suffix_of_files
    ```
-7. **`zipnn_compress_safetensors.py`** - Compresses safetensors files tensor by tensor, adding a `.znn.safetensors` suffix.
+7. **`zipnn_compress_safetensors.py`** - Compresses safetensors files efficiently, tensor by tensor, adding a `.znn.safetensors` suffix.
    ```
    python zipnn_compress_path_safetensors.py safetensors_path
    ```
@@ -53,12 +55,10 @@ Each script provides configurable options for fine-tuning performance and flexib
 
 ## Scripts Configuration
 
-### `zipnn_compress_file.py`
+### Compression Scripts
 
-Usage example:
-```
-python zipnn_compress_file.py model_name
-```
+#### `zipnn_compress_file.py`
+
 - **Purpose**: Compresses a single file, using ZipNN.
 - **Arguments**:
   - **Required**: The path of the file to compress.
@@ -74,29 +74,10 @@ python zipnn_compress_file.py model_name
     - `--verification`: A flag that verifies that a compression can be decompressed correctly.
     - `--test`: A flag to not write the compressed data to a file.
     - `--is_streaming`: A flag to compress using streaming.
+    - `--threads`: The amount of threads to be used during compression. The default is the maximum amount possible.
 
    
-### `zipnn_decompress_file.py`
-
-Usage example:
-```
-python zipnn_decompress_file.py compressed_model_name.znn
-```
-
-- **Purpose**: Decompresses the input file, removing the `.znn` extension from the output file name, using ZipNN.
-- **Arguments**: 
-  - **Required**: The path of the file to decompress.
-  - **Optional**:
-    - `--delete`: Flag that specifies deleting the compressed file after decompression.
-    - `--force`: Flag that forces overwriting when decompressing.
-    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
-
-### `zipnn_compress_path.py`
-
-Usage example:
-```
-python zipnn_compress_path.py safetensors  --path data/
-```
+#### `zipnn_compress_path.py`
 
 - **Purpose**: Compresses all files with a specified suffix using ZipNN under a path.
 - **Arguments**:
@@ -118,33 +99,11 @@ python zipnn_compress_path.py safetensors  --path data/
     - `--verification`: A flag that verifies that a compression can be decompressed correctly.
     - `--test`: A flag to not write the compressed data to a file.
     - `--is_streaming`: A flag to compress using streaming.
+    - `--threads`: The amount of threads to be used during compression. The default is the maximum amount possible.
+    - `--file_compression`: A flag to compress using the default ZipNN compression, not using the specific safetensors compression method tensor-by-tensor.
 
-### `zipnn_decompress_path.py`
+#### `zipnn_compress_file_delta.py`
 
-Usage example:
-```
-python zipnn_decompress_path.py --path data/
-```
-
-- **Purpose**: Decompresses all files with a `.znn` suffix under a path, removing the `.znn` extension from the output file name, using ZipNN.
-- **Arguments**: 
-  - **Optional**:
-    - `--path`: Path to the folder containing all files that need decompression. If left empty, it will look for all files in the current folder.
-    - `--delete`: Flag that specifies deleting the compressed files after decompression.
-    - `--force`: Flag that forces overwriting when decompressing.
-    - `--max_processes`: Amount of max processes that can be used during the decompression. The default is 1.
-    - `--model`: Only when using --hf_cache, specify the model name or path. E.g. 'ibm-granite/granite-7b-instruct'.
-    - `--model_branch`: Only when using --model, specify the model branch. Default is 'main'.
-    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache. Must either specify --model or --path to the model's snapshot cache.
-
-To use these scripts, simply copy the desired file to your project directory and run it as needed.
-
-### `zipnn_compress_file_delta.py`
-
-Usage example:
-```
-python zipnn_compress_file_delta.py input_file delta_file
-```
 - **Purpose**: Compresses a single file with ZipNN using the delta compression method.
 - **Arguments**:
   - **Required**:
@@ -162,14 +121,48 @@ python zipnn_compress_file_delta.py input_file delta_file
     - `--verification`: A flag that verifies that a compression can be decompressed correctly.
     - `--test`: A flag to not write the compressed data to a file.
     - `--is_streaming`: A flag to compress using streaming.
+    - `--threads`: The amount of threads to be used during compression. The default is the maximum amount possible.
 
+#### `zipnn_compress_safetensors.py`
+
+- **Purpose**: Compresses a single safetensors file tensor-by-tensor.
+- **Arguments**:
+  - **Required**: The path of the file to compress.
+  - **Optional**:
+    - `--delete`: Flag that specifies deleting the original file after compression.
+    - `--force`: Flag that forces overwriting when compressing.
+    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
+    - `--method`: The compression method to be used. The options are "HUFFMAN", "ZSTD", "FSE", "AUTO", and "HUFFMAN" is the default.
+    - `--threads`: The amount of threads to be used during compression. The default is the maximum amount possible.
+
+### Decompression Scripts
+
+#### `zipnn_decompress_file.py`
+
+- **Purpose**: Decompresses the input file, removing the `.znn` extension from the output file name, using ZipNN.
+- **Arguments**: 
+  - **Required**: The path of the file to decompress.
+  - **Optional**:
+    - `--delete`: Flag that specifies deleting the compressed file after decompression.
+    - `--force`: Flag that forces overwriting when decompressing.
+    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
+    - `--threads`: The amount of threads to be used during decompression. The default is the maximum amount possible.
+
+#### `zipnn_decompress_path.py`
+
+- **Purpose**: Decompresses all files with a `.znn` suffix under a path, removing the `.znn` extension from the output file name, using ZipNN.
+- **Arguments**: 
+  - **Optional**:
+    - `--path`: Path to the folder containing all files that need decompression. If left empty, it will look for all files in the current folder.
+    - `--delete`: Flag that specifies deleting the compressed files after decompression.
+    - `--force`: Flag that forces overwriting when decompressing.
+    - `--max_processes`: Amount of max processes that can be used during the decompression. The default is 1.
+    - `--model`: Only when using --hf_cache, specify the model name or path. E.g. 'ibm-granite/granite-7b-instruct'.
+    - `--model_branch`: Only when using --model, specify the model branch. Default is 'main'.
+    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache. Must either specify --model or --path to the model's snapshot cache.
+    - `--threads`: The amount of threads to be used during decompression. The default is the maximum amount possible.
    
-### `zipnn_decompress_file_delta.py`
-
-Usage example:
-```
-python zipnn_decompress_file_delta.py compressed_model_name.znn delta_file
-```
+#### `zipnn_decompress_file_delta.py`
 
 - **Purpose**: Decompresses a single file with ZipNN using the delta decompression method.
 - **Arguments**: 
@@ -180,15 +173,31 @@ python zipnn_decompress_file_delta.py compressed_model_name.znn delta_file
     - `--delete`: Flag that specifies deleting the compressed file after decompression.
     - `--force`: Flag that forces overwriting when decompressing.
     - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
+    - `--threads`: The amount of threads to be used during decompression. The default is the maximum amount possible.
 
+#### `zipnn_decompress_safetensors.py`
 
-**Examples of compressing Hugging Face models with ZipNN scripts:**
+- **Purpose**: Decompresses a single `.znn.safetensors` file tensor-by-tensor.
+- **Arguments**:
+  - **Required**: The path of the file to compress.
+  - **Optional**:
+    - `--delete`: Flag that specifies deleting the original file after compression.
+    - `--force`: Flag that forces overwriting when compressing.
+    - `--hf_cache`: A flag that indicates if the file is in the Hugging Face cache.
+    - `--method`: The compression method to be used. The options are "HUFFMAN", "ZSTD", "FSE", "AUTO", and "HUFFMAN" is the default.
+    - `--threads`: The amount of threads to be used during compression. The default is the maximum amount possible.
 
-Use --model to specify the full model name from Hugging Face, and --hf_cache for caching:
+## HuggingFace Example
+
+Use --model to specify the full model name from Hugging Face, and --hf_cache for caching.
+
+### Compressing HuggingFace model
 
 ```bash
 python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```
+
+### Decompressing HuggingFace model 
 
 ```bash
 python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
