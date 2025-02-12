@@ -1,6 +1,57 @@
-# ZipNN Scripts for working with files
+# ZipNN Scripts for File Compression and Decompression
 
-Below is a brief overview of each script available in the `scripts` folder:
+This repository provides a set of command-line scripts designed to efficiently compress and decompress files using ZipNN. The scripts support multiple compression and decompression methods:
+
+- **Standard ZipNN compression**
+- **Delta compression**, which requires a delta file and compresses the difference between the input and the delta file
+- **Safetensors compression**, which allows tensor-by-tensor compression for safetensors files
+- **Path-based compression**, enabling batch compression/decompression for all files in a specified directory
+
+Each script provides configurable options for fine-tuning performance and flexibility, as detailed below.
+
+## Available Scripts
+
+### Compression Scripts
+1. **`zipnn_compress_file.py`** - Compresses a single file, adding a `.znn` suffix.
+   
+   ```
+   python zipnn_compress_file.py model_path
+   ```
+3. **`zipnn_compress_file_delta.py`** - Compresses a file using delta compression, requiring a delta reference file.
+   ```
+   python zipnn_compress_file_delta.py model_path delta_file_path
+   ```
+
+5. **`zipnn_compress_path.py`** - Compresses all files with a given suffix in a specified directory (optionally recursive).
+   ```
+   python zipnn_compress_path.py suffix_of_files
+   ```
+7. **`zipnn_compress_safetensors.py`** - Compresses safetensors files tensor by tensor, adding a `.znn.safetensors` suffix.
+   ```
+   python zipnn_compress_path_safetensors.py safetensors_path
+   ```
+
+### Decompression Scripts
+1. **`zipnn_decompress_file.py`** - Decompresses a single file.
+   
+   ```
+   python zipnn_decompress_file.py compressed_model_path
+   ```
+3. **`zipnn_decompress_file_delta.py`** - Decompresses a file using delta compression, requiring a delta reference file.
+   ```
+   python zipnn_decompress_file_delta.py compressed_model_path delta_file_path
+   ```
+5. **`zipnn_decompress_path.py`** - Decompresses all `.znn`, `.znn.safetensors` files in a specified directory (optionally recursive).
+   ```
+   python zipnn_decompress_path.py 
+   ```
+7. **`zipnn_decompress_safetensors.py`** - Decompresses safetensors files efficiently, tensor by tensor.
+   ```
+   python zipnn_decompress_path_safetensors.py compressed_safetensors_path
+   ```
+
+
+## Scripts Configuration
 
 ### `zipnn_compress_file.py`
 
