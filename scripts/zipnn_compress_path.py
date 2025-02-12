@@ -397,7 +397,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--file_compression",
         action="store_true",
-        help="A flag to compress the file as a whole, not per safetensors file.",
+        help="A flag to compress the file as a whole, not per tensor.",
     )#
     args = parser.parse_args()
     optional_kwargs = {}
