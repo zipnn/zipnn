@@ -2,3 +2,5 @@ https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_compress_file.p
 https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_compress_path.py
 https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_decompress_file.py
 https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_decompress_path.py
+https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_compress_safetensors.py
+https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/zipnn_decompress_safetensors.py
