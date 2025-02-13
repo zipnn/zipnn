@@ -26,19 +26,35 @@ git rebase upstream/main &&
 git lfs pull upstream
 ```
 
-1. Compress all the model weights
-Download the scripts for compressing/decompressing AI Models:
-
+4. Download the scripts for compressing/decompressing AI Models:
 ```bash
 wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt &&
 rm scripts.txt
 ```
 
+5. Compress the model.
+ 
+**First Option:** Whenever working with safetensors files, we suggest compressing using a tailored method for safetensors:
+
+```bash
+python3 zipnn_compress_path.py safetensors --path .
+```
+
+Then, to add the compressed weights to git-lfs tracking and correct the index json:
+```bash
+git lfs track "*.znn.safetensors" &&
+sed -i "" 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json &&
+git add *.znn.safetensors .gitattributes model.safetensors.index.json &&
+git rm *.safetensors
+```
+
+**Second Option:** For default ZipNN compression, which works with all files, simply run:
+
 ```bash
 python3 zipnn_compress_path.py safetensors --path . --file_compression
 ```
 
-2. Add the compressed weights to git-lfs tracking and correct the index json
+Then, to add the compressed weights to git-lfs tracking and correct the index json:
 ```
 git lfs track "*.znn" &&
 sed -i "" 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json &&
@@ -46,14 +62,26 @@ git add *.znn .gitattributes model.safetensors.index.json &&
 git rm *.safetensors
 ```
 
-3. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
+6. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
 ```bash
 git lfs install --force --local && # this reinstalls the LFS hooks
 huggingface-cli lfs-enable-largefiles . && # needed if some files are bigger than 5GB
 git push --force origin main
 ```
 
-To use the model simply run our ZipNN Hugging Face method before proceeding as normal:
+### Using the model
+If you compressed using the **First Option**, our tailored method for safetensors, run our safetensors method before proceeding as normal:
+
+```python
+from zipnn import zipnn_safetensors
+
+zipnn_safetensors()
+
+# Load the model from your compressed Hugging Face model card as you normally would
+...
+```
+
+If you compressed using the **Second Option**, the default ZipNN compression, run our huggingface method before proceeding as normal:
 ```python
 from zipnn import zipnn_hf
 
