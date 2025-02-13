@@ -48,19 +48,25 @@ def decompress_file(input_file, delete=False, force=False, hf_cache=False,thread
 
         file_size_before = 0
         file_size_after = 0
-        start_time = time.time()
+        start_time=time.time()
         with open(input_file, "rb") as infile, open(output_file, "wb") as outfile:
-            d_data = b""
             chunk = infile.read()
+            load_time=time.time()-start_time
             file_size_before = len(chunk)
-            d_data += zpn.decompress(chunk)
+            start_time = time.time()
+            d_data = zpn.decompress(chunk)
+            decomp_time = time.time() - start_time
             file_size_after = len(d_data)
+            start_time=time.time()
             outfile.write(d_data)
+            write_time=time.time()-start_time
             print(f"Decompressed {input_file} to {output_file} using {threads} threads")
-        end_time = time.time() - start_time
-
+            print(f"sum of load times: {load_time}s")
+            #print(f"sum of decomp times: {decomp_time}s")
+            print(f"decomp file written in {write_time}s")
+        
         print(
-            f"{GREEN}Back to original size: {file_size_after/GB:.02f}GB size before decompression: {file_size_before/GB:.02f}GB, time: {end_time:.02f}{RESET}"
+            f"{GREEN}Back to original size: {file_size_after/GB:.02f}GB size before decompression: {file_size_before/GB:.02f}GB{RESET}"
             )
 
 
@@ -94,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--delete",
         action="store_true",
-        help="A flag that triggers deletion of a single compressed file instead of decompression",
+        help="A flag that triggers deletion of the single compressed file instead after decompression",
     )
     parser.add_argument(
         "--force", action="store_true", help="A flag that forces overwriting when decompressing."

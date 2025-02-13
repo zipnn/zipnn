@@ -34,30 +34,41 @@ def test_byte_torch_streaming():
     for size in sizes_kb:
         print(f"\nTesting size: {size}KB")
         original_tensor = create_tensor(size)
+        original_tensor_clone=original_tensor.clone()
         compressed_data = zpn_torch.compress(original_tensor)
         decompressed_data = zpn_torch.decompress(compressed_data)
-        print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(original_tensor, decompressed_data))
+        print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(original_tensor_clone, decompressed_data))
+        if not torch.equal(original_tensor_clone, decompressed_data):
+            raise ValueError("Error - original file and decompressed file are NOT equal.")
 
         original_bytes=create_random_bytes(size)
         copy_bytes=bytearray(original_bytes)
         compressed_data = zpn_bytes.compress(original_bytes)
         decompressed_data = zpn_bytes.decompress(compressed_data)
         print("Are the original and decompressed byte strings the same [BYTES]? ", copy_bytes == decompressed_data)
+        if not copy_bytes == decompressed_data:
+            raise ValueError("Error - original file and decompressed file are NOT equal.")
         
 
     # Test each size in megabytes
     for size in sizes_mb:
         print(f"\nTesting size: {size}MB")
-        original_tensor = create_tensor(int(size * 1024))  
+        original_tensor = create_tensor(int(size * 1024))
+        original_tensor_clone=original_tensor.clone()
         compressed_data = zpn_torch.compress(original_tensor)
         decompressed_data = zpn_torch.decompress(compressed_data)
-        print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(original_tensor, decompressed_data))
+        print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(original_tensor_clone, decompressed_data))
+        if not torch.equal(original_tensor_clone, decompressed_data):
+            raise ValueError("Error - original file and decompressed file are NOT equal.")
 
         original_bytes=create_random_bytes(int(size*1024))
         copy_bytes=bytearray(original_bytes)
         compressed_data = zpn_bytes.compress(original_bytes)
         decompressed_data = zpn_bytes.decompress(compressed_data)
         print("Are the original and decompressed byte strings the same [BYTES]? ", copy_bytes == decompressed_data)
+        if not copy_bytes == decompressed_data:
+            raise ValueError("Error - original file and decompressed file are NOT equal.")
+        
 
     # Test each size in chunk sizes
     for size in chunk_sizes:
@@ -68,6 +79,8 @@ def test_byte_torch_streaming():
         compressed_data = zpn_streaming.compress(original_bytes)
         decompressed_data = zpn_streaming.decompress(compressed_data)
         print("Are the original and decompressed byte strings the same [STREAMING BYTES]? ",copy_bytes == decompressed_data)
+        if not copy_bytes == decompressed_data:
+            raise ValueError("Error - original file and decompressed file are NOT equal.")
 
     # Delta(byte)
     zpn_delta = ZipNN(delta_compressed_type="byte")
