@@ -62,7 +62,7 @@ First, make sure you have ZipNN installed:
 ```bash
 pip install zipnn
 ```
-Then, simply add zipnn_safetensors() at the beginning of the file, and from then on proceed as normally. The plugin will let you keep the compressed model in storage, while decompressing it quickly when loaded.
+Then, simply add ```zipnn_safetensors()``` at the beginning of the file, and from then on proceed as normally. The plugin will let you keep the compressed model in storage, while decompressing it quickly when loaded.
 
 #### GPT2 using from_pretrained
 ```python
