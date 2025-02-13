@@ -5,10 +5,10 @@
 2. Clone your fork repository: 
 ```bash
 git clone git@hf.co:me/myfork
+cd myfork
 ```
 3. Set up Git LFS locally, adds upstream, fetch updates, and pull LFS files.
 ```bash
-cd myfork
 git lfs install --skip-smudge --local &&
 git remote add upstream git@hf.co:ibm-granite/granite-7b-instruct &&
 git fetch upstream &&
