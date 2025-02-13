@@ -18,7 +18,8 @@ The default is set to the number of logical CPU threads.<br>
 
 ## Contents
 
-- [NEW: HuggingFace Integration](#huggingface-plugin)
+- [HuggingFace Plugin](#huggingface-plugin)
+- [Safetensors Plugin](#safetensors-plugin)
 - [Getting Started](#getting-started)
 - [Introduction](#introduction)
 - [Results](#results)
@@ -50,6 +51,47 @@ zipnn_hf(replace_local_file=True)
 [Click here](./docs/HuggingFace.md) to see full Hugging Face integration documentation, and to try state-of-the-art compressed models that are already present on HuggingFace, such as [Roberta Base]( https://huggingface.co/royleibov/roberta-base-ZipNN-Compressed ), [Granite 3.0](https://huggingface.co/royleibov/granite-3.0-8b-instruct-ZipNN-Compressed), [Llama 3.2]( https://huggingface.co/royleibov/Llama-3.2-11B-Vision-Instruct-ZipNN-Compressed ).
 
 You can also try one of these python notebooks hosted on Kaggle: [granite 3b](https://www.kaggle.com/code/royleibovitz/huggingface-granite-3b-example), [Llama 3.2](https://www.kaggle.com/code/royleibovitz/huggingface-llama-3-2-example), [phi 3.5](https://www.kaggle.com/code/royleibovitz/huggingface-phi-3-5-example).  
+
+## Safetensors Plugin
+
+Specifically for safetensors files we suggest using a plugin made for the safetensors library to use ZipNN compression, for even better performance.
+
+### Download Compressed Models from Hugging Face
+
+First, make sure you have ZipNN installed:
+```bash
+pip install zipnn
+```
+Then, simply add zipnn_safetensors() at the beginning of the file, and from then on proceed as normally. The plugin will let you keep the compressed model in storage, while decompressing it quickly when loaded.
+
+#### GPT2 using from_pretrained
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from zipnn import zipnn_safetensors
+zipnn_safetensors()
+
+model = "moshik1/gpt2-ZipNN"
+tokenizer = AutoTokenizer.from_pretrained(model)
+model = AutoModelForCausalLM.from_pretrained(model, variant="znn")
+
+prompt = "Once upon a time,"
+inputs = tokenizer(prompt, return_tensors="pt")
+outputs = model.generate(**inputs, max_length=10)
+generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+print(generated_text)
+```
+#### GPT2 using vllm
+```python
+from zipnn import zipnn_safetensors;
+zipnn_safetensors();
+from vllm import LLM
+
+llm = LLM("moshik1/gpt2-ZipNN")
+
+prompt = "Once upon a time,"
+outputs = llm.generate([prompt])
+print(outputs[0].outputs[0].text)
+```
 
 ## Getting Started
 This repository provides command-line scripts for efficient file compression and decompression using ZipNN, offering few methods, such as a standard compression for general use, safetensors compression for efficient tensor-by-tensor compression of safetensors files, and path-based batch compression, to apply for all relevant files in a directory.
