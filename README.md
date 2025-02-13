@@ -52,20 +52,25 @@ zipnn_hf(replace_local_file=True)
 You can also try one of these python notebooks hosted on Kaggle: [granite 3b](https://www.kaggle.com/code/royleibovitz/huggingface-granite-3b-example), [Llama 3.2](https://www.kaggle.com/code/royleibovitz/huggingface-llama-3-2-example), [phi 3.5](https://www.kaggle.com/code/royleibovitz/huggingface-phi-3-5-example).  
 
 ## Getting Started
-Download the scripts for compressing/decompressing AI Models:
+This repository provides command-line scripts for efficient file compression and decompression using ZipNN, offering few methods, such as a standard compression for general use, safetensors compression for efficient tensor-by-tensor compression of safetensors files, and path-based batch compression, to apply for all relevant files in a directory.
 
+More information regarding the scripts can be found [in the scripts folder's README.](https://github.com/guygir/zipnn/blob/main/scripts/README.md)
+
+To download the scripts for compressing/decompressing AI Models:
 ```
 wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt
 ```
-
-To compress a file:
+We recommend using safetensors compression when possible. To apply it, run:
 ```
-python3 zipnn_compress_file.py model_name
+python3 zipnn_compress_safetensors.py safetensors_path
 ```
-
-To decompress a file:
+For batch compression in a directory:
 ```
-python3 zipnn_decompress_file.py compressed_model_name.znn
+python3 zipnn_compress_path.py .safetensors
+```
+To decompress a compressed safetensors file:
+```
+python zipnn_decompress_path_safetensors.py compressed_safetensors_path
 ```
 
 ## Introduction
