@@ -34,9 +34,18 @@ The default is set to the number of logical CPU threads.<br>
 
 ## HuggingFace Plugin
 
-You can now choose to save the model compressed on your local storage by using the default plugin. When loading, the model includes a fast decompression phase on the CPU while remaining compressed on your storage.
+You can now choose to save the model compressed on your local storage by using the plugin. When loading, the model includes a fast decompression phase on the CPU while remaining compressed on your storage.
 
 **What this means:** Each time you load the model, less data is transferred to the GPU cluster, with decompression happening on the CPU.
+
+### Safetensors Plugin
+
+Specifically for safetensors files we suggest using a plugin made for the safetensors library to use ZipNN compression, for even better performance.
+```python
+zipnn_safetensors()
+```
+
+For any other type of file, please use our huggingface plugin.
 
 ```python
 zipnn_hf()
@@ -46,13 +55,6 @@ Alternatively, you can save the model uncompressed on your local storage. This w
 
 ```python
 zipnn_hf(replace_local_file=True)
-```
-
-### Safetensors Plugin
-
-Specifically for safetensors files we suggest using a plugin made for the safetensors library to use ZipNN compression, for even better performance.
-```python
-zipnn_safetensors()
 ```
 
 [Click here](./docs/HuggingFace.md) to see full Hugging Face integration documentation, and to try state-of-the-art compressed models that are already present on HuggingFace, such as [Roberta Base]( https://huggingface.co/royleibov/roberta-base-ZipNN-Compressed ), [Granite 3.0](https://huggingface.co/royleibov/granite-3.0-8b-instruct-ZipNN-Compressed), [Llama 3.2]( https://huggingface.co/royleibov/Llama-3.2-11B-Vision-Instruct-ZipNN-Compressed ).
@@ -86,8 +88,8 @@ print(generated_text)
 ### GPT2 using vllm
 ```python
 from zipnn import zipnn_safetensors;
-zipnn_safetensors();
 from vllm import LLM
+zipnn_safetensors();
 
 llm = LLM("moshik1/gpt2-ZipNN")
 
