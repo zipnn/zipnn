@@ -10,11 +10,8 @@
 
 [![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/zipnn.svg)](https://pypi.org/pypi/zipnn/)
 
-## PyPI Version 0.5.0 is Here with Multithreading Support on the CPU!!!
-The default is set to the number of logical CPU threads.<br>
-**Note:** For compression, you might want to reduce the number of threads depending on your machine.
-
-
+## PyPI Version 0.5.3 is Here with Multithreading Support on the CPU!!!
+supports VLLM, safetensors and huggingface - model is always compressed on the filesystem!
 
 ## Contents
 
