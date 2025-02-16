@@ -1,6 +1,6 @@
 # ZipNN and Hugging Face Integration
 
-## Compress and Upload a Model to Hugging Face
+## Compress and Upload a Model to Hugging Face (safetensors)
 1. Create a destination repository (e.g. myfork) in https://huggingface.co
 2. Clone your fork repository: 
 ```bash
@@ -34,8 +34,6 @@ rm scripts.txt
 
 5. Compress the model.
  
-**First Option:** Whenever working with safetensors files, we suggest compressing using a tailored method for safetensors:
-
 ```bash
 python3 zipnn_compress_path.py safetensors --path .
 ```
@@ -48,7 +46,30 @@ git add *.znn.safetensors .gitattributes model.safetensors.index.json &&
 git rm *.safetensors
 ```
 
-**Second Option:** For default ZipNN compression, which works with all files, simply run:
+6. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
+```bash
+git lfs install --force --local && # this reinstalls the LFS hooks
+huggingface-cli lfs-enable-largefiles . && # needed if some files are bigger than 5GB
+git push --force origin main
+```
+
+### Using the model
+Run our safetensors method before proceeding as normal:
+
+```python
+from zipnn import zipnn_safetensors
+
+zipnn_safetensors()
+
+# Load the model from your compressed Hugging Face model card as you normally would
+...
+```
+
+## Compress and Upload a Model to Hugging Face (other file types)
+
+Steps 1 through 4 are the same.
+
+5. Compress the model.
 
 ```bash
 python3 zipnn_compress_path.py safetensors --path . --file_compression
@@ -70,18 +91,9 @@ git push --force origin main
 ```
 
 ### Using the model
-If you compressed using the **First Option**, our tailored method for safetensors, run our safetensors method before proceeding as normal:
 
-```python
-from zipnn import zipnn_safetensors
+Run our huggingface method before proceeding as normal:
 
-zipnn_safetensors()
-
-# Load the model from your compressed Hugging Face model card as you normally would
-...
-```
-
-If you compressed using the **Second Option**, the default ZipNN compression, run our huggingface method before proceeding as normal:
 ```python
 from zipnn import zipnn_hf
 
