@@ -15,7 +15,8 @@ supports VLLM, safetensors and huggingface - model is always compressed on the f
 
 ## Contents
 
-- [NEW: HuggingFace Plugin](#huggingface-plugin)
+- [vLLM Integration](#vllm-integration)
+- [HuggingFace Integration](#huggingface-integration)
 - [NEW: Download Compressed Models from Hugging Face](#download-compressed-models-from-hugging-face)
 - [Getting Started](#getting-started)
 - [Introduction](#introduction)
@@ -29,7 +30,35 @@ supports VLLM, safetensors and huggingface - model is always compressed on the f
 - [Citation](#citation)
 - [Change Log](#change-log)
 
-## HuggingFace Plugin
+## vLLM Integration
+
+You can now use zipnn-compressed models in vLLM.
+When running vLLM in a python interactive shell, simply run the following code before importing from vllm modules:
+
+```python
+from zipnn import zipnn_safetensors
+zipnn_safetensors()
+```
+
+This will patch the safetensors python module, used by vLLM to load models in safetensors format.
+The patch will enable the automatic detection and loading of zipnn-compressed models.
+
+If you use vLLM in a container (for example by using the `vllm/vllm-openai:latest` image),
+you can extend that image with zipnn support by building a new image on top of it using the Dockerfile
+found in the root of the zipnn project:
+
+```
+docker build --build-arg BASE_IMAGE=vllm/vllm-openai:latest -t vllm-openai:zipnn .
+```
+
+This will build a new image `vllm-openai:zipnn` that you can use to run vLLM in a container with zipnn support.
+Alternatively, you can simply use the pre-built `zipnn/vllm-openai:latest` image.
+
+Note that the above methods can work not just for vLLM, but for any application that uses the safetensors python library
+(including `sglang`).
+
+
+## HuggingFace Integration
 
 You can now choose to save the model compressed on your local storage by using the plugin. When loading, the model includes a fast decompression phase on the CPU while remaining compressed on your storage.
 

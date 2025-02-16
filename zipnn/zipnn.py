@@ -5,7 +5,6 @@ import multiprocessing
 import numpy as np
 from safetensors.torch import safe_open
 import torch
-import zstandard as zstd
 import zipnn_core
 from zipnn.util_header import EnumMethod, EnumFormat, EnumLossy
 from zipnn.util_torch import (
@@ -240,6 +239,10 @@ class ZipNN:
         if self.method == EnumMethod.HUFFMAN.value or self.method == EnumMethod.AUTO.value:
             pass 
         elif self.method == EnumMethod.ZSTD.value:
+            try: 
+                import zstandard as zstd
+            except ImportError as exc:
+                raise ImportError("zstandard library is not installed. Please install it to use  zstandard compression: pip install zstandard ") from exc
             self._zstd_compress = zstd.ZstdCompressor(level=zstd_level, threads=self.threads)
             self._zstd_decompress = zstd.ZstdDecompressor()
 
