@@ -49,10 +49,9 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        "numpy",
-        "zstandard",
-        "torch",
-        "safetensors"
+        'numpy>=1.17.0',
+        'safetensors>=0.4.0',
+        "torch>=2.0.0",
     ],
     ext_modules=[zipnn_core_extension],  # Add the C extension module here
 )

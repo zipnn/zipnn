@@ -1,4 +1,3 @@
-zstandard
-torch
-numpy
-safetensors
+torch>=2.0.0 
+numpy>=1.17.0
+safetensors>=0.4.0
