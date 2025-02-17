@@ -102,7 +102,7 @@ def compress_files_with_suffix(
     verification=False,#
     test=False,#
     is_streaming=False,
-    threads=multiprocessing.cpu_count(),
+    threads=None,
     file_compression=False    
 ):
     import zipnn
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--threads",
         type=int,
-        default=multiprocessing.cpu_count(),
+        default=None,
         help="The amount of threads to be used.",
     )
     parser.add_argument(

@@ -31,7 +31,7 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def decompress_safetensors_file(filename, delete=False,force=False,hf_cache=False,threads=multiprocessing.cpu_count()):
+def decompress_safetensors_file(filename, delete=False,force=False,hf_cache=False,threads=None):
     """
     Decompress a safetensors file.
     """
@@ -123,7 +123,7 @@ def decompress_safetensors_file(filename, delete=False,force=False,hf_cache=Fals
         except Exception as e:
             raise Exception(f"Error reorganizing Hugging Face cache: {e}")
     
-    print(f"Decompressed {filename} to {decompressed_path} using {threads} threads")
+    print(f"Decompressed {filename} to {decompressed_path} using {znn.threads} threads")
     print(f"sum of load times: {load_time_sum}s")
     print(f"sum of decomp times: {decomp_time_sum}s")
     print(f"decomp file written in {write_time}s, ratio is {comp_len/decomp_len}")
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--threads",
         type=int,
-        default=multiprocessing.cpu_count(),
+        default=None,
         help="The amount of threads to be used.",
     )
     args = parser.parse_args()
