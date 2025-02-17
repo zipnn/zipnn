@@ -88,7 +88,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from zipnn import zipnn_safetensors
 zipnn_safetensors()
 
-model = "moshik1/gpt2-ZipNN"
+model = "zipnn/gpt2-ZipNN"
 tokenizer = AutoTokenizer.from_pretrained(model)
 model = AutoModelForCausalLM.from_pretrained(model, variant="znn")
 
@@ -104,7 +104,7 @@ from zipnn import zipnn_safetensors;
 from vllm import LLM
 zipnn_safetensors();
 
-llm = LLM("moshik1/gpt2-ZipNN")
+llm = LLM("zipnn/gpt2-ZipNN")
 
 prompt = "Once upon a time,"
 outputs = llm.generate([prompt])
