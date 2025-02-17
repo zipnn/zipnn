@@ -9,26 +9,26 @@ cd myfork
 ```
 3. Set up Git LFS locally, adds upstream, fetch updates, and pull LFS files.
 ```bash
-git lfs install --skip-smudge --local &&
-git remote add upstream git@hf.co:ibm-granite/granite-7b-instruct &&
-git fetch upstream &&
+git lfs install --skip-smudge --local
+git remote add upstream git@hf.co:<organization>/<model>
+git fetch upstream
 git lfs fetch --all upstream
 ```
 
 * If you want to completely override the fork history (which should only have an initial commit), run:
 ```bash
-git reset --hard upstream/main &&
+git reset --hard upstream/main 
 git lfs pull upstream
 ```
 * If you want to rebase instead of overriding, run the following command and resolve any conflicts:
 ```bash
-git rebase upstream/main &&
+git rebase upstream/main 
 git lfs pull upstream
 ```
 
 4. Download the scripts for compressing/decompressing AI Models:
 ```bash
-wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt &&
+wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt 
 rm scripts.txt
 ```
 
@@ -40,16 +40,16 @@ python3 zipnn_compress_path.py safetensors --path .
 
 Then, to add the compressed weights to git-lfs tracking and correct the index json:
 ```bash
-git lfs track "*.znn.safetensors" &&
-sed -i "" 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json &&
-git add *.znn.safetensors .gitattributes model.safetensors.index.json &&
+git lfs track "*.znn.safetensors" 
+sed -i "" 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json 
+git add *.znn.safetensors .gitattributes model.safetensors.index.json 
 git rm *.safetensors
 ```
 
 6. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
 ```bash
-git lfs install --force --local && # this reinstalls the LFS hooks
-huggingface-cli lfs-enable-largefiles . && # needed if some files are bigger than 5GB
+git lfs install --force --local  # this reinstalls the LFS hooks
+huggingface-cli lfs-enable-largefiles .  # needed if some files are bigger than 5GB
 git push --force origin main
 ```
 
@@ -77,16 +77,16 @@ python3 zipnn_compress_path.py safetensors --path . --file_compression
 
 Then, to add the compressed weights to git-lfs tracking and correct the index json:
 ```
-git lfs track "*.znn" &&
-sed -i "" 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json &&
-git add *.znn .gitattributes model.safetensors.index.json &&
+git lfs track "*.znn" 
+sed -i "" 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json 
+git add *.znn .gitattributes model.safetensors.index.json 
 git rm *.safetensors
 ```
 
 6. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
 ```bash
-git lfs install --force --local && # this reinstalls the LFS hooks
-huggingface-cli lfs-enable-largefiles . && # needed if some files are bigger than 5GB
+git lfs install --force --local  # this reinstalls the LFS hooks
+huggingface-cli lfs-enable-largefiles .  # needed if some files are bigger than 5GB
 git push --force origin main
 ```
 
