@@ -30,7 +30,7 @@ def build_compressed_tensor_info(uncompressed_tensor: torch.tensor) -> Compresse
     returns metadata to be saved for the respective compressed tensor.
     """
     return CompressedTensorInfo(
-        dtype=str(uncompressed_tensor.dtype).removeprefix("torch."),
+        dtype = str(uncompressed_tensor.dtype).replace("torch.", ""),
         shape=str(list(uncompressed_tensor.shape)))
 
 
