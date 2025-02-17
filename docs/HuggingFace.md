@@ -43,7 +43,7 @@ Then, to add the compressed weights to git-lfs tracking and correct the index js
 git lfs track "*.znn.safetensors" 
 sed -i "" 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json 
 git add *.znn.safetensors .gitattributes model.safetensors.index.json 
-git rm *.safetensors
+git ls-files *.safetensors | grep -v '.znn.safetensors$' | xargs git rm
 ```
 
 6. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
