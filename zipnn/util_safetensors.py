@@ -31,10 +31,10 @@ def build_compressed_tensor_info(uncompressed_tensor: torch.tensor) -> Compresse
     """
     dtype = str(uncompressed_tensor.dtype)
     if dtype.startswith('torch.'):
-        dtype = dtype[len('torch.')]
+        dtype = dtype[len('torch.'):]
 
     return CompressedTensorInfo(
-        dtype,
+        dtype=dtype,
         shape=str(list(uncompressed_tensor.shape)))
 
 
