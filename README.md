@@ -72,7 +72,7 @@ zipnn_safetensors()
 
 [Click here](./docs/HuggingFace.md) to see full Hugging Face integration documentation.
 
-Try our examples showcasing the use of a compressed GPT-2 model with [vllm]( https://ex1 ) or [from_pretrained](https://ex2).
+Try our examples showcasing the use of a compressed GPT-2 model with [vllm](https://github.com/guygir/zipnn/blob/main/examples/gpt2-zipnn_vllm.py) or [from_pretrained](https://github.com/guygir/zipnn/blob/main/examples/gpt2-zipnn_vllm.py).
 
 ### Download Compressed Models from Hugging Face
 
