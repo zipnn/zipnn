@@ -10,7 +10,7 @@
 
 [![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/zipnn.svg)](https://pypi.org/pypi/zipnn/)
 
-## PyPI Version 0.5.3 is Here with Multithreading Support on the CPU!!!
+## PyPI Version 0.5.2 is Here with Multithreading Support on the CPU!!!
 supports VLLM, safetensors and huggingface - model is always compressed on the filesystem!
 
 ## Contents
@@ -70,9 +70,9 @@ Specifically for safetensors files we suggest using a plugin made for the safete
 zipnn_safetensors()
 ```
 
-[Click here](./docs/HuggingFace.md) to see full Hugging Face integration documentation, and to try state-of-the-art compressed models that are already present on HuggingFace, such as [Roberta Base]( https://huggingface.co/royleibov/roberta-base-ZipNN-Compressed ), [Granite 3.0](https://huggingface.co/royleibov/granite-3.0-8b-instruct-ZipNN-Compressed), [Llama 3.2]( https://huggingface.co/royleibov/Llama-3.2-11B-Vision-Instruct-ZipNN-Compressed ).
+[Click here](./docs/HuggingFace.md) to see full Hugging Face integration documentation.
 
-You can also try one of these python notebooks hosted on Kaggle: [granite 3b](https://www.kaggle.com/code/royleibovitz/huggingface-granite-3b-example), [Llama 3.2](https://www.kaggle.com/code/royleibovitz/huggingface-llama-3-2-example), [phi 3.5](https://www.kaggle.com/code/royleibovitz/huggingface-phi-3-5-example). 
+Try our examples showcasing the use of a compressed GPT-2 model with [vllm]( https://ex1 ) or [from_pretrained](https://ex2).
 
 ### Download Compressed Models from Hugging Face
 
@@ -124,6 +124,10 @@ Alternatively, you can save the model uncompressed on your local storage. This w
 ```python
 zipnn_hf(replace_local_file=True)
 ```
+
+Try state-of-the-art compressed models that are already present on HuggingFace, such as [Roberta Base]( https://huggingface.co/royleibov/roberta-base-ZipNN-Compressed ), [Granite 3.0](https://huggingface.co/royleibov/granite-3.0-8b-instruct-ZipNN-Compressed), [Llama 3.2]( https://huggingface.co/royleibov/Llama-3.2-11B-Vision-Instruct-ZipNN-Compressed ).
+
+You can also try one of these python notebooks hosted on Kaggle: [granite 3b](https://www.kaggle.com/code/royleibovitz/huggingface-granite-3b-example), [Llama 3.2](https://www.kaggle.com/code/royleibovitz/huggingface-llama-3-2-example), [phi 3.5](https://www.kaggle.com/code/royleibovitz/huggingface-phi-3-5-example). 
 
 ## Getting Started
 This repository provides command-line scripts for efficient file compression and decompression using ZipNN, offering few methods, such as a standard compression for general use, safetensors compression for efficient tensor-by-tensor compression of safetensors files, and path-based batch compression, to apply for all relevant files in a directory.
