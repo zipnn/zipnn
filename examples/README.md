@@ -66,7 +66,7 @@ Example Query GPT2:
 curl http://localhost:8000/v1/completions \
     -H "Content-Type: application/json" \
     -d '{
-        "model": "zipnn/gpt2-ZipNN",
+        "model": "gpt2",
         "prompt": "Once upon a time",
         "max_tokens": 50
     }'
