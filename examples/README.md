@@ -8,24 +8,37 @@ python3 EXAMPLE_FILE.py
 ```
 
 
-# Run vLLM with ZipNN 
+## Run vLLM with ZipNN 
 
 
-## Run vanilla vllm
+### Run vanilla vLLM
 
-```
-vllm serve gpt2 --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
-```
-## Run vllm with ZipNN 
+
+Example running GPT2:
 
 ```
+vllm serve zipnn/gpt2-ZipNN --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
+```
 
+or 
+
+```
+python3 -m vllm.entrypoints.openai.api_server --model gpt2 --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
+```
+### Run vllm with ZipNN 
+
+Example running Compressed GPT2:
+
+Add ZipNN Safetensors plugin and you can run vLLM with compressed models
+
+```
+python3 -c "from zipnn import zipnn_safetensors; zipnn_safetensors(); import runpy; runpy.run_module('vllm.entrypoints.openai.api_server', run_name='__main__', alter_sys=True)" --model zipnn/gpt2-ZipNN --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
 ```
 
 
-# ZipNN Docker Example:
+## ZipNN Docker Example:
 
-## Run ZipNN vLLM Docker:
+### Run ZipNN vLLM Docker:
 [zipnn/vllm-openai Docker on dockerhub](https://hub.docker.com/r/zipnn/vllm-openai)
 
 Run with a docker that already has a ZipNN
@@ -37,28 +50,18 @@ Example running GPT2:
 sudo docker run --runtime=nvidia --gpus all --shm-size 1g -p 8000:8000 zipnn/vllm-openai --model zipnn/gpt2-ZipNN --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
 ```
 
-Example Query:
-```
-curl http://localhost:8000/v1/completions \
-    -H "Content-Type: application/json" \
-    -d '{
-        "model": "zipnn/gpt2-ZipNN",
-        "prompt": "Once upon a time",
-        "max_tokens": 50
-    }'
-```
+###  Run vanilla vLLM Docker:
 
-## Run ZipNN on vanilla vLLM Docker:
-
-
-
-##  Run vanilla vLLM Docker:
+Example running Compressed GPT2:
 
 ```
 sudo docker run --runtime=nvidia --gpus all --shm-size 1g -p 8000:8000 vllm/vllm-openai --model gpt2 --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
 ```
 
-Example Query:
+
+## Example Queries:
+
+Example Query GPT2:
 ```
 curl http://localhost:8000/v1/completions \
     -H "Content-Type: application/json" \
@@ -69,6 +72,16 @@ curl http://localhost:8000/v1/completions \
     }'
 ```
 
+Example Query compressed GPT2:
+```
+curl http://localhost:8000/v1/completions \
+    -H "Content-Type: application/json" \
+    -d '{
+        "model": "zipnn/gpt2-ZipNN",
+        "prompt": "Once upon a time",
+        "max_tokens": 50
+    }'
+```
 
 
 # Notebooks on Kaggle: 
