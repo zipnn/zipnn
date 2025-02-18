@@ -11,13 +11,15 @@ python3 EXAMPLE_FILE.py
 # Run vLLM with ZipNN 
 
 
-
-
-
 ## Run vanilla vllm
 
 ```
 vllm serve gpt2 --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
+```
+## Run vllm with ZipNN 
+
+```
+
 ```
 
 
@@ -58,11 +60,10 @@ sudo docker run --runtime=nvidia --gpus all --shm-size 1g -p 8000:8000 vllm/vllm
 
 Example Query:
 ```
-curl http://localhost:8000/v1/completions     -H "Content-Type: application/json"     -d
- curl http://localhost:8000/v1/completions \
+curl http://localhost:8000/v1/completions \
     -H "Content-Type: application/json" \
     -d '{
-        "model": "gpt2",
+        "model": "zipnn/gpt2-ZipNN",
         "prompt": "Once upon a time",
         "max_tokens": 50
     }'
