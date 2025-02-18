@@ -2,55 +2,44 @@
 
 ## Compress and Upload a Model to Hugging Face (safetensors)
 1. Create a destination repository (e.g. myfork) in https://huggingface.co
-2. Clone your fork repository: 
+2. Clone your fork repository and the repository of the model you want to compress: 
 ```bash
-git clone git@hf.co:me/myfork
-cd myfork
-```
-3. Set up Git LFS locally, adds upstream, fetch updates, and pull LFS files.
-```bash
-git lfs install --skip-smudge --local
-git remote add upstream git@hf.co:<organization>/<model>
-git fetch upstream
-git lfs fetch --all upstream
+git clone git@hf.co:<me>/<myfork>
+git clone git@hf.co:<organization>/<model>
+cd model
 ```
 
-* If you want to completely override the fork history (which should only have an initial commit), run:
-```bash
-git reset --hard upstream/main 
-git lfs pull upstream
-```
-* If you want to rebase instead of overriding, run the following command and resolve any conflicts:
-```bash
-git rebase upstream/main 
-git lfs pull upstream
-```
-
-4. Download the scripts for compressing/decompressing AI Models:
+3. Download the scripts for compressing/decompressing AI Models:
 ```bash
 wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt 
 rm scripts.txt
 ```
 
-5. Compress the model.
- 
+4. Compress the model:
 ```bash
 python3 zipnn_compress_path.py safetensors --path .
 ```
 
-Then, to add the compressed weights to git-lfs tracking and correct the index json:
+5. Copy all needed compressed model files to your fork:
+
 ```bash
-git lfs track "*.znn.safetensors" 
-sed -i "" 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json 
-git add *.znn.safetensors .gitattributes model.safetensors.index.json 
-git ls-files *.safetensors | grep -v '.znn.safetensors$' | xargs git rm
+cp .gitattributes ../myfork
+cp *.txt ../myfork
+cp *.json ../myfork
+cp README.md ../myfork
+cp *.znn.safetensors ../myfork
 ```
 
-6. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
+6. Set up GIT LFS, add the compressed weights to git-lfs tracking and correct the index json (if model is sharded), and push to your repository:
+
 ```bash
-git lfs install --force --local  # this reinstalls the LFS hooks
-huggingface-cli lfs-enable-largefiles .  # needed if some files are bigger than 5GB
+cd ../<myfork>
+git lfs install --force --local  
+git lfs track "*.znn.safetensors"
+sed -i "" 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json
+huggingface-cli lfs-enable-largefiles .  
 git push --force origin main
+rm ../<model>
 ```
 
 ### Using the model
@@ -67,27 +56,33 @@ zipnn_safetensors()
 
 ## Compress and Upload a Model to Hugging Face (other file types)
 
-Steps 1 through 4 are the same.
+Steps 1 through 3 are the same.
 
-5. Compress the model.
-
+4. Compress the model:
 ```bash
 python3 zipnn_compress_path.py safetensors --path . --file_compression
 ```
 
-Then, to add the compressed weights to git-lfs tracking and correct the index json:
-```
-git lfs track "*.znn" 
-sed -i "" 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json 
-git add *.znn .gitattributes model.safetensors.index.json 
-git rm *.safetensors
+5. Copy all needed compressed model files to your fork:
+
+```bash
+cp .gitattributes ../myfork
+cp *.txt ../myfork
+cp *.json ../myfork
+cp README.md ../myfork
+cp *.znn ../myfork
 ```
 
-6. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
+6. Set up GIT LFS, add the compressed weights to git-lfs tracking and correct the index json (if model is sharded), and push to your repository:
+
 ```bash
-git lfs install --force --local  # this reinstalls the LFS hooks
-huggingface-cli lfs-enable-largefiles .  # needed if some files are bigger than 5GB
+cd ../<myfork>
+git lfs install --force --local  
+git lfs track "*.znn"
+sed -i "" 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json 
+huggingface-cli lfs-enable-largefiles .  
 git push --force origin main
+rm ../<model>
 ```
 
 ### Using the model
