@@ -7,6 +7,20 @@ To test an example yourself, simply run
 python3 EXAMPLE_FILE.py
 ```
 
+
+# Run vLLM with ZipNN 
+
+
+
+
+
+## Run vanilla vllm
+
+```
+vllm serve gpt2 --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
+```
+
+
 # ZipNN Docker Example:
 
 ## Run ZipNN vLLM Docker:
@@ -23,8 +37,9 @@ sudo docker run --runtime=nvidia --gpus all --shm-size 1g -p 8000:8000 zipnn/vll
 
 Example Query:
 ```
-curl http://localhost:8000/v1/completions     -H "Content-Type: application/json"     -d
- '{
+curl http://localhost:8000/v1/completions \
+    -H "Content-Type: application/json" \
+    -d '{
         "model": "zipnn/gpt2-ZipNN",
         "prompt": "Once upon a time",
         "max_tokens": 50
@@ -44,7 +59,9 @@ sudo docker run --runtime=nvidia --gpus all --shm-size 1g -p 8000:8000 vllm/vllm
 Example Query:
 ```
 curl http://localhost:8000/v1/completions     -H "Content-Type: application/json"     -d
- '{
+ curl http://localhost:8000/v1/completions \
+    -H "Content-Type: application/json" \
+    -d '{
         "model": "gpt2",
         "prompt": "Once upon a time",
         "max_tokens": 50
