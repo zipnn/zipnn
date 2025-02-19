@@ -18,7 +18,7 @@ In the huggingface examples folder, we demonstrate the use of various state-of-t
 Example running GPT2:
 
 ```
-vllm serve zipnn/gpt2-ZipNN --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
+vllm serve gpt2 --gpu-memory-utilization 0.9 --max-num-batched-tokens 8192
 ```
 
 or 
