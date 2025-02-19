@@ -1,53 +1,94 @@
 # ZipNN and Hugging Face Integration
 
-## Compress and Upload a Model to Hugging Face
-0. Fork the model's Hugging Face repo (adapted from [the documentation](https://huggingface.co/docs/hub/en/repositories-next-steps#duplicating-with-the-git-history-fork)):
+## Compress and Upload a Model to Hugging Face (safetensors)
+1. Create a destination repository (e.g. myfork) in https://huggingface.co
+2. Clone your fork repository and the repository of the model you want to compress: 
 ```bash
-git lfs install --skip-smudge --local &&
-git remote add upstream git@hf.co:ibm-granite/granite-7b-instruct &&
-git fetch upstream &&
-git lfs fetch --all upstream
+git clone git@hf.co:<me>/<myfork>
+git clone git@hf.co:<organization>/<model>
+cd model
 ```
 
-* If you want to completely override the fork history (which should only have an initial commit), run:
+3. Download the scripts for compressing/decompressing AI Models:
 ```bash
-git reset --hard upstream/main &&
-git lfs pull upstream
-```
-* If you want to rebase instead of overriding, run the following command and resolve any conflicts:
-```bash
-git rebase upstream/main &&
-git lfs pull upstream
-```
-
-1. Compress all the model weights
-Download the scripts for compressing/decompressing AI Models:
-
-```bash
-wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt &&
+wget -i https://raw.githubusercontent.com/zipnn/zipnn/main/scripts/scripts.txt 
 rm scripts.txt
 ```
 
+4. Compress the model:
 ```bash
 python3 zipnn_compress_path.py safetensors --path .
 ```
 
-2. Add the compressed weights to git-lfs tracking and correct the index json
-```
-git lfs track "*.znn" &&
-sed -i 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json &&
-git add *.znn .gitattributes model.safetensors.index.json &&
-git rm *.safetensors
-```
+5. Copy all needed compressed model files to your fork:
 
-3. Done! Now push the changes as per [the documentation](https://huggingface.co/docs/hub/repositories-getting-started#set-up):
 ```bash
-git lfs install --force --local && # this reinstalls the LFS hooks
-huggingface-cli lfs-enable-largefiles . && # needed if some files are bigger than 5GB
-git push --force origin main
+cp .gitattributes ../myfork
+cp *.txt ../myfork
+cp *.json ../myfork
+cp README.md ../myfork
+cp *.znn.safetensors ../myfork
 ```
 
-To use the model simply run our ZipNN Hugging Face method before proceeding as normal:
+6. Set up GIT LFS, add the compressed weights to git-lfs tracking and correct the index json (if model is sharded), and push to your repository:
+
+```bash
+cd ../<myfork>
+git lfs install --force --local  
+git lfs track "*.znn.safetensors"
+sed -i "" 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json
+huggingface-cli lfs-enable-largefiles .  
+git push --force origin main
+rm ../<model>
+```
+
+### Using the model
+Run our safetensors method before proceeding as normal:
+
+```python
+from zipnn import zipnn_safetensors
+
+zipnn_safetensors()
+
+# Load the model from your compressed Hugging Face model card as you normally would
+...
+```
+
+## Compress and Upload a Model to Hugging Face (other file types)
+
+Steps 1 through 3 are the same.
+
+4. Compress the model:
+```bash
+python3 zipnn_compress_path.py safetensors --path . --file_compression
+```
+
+5. Copy all needed compressed model files to your fork:
+
+```bash
+cp .gitattributes ../myfork
+cp *.txt ../myfork
+cp *.json ../myfork
+cp README.md ../myfork
+cp *.znn ../myfork
+```
+
+6. Set up GIT LFS, add the compressed weights to git-lfs tracking and correct the index json (if model is sharded), and push to your repository:
+
+```bash
+cd ../<myfork>
+git lfs install --force --local  
+git lfs track "*.znn"
+sed -i "" 's/.safetensors/.safetensors.znn/g' model.safetensors.index.json 
+huggingface-cli lfs-enable-largefiles .  
+git push --force origin main
+rm ../<model>
+```
+
+### Using the model
+
+Run our huggingface method before proceeding as normal:
+
 ```python
 from zipnn import zipnn_hf
 

@@ -34,7 +34,7 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def compress_safetensors_file(filename,delete=False,force=False,hf_cache=False,method=None,threads=multiprocessing.cpu_count()):
+def compress_safetensors_file(filename,delete=False,force=False,hf_cache=False,method=None,threads=None):
     """
     Compress a safetensors file.
     """
@@ -134,7 +134,7 @@ def compress_safetensors_file(filename,delete=False,force=False,hf_cache=False,m
         except Exception as e:
             raise Exception(f"Error reorganizing Hugging Face cache: {e}")
 
-    print(f"Compressed {filename} to {compressed_path} using {threads} threads")
+    print(f"Compressed {filename} to {compressed_path} using {znn.threads} threads")
     print(f"sum of load times: {load_time_sum}s")
     print(f"sum of comp times: {comp_time_sum}s")
     print(f"comp file written in {write_time}s, ratio is {comp_len/og_len}")
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--threads",
         type=int,
-        default=multiprocessing.cpu_count(),
+        default=None,
         help="The amount of threads to be used.",
     )
     args = parser.parse_args()

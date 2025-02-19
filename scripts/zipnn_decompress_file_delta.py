@@ -26,7 +26,7 @@ def check_and_install_zipnn():
         import zipnn
 
 
-def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=False,threads=multiprocessing.cpu_count()):
+def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=False,threads=None):
     import zipnn
 
     if not input_file.endswith(".znn"):
@@ -58,7 +58,7 @@ def decompress_file(input_file, delta_file, delete=False, force=False, hf_cache=
             with open(output_file, "wb") as f_out:
                 f_out.write(decompressed_data)
             #
-            print(f"Decompressed {input_file} to {output_file} using {threads} threads")
+            print(f"Decompressed {input_file} to {output_file} using {zpn.threads} threads")
             file_size_before = len(file_data)
             file_size_after = len(decompressed_data)
             print(
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--threads",
         type=int,
-        default=multiprocessing.cpu_count(),
+        default=None,
         help="The amount of threads to be used.",
     )
     args = parser.parse_args()

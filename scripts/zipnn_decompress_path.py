@@ -63,7 +63,7 @@ def decompress_znn_files(
     hf_cache=False,
     model="",
     branch="main",
-    threads=multiprocessing.cpu_count()
+    threads=None
 ):
     import zipnn
 
@@ -318,7 +318,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--threads",
         type=int,
-        default=multiprocessing.cpu_count(),
+        default=None,
         help="The amount of threads to be used.",
     )
     args = parser.parse_args()

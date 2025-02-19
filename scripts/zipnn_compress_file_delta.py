@@ -69,7 +69,7 @@ def compress_file(
     verification=False,#
     test=False,#
     is_streaming=False,
-    threads=multiprocessing.cpu_count()
+    threads=None
 ):
     import zipnn
 
@@ -116,7 +116,7 @@ def compress_file(
             with open(output_file, "wb") as f_out:
                 f_out.write(compressed_data)
         #
-        print(f"Compressed {input_file} to {output_file} using {threads} threads")
+        print(f"Compressed {input_file} to {output_file} using {zpn.threads} threads")
         file_size_before = len(file_data)
         file_size_after = len(compressed_data)
         print(
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--threads",
         type=int,
-        default=multiprocessing.cpu_count(),
+        default=None,
         help="The amount of threads to be used.",
     )
     args = parser.parse_args()
