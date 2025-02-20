@@ -42,6 +42,20 @@ zipnn_safetensors()
 This will patch the safetensors python module, used by vLLM to load models in safetensors format.
 The patch will enable the automatic detection and loading of zipnn-compressed models.
 
+#### GPT2 using vllm
+```python
+from zipnn import zipnn_safetensors;
+from vllm import LLM
+zipnn_safetensors();
+
+llm = LLM("zipnn/gpt2-ZipNN")
+
+prompt = "Once upon a time,"
+outputs = llm.generate([prompt])
+print(outputs[0].outputs[0].text)
+```
+
+#### vLLM in a container
 If you use vLLM in a container (for example by using the `vllm/vllm-openai:latest` image),
 you can extend that image with zipnn support by building a new image on top of it using the Dockerfile
 found in the root of the zipnn project:
@@ -67,6 +81,7 @@ You can now choose to save the model compressed on your local storage by using t
 
 Specifically for safetensors files we suggest using a plugin made for the safetensors library to use ZipNN compression, for even better performance.
 ```python
+from zipnn import zipnn_safetensors
 zipnn_safetensors()
 ```
 
@@ -97,18 +112,6 @@ inputs = tokenizer(prompt, return_tensors="pt")
 outputs = model.generate(**inputs, max_length=10)
 generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 print(generated_text)
-```
-#### GPT2 using vllm
-```python
-from zipnn import zipnn_safetensors;
-from vllm import LLM
-zipnn_safetensors();
-
-llm = LLM("zipnn/gpt2-ZipNN")
-
-prompt = "Once upon a time,"
-outputs = llm.generate([prompt])
-print(outputs[0].outputs[0].text)
 ```
 
 ### Other file types

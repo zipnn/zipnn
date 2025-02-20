@@ -1,5 +1,45 @@
 # ZipNN and Hugging Face Integration
 
+
+## Download Compressed Models from Hugging Face
+In this example we show how to use the [compressed ibm-granite granite-7b-instruct](https://huggingface.co/royleibov/granite-7b-instruct-ZipNN-Compressed) hosted on Hugging Face.
+
+First, make sure you have ZipNN installed:
+```bash
+pip install zipnn
+```
+
+**To run the model, simply add `zipnn_hf()`** at the beginning of the file, and it will take care of decompression for you. By default, the model remains compressed in your local storage, decompressing quickly on the CPU only during loading.
+
+
+```python
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from zipnn import zipnn_hf
+
+zipnn_hf()
+
+tokenizer = AutoTokenizer.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
+model = AutoModelForCausalLM.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
+```
+
+**Alternatively, you can save the model uncompressed on your local storage.** This way, future loads won’t require a decompression phase.
+```
+zipnn_hf(replace_local_file=True)
+```
+
+**To compress and decompress manually**, simply run:
+```bash
+python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
+```
+
+```bash
+python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
+```
+
+
+
+
+
 ## Compress and Upload a Model to Hugging Face (safetensors)
 1. Create a destination repository (e.g. myfork) in https://huggingface.co
 2. Clone your fork repository and the repository of the model you want to compress: 
@@ -85,7 +125,7 @@ git push --force origin main
 rm ../<model>
 ```
 
-### Using the model
+### Compressed Models on Hugging Face
 
 Run our huggingface method before proceeding as normal:
 
@@ -96,41 +136,6 @@ zipnn_hf()
 
 # Load the model from your compressed Hugging Face model card as you normally would
 ...
-```
-
-## Download Compressed Models from Hugging Face
-In this example we show how to use the [compressed ibm-granite granite-7b-instruct](https://huggingface.co/royleibov/granite-7b-instruct-ZipNN-Compressed) hosted on Hugging Face.
-
-First, make sure you have ZipNN installed:
-```bash
-pip install zipnn
-```
-
-**To run the model, simply add `zipnn_hf()`** at the beginning of the file, and it will take care of decompression for you. By default, the model remains compressed in your local storage, decompressing quickly on the CPU only during loading.
-
-
-```python
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from zipnn import zipnn_hf
-
-zipnn_hf()
-
-tokenizer = AutoTokenizer.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
-model = AutoModelForCausalLM.from_pretrained("royleibov/granite-7b-instruct-ZipNN-Compressed")
-```
-
-**Alternatively, you can save the model uncompressed on your local storage.** This way, future loads won’t require a decompression phase.
-```
-zipnn_hf(replace_local_file=True)
-```
-
-**To compress and decompress manually**, simply run:
-```bash
-python zipnn_compress_path.py safetensors --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
-```
-
-```bash
-python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Compressed --hf_cache
 ```
 
 
