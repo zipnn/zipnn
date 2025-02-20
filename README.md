@@ -70,6 +70,8 @@ Alternatively, you can simply use the pre-built `zipnn/vllm-openai:latest` image
 Note that the above methods can work not just for vLLM, but for any application that uses the safetensors python library
 (including `sglang`).
 
+For additional examples of our vLLM integration, please refer to the [corresponding README.](examples/README.md)
+
 
 ## HuggingFace Integration
 
@@ -130,7 +132,9 @@ zipnn_hf(replace_local_file=True)
 
 Try state-of-the-art compressed models that are already present on HuggingFace, such as [Roberta Base]( https://huggingface.co/royleibov/roberta-base-ZipNN-Compressed ), [Granite 3.0](https://huggingface.co/royleibov/granite-3.0-8b-instruct-ZipNN-Compressed), [Llama 3.2]( https://huggingface.co/royleibov/Llama-3.2-11B-Vision-Instruct-ZipNN-Compressed ).
 
-You can also try one of these python notebooks hosted on Kaggle: [granite 3b](https://www.kaggle.com/code/royleibovitz/huggingface-granite-3b-example), [Llama 3.2](https://www.kaggle.com/code/royleibovitz/huggingface-llama-3-2-example), [phi 3.5](https://www.kaggle.com/code/royleibovitz/huggingface-phi-3-5-example). 
+You can also try one of these python notebooks hosted on Kaggle: [granite 3b](https://www.kaggle.com/code/royleibovitz/huggingface-granite-3b-example), [Llama 3.2](https://www.kaggle.com/code/royleibovitz/huggingface-llama-3-2-example), [phi 3.5](https://www.kaggle.com/code/royleibovitz/huggingface-phi-3-5-example).
+
+Additionally, we've provided numerous examples showcasing the HF plugin, which can be run on the command line with various popular models, available in [this folder.](examples/huggingface%20exmaples)
 
 ## Getting Started
 This repository provides command-line scripts for efficient file compression and decompression using ZipNN, offering few methods, such as a standard compression for general use, safetensors compression for efficient tensor-by-tensor compression of safetensors files, and path-based batch compression, to apply for all relevant files in a directory.
@@ -245,6 +249,7 @@ Are the original and decompressed byte strings the same [BYTE]?  True
 Are the original and decompressed byte strings the same [TORCH]?  True
 ```
 
+For many more examples showcasing our various scripts, methods, and plugins, please refer to the [examples folder.](examples)
 ## Configuration
 
 The default configuration is ByteGrouping of 4 with vanilla ZSTD, and the input and outputs are "byte". For more advanced options, please consider the following parameters:
@@ -259,6 +264,7 @@ The default configuration is ByteGrouping of 4 with vanilla ZSTD, and the inp
 *  ```is_streaming```: A flag to compress the data using streaming. (default value = False).
 *  ```streaming_chunk```: Chunk size for streaming, only relevant if is_streaming is True. (default value = 1KB).
 
+Additional configuration can be done using our pre-made scripts for compressing and decompressing files, which can be thoroughly reviewed in the [scripts' README.](scripts/README.md)
 
 ## Validation
 
