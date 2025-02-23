@@ -70,7 +70,7 @@ Alternatively, you can simply use the pre-built `zipnn/vllm-openai:latest` image
 Note that the above methods can work not just for vLLM, but for any application that uses the safetensors python library
 (including `sglang`).
 
-For additional examples of our vLLM integration, please refer to the [corresponding README.](examples/README.md)
+For additional examples of our vLLM integration, please refer to the [vLLM and Docker Examples.](examples#run-vllm-with-zipnn)
 
 
 ## HuggingFace Integration
