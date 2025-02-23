@@ -169,8 +169,7 @@ It is especially effective for BF16 models, typically saving 33% of the model si
 <!-- With zipnn, users can focus on their core tasks without worrying about the complexities of data compression, confident that the package will deliver the best possible results for their specific data types and structures. --> 
 
 
-Some of the techniques employed in ZipNN are described in our paper: [Lossless and Near-Lossless Compression for Foundation Models](https://arxiv.org/pdf/2404.15198)
-A follow up version with a more complete description is under preparation. 
+The techniques employed in ZipNN are described in our paper: [ZipNN: Lossless Compression for AI Models](https://arxiv.org/abs/2411.05239)
 
 Currently, ZipNN compression methods are implemented on CPUs, and GPU implementations are on the way. 
 
