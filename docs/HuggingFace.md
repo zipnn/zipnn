@@ -44,7 +44,7 @@ python zipnn_decompress_path.py --model royleibov/granite-7b-instruct-ZipNN-Comp
 1. Create a destination repository (e.g. myfork) in https://huggingface.co
 2. Clone your fork repository and the repository of the model you want to compress: 
 ```bash
-git clone git@hf.co:<me>/<myfork>
+git clone git@hf.co:<myorganization>/<myfork>
 git clone git@hf.co:<organization>/<model>
 cd model
 ```
