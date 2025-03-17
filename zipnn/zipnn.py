@@ -710,6 +710,7 @@ class ZipNN:
             if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                 self._update_data_shape(shape)
             python_header = self._header + self._ext_header
+            ba_saved = bytearray(ba)
             ba_comp = zipnn_core.zipnn_core(
                 python_header,
                 ba,
@@ -722,6 +723,18 @@ class ZipNN:
                 self.check_th_after_percent,
                 self.threads,
             )
+            ba_decom = zipnn_core.combine_dtype(
+                ba_comp[len(python_header):],
+                num_buf,
+                bit_reorder,
+                byte_reorder,
+                self.compression_chunk,
+                len(ba),
+                self.threads,
+                )
+            print("Are the original and decompressed byte strings the same [BYTE]? ", ba_decom[0] == ba_saved[0])
+
+
             if is_print:
                 print("aggregate output bin ", time.time() - start_time)
         if is_print:
@@ -770,7 +783,7 @@ class ZipNN:
             shape = data.shape
 
         is_float = zipnn_is_floating_point(self.input_format, data, self.bytearray_dtype)
-        print (dtype_enum)
+        
         if is_float:
             bit_reorder = 1
             if dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
@@ -819,8 +832,9 @@ class ZipNN:
         start_time = time.time()
 
         if self.input_format == EnumFormat.TORCH.value:
+            print (data.dtype)
             if dtype_enum in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2):
-                data = data.to(torch.int8)
+                data = data.view(torch.uint8)
             ba = memoryview(data.contiguous().view(-1).numpy()).cast("B")
         elif self.input_format == EnumFormat.NUMPY.value:
             ba = data.tobytes()
@@ -831,7 +845,7 @@ class ZipNN:
 
         if is_print:
             print("torch_func", time.time() - start_time)
-
+   
         return self.compress_bin(
             ba=ba,
             byte_reorder=byte_reorder,
@@ -1078,7 +1092,7 @@ class ZipNN:
             uint16 = 0
             uint32 = 0
             float8 = 0
-            print (self.dtype)
+            
             if self.dtype in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
                 groups = 4
                 float32 = 1
@@ -1128,7 +1142,6 @@ class ZipNN:
                 return ba_decom
 
             if self.input_format == EnumFormat.TORCH.value:
-                print(self.shape_bytes)
                 if float32:
                     array = np.frombuffer(ba_decom, dtype=np.float32)
                     array = array.reshape(self.shape_bytes)

@@ -92,17 +92,23 @@ def compress_safetensors_file(filename,delete=False,force=False,hf_cache=False,m
                 threads=threads)
 
             uncompressed_size = tensor.element_size() * tensor.nelement()
+            tensor_save = tensor.clone()
             time_start=time.time()
             compressed_buf = znn.compress(tensor)
             comp_time_sum+=time.time()-time_start
+            uncompressed_buf = znn.decompress(compressed_buf)
             compressed_size = len(compressed_buf)       
-            og_len+=uncompressed_size            
+            og_len+=uncompressed_size
+            print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(tensor_save.to(torch.uint8), uncompressed_buf.to(torch.uint8)))
+            
+
 
             if compressed_size >= uncompressed_size:
                 tensors[name] = tensor
                 comp_len+=uncompressed_size
                 continue
             comp_len+=compressed_size
+            print (compressed_size/uncompressed_size)
 
             compressed_tensor = torch.frombuffer(compressed_buf, dtype=COMPRESSED_DTYPE)
             tensors[name] = compressed_tensor
