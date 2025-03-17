@@ -770,6 +770,7 @@ class ZipNN:
             shape = data.shape
 
         is_float = zipnn_is_floating_point(self.input_format, data, self.bytearray_dtype)
+        print (dtype_enum)
         if is_float:
             bit_reorder = 1
             if dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
@@ -783,7 +784,7 @@ class ZipNN:
                 num_buf = 2
                 if self.input_format == EnumFormat.TORCH.value:
                     data = data.view(torch.uint16)
-            elif dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code):
+            elif dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code, ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2):
                 bit_reorder = 0
                 byte_reorder = 10  # 8b01_010
                 dtype_size = 16
@@ -818,6 +819,8 @@ class ZipNN:
         start_time = time.time()
 
         if self.input_format == EnumFormat.TORCH.value:
+            if dtype_enum in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2):
+                data = data.to(torch.int8)
             ba = memoryview(data.contiguous().view(-1).numpy()).cast("B")
         elif self.input_format == EnumFormat.NUMPY.value:
             ba = data.tobytes()
@@ -1074,6 +1077,8 @@ class ZipNN:
             float16 = 0
             uint16 = 0
             uint32 = 0
+            float8 = 0
+            print (self.dtype)
             if self.dtype in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
                 groups = 4
                 float32 = 1
@@ -1083,6 +1088,9 @@ class ZipNN:
             elif self.dtype in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code):
                 groups = 2
                 float16 = 1
+            elif self.dtype in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2.code):
+                groups = 2
+                float8 = 1
             elif self.dtype == ZipNNDtypeEnum.UINT32.code:
                 groups = 1
                 uint32 = 1
@@ -1101,7 +1109,7 @@ class ZipNN:
                 num_buf = 4
                 if uint32:
                     raise ValueError("Unsupported uinit32 in this version yet! please try version 0.1.1")
-                elif bfloat16 or float16:
+                elif bfloat16 or float16 or float8:
                     num_buf = 2
                 mv = memoryview(ba_compress)
                 ba_decom = zipnn_core.combine_dtype(
@@ -1120,6 +1128,7 @@ class ZipNN:
                 return ba_decom
 
             if self.input_format == EnumFormat.TORCH.value:
+                print(self.shape_bytes)
                 if float32:
                     array = np.frombuffer(ba_decom, dtype=np.float32)
                     array = array.reshape(self.shape_bytes)
@@ -1133,8 +1142,15 @@ class ZipNN:
                     array = np.frombuffer(ba_decom, dtype=np.float16)
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
+                elif float8:
+                    array = np.frombuffer(ba_decom, dtype=np.uint8)
+                    array = array.reshape(self.shape_bytes)
+                    tensor = torch.from_numpy(array)
+                    if self.dtype == ZipNNDtypeEnum.FLOAT8_E4M3FN.code:
+                        tensor = tensor.view(torch.float8_e4m3fn)
+                    else:
+                        tensor = tensor.view(torch.float8_e5m2)
                 return tensor
-                exit(0)
 
             if self.input_format == EnumFormat.NUMPY.value:
                 if float32:
