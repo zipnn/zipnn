@@ -76,7 +76,7 @@ void *copy_compressed_data_interleaved(void *arg) {
       if (args->compressedData[b][c] && args->compChunksSize[b][c] > 0) {
         memcpy(args->resultBuf + localOffsets[b], args->compressedData[b][c],
                args->compChunksSize[b][c]);
-        free(args->compressedData[b][c]);
+        ////free(args->compressedData[b][c]);
         localOffsets[b] += args->compChunksSize[b][c];
       }
     }
@@ -169,7 +169,7 @@ uint8_t *prepare_python_return_buffer(
   // Calculate buffer offsets
   size_t *bufferOffsets = (size_t *)malloc(numBuf * sizeof(size_t));
   if (!bufferOffsets) {
-    free(resultBuf);
+    //free(resultBuf);
     return NULL;
   }
 
@@ -185,11 +185,11 @@ uint8_t *prepare_python_return_buffer(
   size_t *threadOffsets = calloc(num_threads * numBuf, sizeof(size_t));
 
   if (!threads || !thread_args || !threadOffsets) {
-    free(resultBuf);
-    free(bufferOffsets);
-    free(threads);
-    free(thread_args);
-    free(threadOffsets);
+    //free(resultBuf);
+    //free(bufferOffsets);
+    //free(threads);
+    //free(thread_args);
+    //free(threadOffsets);
     return NULL;
   }
 
@@ -220,11 +220,11 @@ uint8_t *prepare_python_return_buffer(
       for (size_t i = 0; i < t; i++) {
         pthread_join(threads[i], NULL);
       }
-      free(threads);
-      free(thread_args);
-      free(threadOffsets);
-      free(bufferOffsets);
-      free(resultBuf);
+      //free(threads);
+      //free(thread_args);
+      //free(threadOffsets);
+      //free(bufferOffsets);
+      //free(resultBuf);
       return NULL;
     }
   }
@@ -235,10 +235,10 @@ uint8_t *prepare_python_return_buffer(
   }
 
   // Cleanup
-  free(threads);
-  free(thread_args);
-  free(threadOffsets);
-  free(bufferOffsets);
+  //free(threads);
+  //free(thread_args);
+  //free(threadOffsets);
+  //free(bufferOffsets);
 
   return resultBuf;
 }
@@ -294,11 +294,11 @@ typedef struct {
 static void *compression_worker(void *arg) {
   CompressionThreadData *thread_data = (CompressionThreadData *)arg;
   size_t current_chunk;
-
   while (1) {
     // Get next chunk to process
     pthread_mutex_lock(thread_data->next_chunk_mutex);
     current_chunk = (*thread_data->next_chunk)++;
+    // printf("INIT current_chunk: %d\n, bumBuf: %d\n", current_chunk,thread_data->numBuf);
     pthread_mutex_unlock(thread_data->next_chunk_mutex);
 
     // Exit if all chunks have been processed
@@ -312,9 +312,17 @@ static void *compression_worker(void *arg) {
         (current_chunk == thread_data->numChunks - 1)
             ? (thread_data->data->len - offset) // Last chunk
             : thread_data->origChunkSize;       // Regular chunk
-
+    
     // Byte Grouping + Byte Ordering
-    if (thread_data->numBuf == 2) {
+
+    if (thread_data->numBuf == 1) {
+      // NEW: FP8 handeling
+      if(split_bytearray_dtype8(thread_data->data->buf + offset, curOrigChunkSize,thread_data->buffers[current_chunk],thread_data->unCompChunksSize[current_chunk],thread_data->bytes_mode)!=0){
+        pthread_exit((void *)-1);
+      }
+    } 
+
+    else if (thread_data->numBuf == 2) {
       // Handle 16-bit data type splitting
       if (split_bytearray_dtype16(
               thread_data->data->buf + offset, curOrigChunkSize,
@@ -347,13 +355,39 @@ static void *compression_worker(void *arg) {
 
       if (thread_data->buffers[current_chunk][b] != NULL) {
         // Always try to compress initially
-        size_t uncompSize = thread_data->unCompChunksSize[current_chunk][b];
+        size_t uncompSize;
+        if (thread_data->numBuf == 1){
+          // NEW: FP8 handeling
+          // NEW: Changed from unCompChunksSize[current_chunk][b] to unCompChunksSize[current_chunk][b]/thread_data->numChunks, seems to fix the FP8 COMPRESSION RATIO.
+          uncompSize = thread_data->unCompChunksSize[current_chunk][b]/thread_data->numChunks;
+        }
+        else {
+          uncompSize = thread_data->unCompChunksSize[current_chunk][b];
+        }
+        //size_t uncompSize = thread_data->unCompChunksSize[current_chunk][b];
         // Attempt Huffman compression
+
+        //printf("b: %d, current_chunk: %d, num of chunks: %d\n", b, current_chunk,thread_data->numChunks);
+        //printf("numbuf: %d\n", thread_data->numBuf);
+        //printf("origChunkSize: %zu\n", thread_data->origChunkSize);
+        //printf("uncompSize: %zu\n", uncompSize);
+        //printf("buffers[%d][%d]: %p\n", current_chunk, b, thread_data->buffers[current_chunk][b]);
+        //printf("compressedData[%d][%d]: %p\n", b, current_chunk, thread_data->compressedData[b][current_chunk]);
+        //printf("compChunksSize[%d][%d]: %zu\n", b, current_chunk, thread_data->compChunksSize[b][current_chunk]);
+        //
         thread_data->compChunksSize[b][current_chunk] =
             HUF_compress(thread_data->compressedData[b][current_chunk],
                          thread_data->origChunkSize,
                          thread_data->buffers[current_chunk][b], uncompSize);
-
+        //
+        //printf("b: %d, current_chunk: %d\n", b, current_chunk);
+        //printf("numbuf: %d\n", thread_data->numBuf);
+        //printf("origChunkSize: %zu\n", thread_data->origChunkSize);
+        //printf("uncompSize: %zu\n", uncompSize);
+        //printf("buffers[%d][%d]: %p\n", current_chunk, b, thread_data->buffers[current_chunk][b]);
+        //printf("compressedData[%d][%d]: %p\n", b, current_chunk, thread_data->compressedData[b][current_chunk]);
+        //printf("compChunksSize[%d][%d]: %zu\n", b, current_chunk, thread_data->compChunksSize[b][current_chunk]);
+        //
         // Check if compression was beneficial
         if (thread_data->compChunksSize[b][current_chunk] != 0 &&
             thread_data->compChunksSize[b][current_chunk] <
@@ -361,10 +395,16 @@ static void *compression_worker(void *arg) {
           // Compression not beneficial - use original data
           thread_data->compChunksType[b][current_chunk] =
               1; // Compressed with Huffman
-          free(thread_data->buffers[current_chunk][b]);
+          printf("\nzipnn_core FREE 373\n");
+          //if (thread_data->numBuf!=1){
+          ////free(thread_data->buffers[current_chunk][b]);
+          //}
+          //////free(thread_data->buffers[current_chunk][b]);
         } else {
           // Compression not beneficial - use original data
-          free(thread_data->compressedData[b][current_chunk]);
+          //if (thread_data->numBuf!=1){
+          ////free(thread_data->compressedData[b][current_chunk]);
+          //}
           thread_data->compChunksSize[b][current_chunk] = uncompSize;
           thread_data->compChunksType[b][current_chunk] = 0; // not compressed
           thread_data->compressedData[b][current_chunk] =
@@ -510,16 +550,17 @@ PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
     }
   }
 
-  free(thread_handles);
-  free(thread_data);
+  //free(thread_handles);
+  //free(thread_data);
   pthread_mutex_destroy(&next_chunk_mutex);
   goto continue_processing;
 
 cleanup_threads:
   if (thread_handles)
-    free(thread_handles);
-  if (thread_data)
-    free(thread_data);
+    //free(thread_handles);
+  if (thread_data){
+    //free(thread_data);
+  }
   pthread_mutex_destroy(&next_chunk_mutex);
   goto compression_error;  
   return NULL;
@@ -594,79 +635,104 @@ continue_processing:
   //
 
   // Cleanup and return
+  /*
   for (size_t c = 0; c < numChunks; c++) {
     for (uint32_t b = 0; b < numBuf; b++) {
       if (buffers[c][b]) {
-        //		      free(buffers[c][b]);
+        //printf("buffers[%d][%d]: %p\n", b,c, thread_data->buffers[b][c]);
+        //free(buffers[c][b]);
+        //buffers[c][b]=NULL;
       }
     }
     if (buffers[c]) {
-      free(buffers[c]);
+      //free(buffers[c]);
+      //buffers[c]=NULL;
     }
-    free(unCompChunksSize[c]);
+    if (unCompChunksSize[c]){
+      //free(unCompChunksSize[c]);
+    }
   }
-  free(buffers);
-  free(unCompChunksSize);
+  if (buffers){
+    //free(buffers);
+  }
+  ////free(buffers);
+  if (unCompChunksSize){
+    //free(unCompChunksSize);
+  }
+  ////free(unCompChunksSize);
 
   for (uint32_t b = 0; b < numBuf; b++) {
     if (compressedData[b]) {
-      free(compressedData[b]);
+      ////free(compressedData[b]);
     }
-    free(compChunksType[b]);
-    free(compChunksSize[b]);
+    if (compChunksType[b]) {
+      //free(compChunksType[b]);
+    }
+    if (compChunksSize[b]) {
+      //free(compChunksSize[b]);
+    }
   }
-  free(compressedData);
-  free(compChunksType);
-  free(compChunksSize);
+  if (compressedData){
+    ////free(compressedData);
+  }
+  if (compChunksType){
+    //free(compChunksType);
+  }
+  if (compChunksSize){
+    //free(compChunksSize);
+  }
+
+  */
   return py_result;
 
   // Handle Error
+  /**/
   compression_error:
     if (buffers) {
       for (size_t c = 0; c < numChunks; c++) {
 	if (buffers[c] != NULL) {
-	  free(buffers[c]);
+	  //free(buffers[c]);
 	  for (uint32_t b = 0; b < numBuf; b++) {
 	    if (buffers[c][b] != NULL) {
-	      free(buffers[c][b]);
+	      //free(buffers[c][b]);
 	    }
 	  }
 	}
       }
-      free(buffers);
+      //free(buffers);
     }
     
     if (unCompChunksSize) {
       for (size_t c = 0; c < numChunks; c++) {
 	if (unCompChunksSize[c] != NULL) {
-          free(unCompChunksSize[c]);
+          //free(unCompChunksSize[c]);
 	}
       }
-      free(unCompChunksSize);
+      //free(unCompChunksSize);
     }
     if (compressedData) {
       for (uint32_t b = 0; b < numBuf; b++) {
 	if (compressedData[b] != NULL) {
-          free(compressedData[b]);
+          //free(compressedData[b]);
 	}
       }
-      free(compressedData);
+      //free(compressedData);
     }
     if (compChunksType) {
       for (uint32_t b = 0; b < numBuf; b++) {
 	if (compChunksType[b] != NULL) {
-          free(compChunksType[b]);
+          //free(compChunksType[b]);
 	}
       }
-      free(compChunksType);
+      //free(compChunksType);
     }
     if (compChunksSize) {
       for (uint32_t b = 0; b < numBuf; b++) {
 	if (compChunksSize[b]) {
-          free(compChunksSize[b]);
+          //free(compChunksSize[b]);
 	}
       }
-      free(compChunksSize);
+      //free(compChunksSize);
     }
     return NULL;
 }
@@ -783,7 +849,7 @@ static void *decompression_chunk_worker(void *arg) {
                                                    current_chunk]),
             data->compChunksLen[b * data->chunk_id + current_chunk]);
         if (HUF_isError(decompressedSize)) {
-          free(data->deCompressedDataPtr[b][current_chunk]);
+          //free(data->deCompressedDataPtr[b][current_chunk]);
           pthread_exit((void *)-1);
         }
       }
@@ -792,8 +858,15 @@ static void *decompression_chunk_worker(void *arg) {
     // Combine decompressed buffers into final output
     uint8_t *combinePtr = data->resultBuf + data->origChunkSize * current_chunk;
 
+    // Handle 8-bit (1 buffer)
+    if (data->numBuf == 1) {
+      // NEW: FP8 handeling
+      ////combinePtr = data->deCompressedDataPtr[0][current_chunk];
+      size_t *current_decompLen = &data->decompLen[current_chunk * data->numBuf];
+      memcpy(combinePtr, data->deCompressedDataPtr[0][current_chunk], current_decompLen[0]);
+    }
     // Handle 16-bit (2 buffer) or 32-bit (4 buffer) data types
-    if (data->numBuf == 2) {
+    else if (data->numBuf == 2) {
       // Get decompLen array for current chunk
       size_t *current_decompLen =
           &data->decompLen[current_chunk * data->numBuf];
@@ -820,7 +893,7 @@ static void *decompression_chunk_worker(void *arg) {
     }
     for (uint32_t b = 0; b < data->numBuf; b++) {
       if (freeDeCompressedDataPtr[b] == 1) {
-        free(data->deCompressedDataPtr[b][current_chunk]);
+        //free(data->deCompressedDataPtr[b][current_chunk]);
       }
     }
   }
@@ -848,7 +921,6 @@ static void *decompression_chunk_worker(void *arg) {
 
 PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   Py_buffer data;
-
   // clock_t sTime, eTime;
   // sTime = clock();
   // Calculate chunk and buffer sizes
@@ -866,7 +938,11 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
   // Handle buffer ratio calculations based on data type (16-bit or 32-bit)
   if (1) { // TBD when support auto byte_reorder
-    if (numBuf == 2) {
+    if (numBuf == 1){
+      // NEW: FP8 handeling
+      // printf("zipnn_core NEW LINE py combine dtype");
+    }
+    else if (numBuf == 2) {
       if (buffer_ratio_dtype16(bytes_mode, oneBufRatio) == -1) {
         PyErr_SetString(PyExc_MemoryError, "Failed to calculate bufffer ratio");
         return NULL; //
@@ -1055,17 +1131,17 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
     }
   }
 
-  free(thread_handles);
-  free(thread_data);
+  //free(thread_handles);
+  //free(thread_data);
   pthread_mutex_destroy(&next_chunk_mutex);
   mutex_initialized = 0;
   goto continue_processing;
 
 cleanup_threads:
   if (thread_handles)
-    free(thread_handles);
+    //free(thread_handles);
   if (thread_data)
-    free(thread_data);
+    //free(thread_data);
   if (mutex_initialized)
     pthread_mutex_destroy(&next_chunk_mutex);
   goto decompression_error;
@@ -1095,14 +1171,14 @@ continue_processing:
 
   // sT = clock();
   for (uint32_t b = 0; b < numBuf; b++) {
-    free(deCompressedDataPtr[b]);
+    //free(deCompressedDataPtr[b]);
   }
-  free(deCompressedDataPtr);
+  //free(deCompressedDataPtr);
   // eT = clock();
   // double freeTime = (double)(eT - sT) / CLOCKS_PER_SEC;
   //   printf ("free %f\n", freeTime);
 
-  //  free(resultBuf);
+  //  //free(resultBuf);
   //  PyBuffer_Release(&data);
   return py_result;
 
@@ -1112,18 +1188,18 @@ continue_processing:
      for (uint32_t b = 0; b < numBuf; b++) {
        for (size_t c = 0; c < numChunks; c++) {
          if (deCompressedDataPtr[b][c] != NULL) {	     
-           free(deCompressedDataPtr[b][c]);
+           //free(deCompressedDataPtr[b][c]);
 	 }
        }
        if (deCompressedDataPtr[b] != NULL) {	     
-           free(deCompressedDataPtr[b]);
+           //free(deCompressedDataPtr[b]);
        }
      }
-    free(deCompressedDataPtr);
+    //free(deCompressedDataPtr);
   }
 
   if (resultBuf) {
-    free(resultBuf);	  
+    //free(resultBuf);	  
   }
   return NULL;
 }

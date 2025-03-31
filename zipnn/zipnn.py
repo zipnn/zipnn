@@ -710,6 +710,7 @@ class ZipNN:
             if self.input_format in (EnumFormat.TORCH.value, EnumFormat.NUMPY.value):
                 self._update_data_shape(shape)
             python_header = self._header + self._ext_header
+            ba_saved = bytearray(ba)
             ba_comp = zipnn_core.zipnn_core(
                 python_header,
                 ba,
@@ -722,6 +723,19 @@ class ZipNN:
                 self.check_th_after_percent,
                 self.threads,
             )
+            #
+            ba_decom = zipnn_core.combine_dtype(
+                ba_comp[len(python_header):],
+                num_buf,
+                bit_reorder,
+                byte_reorder,
+                self.compression_chunk,
+                len(ba),
+                self.threads,
+                )
+            print("Are the original and decompressed byte strings the same [BYTE]? ", ba_decom[:32] == ba_saved[:32])
+            print(f"ratio: {len(ba_comp)/len(ba_saved)}")
+            #
             if is_print:
                 print("aggregate output bin ", time.time() - start_time)
         if is_print:
@@ -772,7 +786,14 @@ class ZipNN:
         is_float = zipnn_is_floating_point(self.input_format, data, self.bytearray_dtype)
         if is_float:
             bit_reorder = 1
-            if dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
+            if dtype_enum in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2.code):
+                # NEW: FP8 handeling
+                num_buf=1
+                dtype_size=8
+                byte_reorder = 10
+                data = data.view(torch.uint8)
+                print(data[:16])
+            elif dtype_enum in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
                 byte_reorder = 220  # 8b1_10_11_100
                 dtype_size = 32
                 num_buf = 4
@@ -1074,7 +1095,12 @@ class ZipNN:
             float16 = 0
             uint16 = 0
             uint32 = 0
-            if self.dtype in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
+            float8 = 0
+            if self.dtype in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2.code):
+                # NEW: FP8 handeling
+                groups = 1
+                float8 = 1
+            elif self.dtype in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
                 groups = 4
                 float32 = 1
             elif self.dtype == ZipNNDtypeEnum.BFLOAT16.code:
@@ -1103,6 +1129,9 @@ class ZipNN:
                     raise ValueError("Unsupported uinit32 in this version yet! please try version 0.1.1")
                 elif bfloat16 or float16:
                     num_buf = 2
+                elif float8:
+                    # NEW: FP8 handeling
+                    num_buf = 1
                 mv = memoryview(ba_compress)
                 ba_decom = zipnn_core.combine_dtype(
                     mv[after_header:],
@@ -1133,8 +1162,15 @@ class ZipNN:
                     array = np.frombuffer(ba_decom, dtype=np.float16)
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
+                elif float8:
+                    # NEW: FP8 handeling
+                    array = np.frombuffer(ba_decom, dtype=np.uint8) 
+                    new_shape = tuple(dim for dim in self.shape_bytes)
+                    array = array.reshape(new_shape)
+                    tensor = torch.from_numpy(array)
+                    tensor = tensor.view(torch.float8_e4m3fn) # OR THE OTHER FLOAT8!
+                    #tensor = tensor.to(torch.float8_e4m3fn) NO NEED
                 return tensor
-                exit(0)
 
             if self.input_format == EnumFormat.NUMPY.value:
                 if float32:

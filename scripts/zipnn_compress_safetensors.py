@@ -56,7 +56,6 @@ def compress_safetensors_file(filename,delete=False,force=False,hf_cache=False,m
     comp_time_sum=0
     comp_len=0
     og_len=0
-
     tensors = {}
     compressed_tensor_infos = {}
 
@@ -92,17 +91,29 @@ def compress_safetensors_file(filename,delete=False,force=False,hf_cache=False,m
                 threads=threads)
 
             uncompressed_size = tensor.element_size() * tensor.nelement()
+            og_len+=uncompressed_size
+            tensor_save = tensor.clone()
             time_start=time.time()
             compressed_buf = znn.compress(tensor)
             comp_time_sum+=time.time()-time_start
+            uncompressed_buf = znn.decompress(compressed_buf)
             compressed_size = len(compressed_buf)       
-            og_len+=uncompressed_size            
+            print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(tensor_save.to(torch.uint8), uncompressed_buf.to(torch.uint8)))
+            # WHy TO UINT??
+            #print(tensor_save.to(torch.uint8)[:16])
+            #print(tensor_save[:16])
+            #print(uncompressed_buf.to(torch.uint8)[:16])
+            #print(uncompressed_buf[:16])
 
             if compressed_size >= uncompressed_size:
                 tensors[name] = tensor
                 comp_len+=uncompressed_size
+                print (f"ratio: {compressed_size/uncompressed_size},{uncompressed_size},{tensor.dtype}")
+                #if uncompressed_size>10000:
+                #    exit()
                 continue
             comp_len+=compressed_size
+            print (f"ratio: {compressed_size/uncompressed_size},{uncompressed_size},{tensor.dtype}")
 
             compressed_tensor = torch.frombuffer(compressed_buf, dtype=COMPRESSED_DTYPE)
             tensors[name] = compressed_tensor
@@ -110,6 +121,8 @@ def compress_safetensors_file(filename,delete=False,force=False,hf_cache=False,m
 
         metadata = f.metadata()
 
+    #print(metadata,compressed_tensor_info)
+    #exit()
     set_compressed_tensors_metadata(compressed_tensor_infos, metadata)
     time_start=time.time()
     save_file(tensors, filename[: -(len(".safetensors"))] + ".znn.safetensors", metadata)

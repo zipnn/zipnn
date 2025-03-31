@@ -44,7 +44,8 @@ def set_compressed_tensors_metadata(
     """
     sets file-level metadata on all compressed tensors.
     """
-    metadata[METADATA_KEY] = json.dumps(compressed_tensor_infos)
+    if metadata:
+        metadata[METADATA_KEY] = json.dumps(compressed_tensor_infos)
 
 
 def get_compressed_tensors_metadata(metadata: Dict[str, str]) -> Dict[str, CompressedTensorInfo]:
