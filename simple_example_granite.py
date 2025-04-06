@@ -69,11 +69,11 @@ with open(file_path, 'rb') as file:
     file_bytes = file.read()
 
 #original_bytes = file_bytes
-#original_bytes = file_bytes[100000000:1173741824]
+original_bytes = file_bytes[100000000:1173741824]
 #original_bytes = file_bytes[100000000:100524288]
 #original_bytes = file_bytes[0:500000]
 #original_bytes = file_bytes[:]
-original_bytes = file_bytes[0:20000]
+#original_bytes = file_bytes[0:16000]
 original_bytes_saved = bytearray(original_bytes)
 print ("len of original bytes ", len(original_bytes)/1024/1024/1024, " GB")
 print ("len of original bytes ", len(original_bytes)/1024, " GB")
@@ -104,9 +104,10 @@ if (is_torch_numpy_byte == 2): # Tensor
 elif (is_torch_numpy_byte == 1): # Numpy   
     zipnn = ZipNN(input_format="numpy", is_streaming=False)
 elif (is_torch_numpy_byte == 0): # Byte 
-    zipnn = ZipNN(input_format="byte", bytearray_dtype = bytearray_dtype, is_streaming=False)
+    #zipnn = ZipNN(input_format="byte", bytearray_dtype = bytearray_dtype, is_streaming=False)
     #zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = "float32", is_streaming=True)
-    #zipnn = ZipNN(input_format="byte", threads = threads, bytearray_dtype = "float16", is_streaming=True)
+    zipnn = ZipNN(input_format="byte", threads = 1, bytearray_dtype = "float8_e4m3fn")
+    #zipnn = ZipNN(input_format="byte", threads = 1, bytearray_dtype = "bfloat16")
 else: 
     raise ValueError("Unsupported input_format")
 

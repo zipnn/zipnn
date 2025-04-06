@@ -165,7 +165,7 @@ def zipnn_is_floating_point(data_format_value, data, bytearray_dtype):
     if data_format_value == EnumFormat.NUMPY.value:
         return np.issubdtype(data.dtype, np.floating)
     if data_format_value == EnumFormat.BYTE.value:
-        return bytearray_dtype in ("float64", "float32", "float16", "bfloat16")
+        return bytearray_dtype in ("float64", "float32", "float16", "bfloat16","float8_e4m3fn","float8_e5m2")
 
 
 from enum import Enum

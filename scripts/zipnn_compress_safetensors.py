@@ -96,24 +96,19 @@ def compress_safetensors_file(filename,delete=False,force=False,hf_cache=False,m
             time_start=time.time()
             compressed_buf = znn.compress(tensor)
             comp_time_sum+=time.time()-time_start
-            uncompressed_buf = znn.decompress(compressed_buf)
+            #uncompressed_buf = znn.decompress(compressed_buf)
             compressed_size = len(compressed_buf)       
-            print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(tensor_save.to(torch.uint8), uncompressed_buf.to(torch.uint8)))
-            # WHy TO UINT??
-            #print(tensor_save.to(torch.uint8)[:16])
-            #print(tensor_save[:16])
-            #print(uncompressed_buf.to(torch.uint8)[:16])
-            #print(uncompressed_buf[:16])
+            #print("Are the original and decompressed byte strings the same [TORCH]? ", torch.equal(tensor_save.to(torch.uint8), uncompressed_buf.to(torch.uint8)))
 
             if compressed_size >= uncompressed_size:
                 tensors[name] = tensor
                 comp_len+=uncompressed_size
-                print (f"ratio: {compressed_size/uncompressed_size},{uncompressed_size},{tensor.dtype}")
+                #print (f"Left uncompressed. ratio: {compressed_size/uncompressed_size}, uncompressed size: {uncompressed_size}, dtype: {tensor.dtype}")
                 #if uncompressed_size>10000:
                 #    exit()
                 continue
             comp_len+=compressed_size
-            print (f"ratio: {compressed_size/uncompressed_size},{uncompressed_size},{tensor.dtype}")
+            #print (f"Compressed. ratio: {compressed_size/uncompressed_size}, uncompressed size: {uncompressed_size}, dtype: {tensor.dtype}")
 
             compressed_tensor = torch.frombuffer(compressed_buf, dtype=COMPRESSED_DTYPE)
             tensors[name] = compressed_tensor

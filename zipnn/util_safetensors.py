@@ -52,4 +52,7 @@ def get_compressed_tensors_metadata(metadata: Dict[str, str]) -> Dict[str, Compr
     """
     retrieves file-level metadata on all compressed tensors.
     """
-    return json.loads(metadata.get(METADATA_KEY) or "{}")
+    if metadata:
+        return json.loads(metadata.get(METADATA_KEY) or {})
+    else:
+        return {}
