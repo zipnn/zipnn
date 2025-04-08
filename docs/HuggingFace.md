@@ -76,7 +76,7 @@ cp *.znn.safetensors ../myfork
 cd ../<myfork>
 git lfs install --force --local  
 git lfs track "*.znn.safetensors"
-sed -i "" 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json
+sed -i 's/.safetensors/.znn.safetensors/g' model.safetensors.index.json
 huggingface-cli lfs-enable-largefiles .  
 git push --force origin main
 rm ../<model>
