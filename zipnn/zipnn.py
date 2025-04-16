@@ -784,6 +784,7 @@ class ZipNN:
             shape = data.shape
 
         is_float = zipnn_is_floating_point(self.input_format, data, self.bytearray_dtype)
+        
         if is_float:
             bit_reorder = 1
             if dtype_enum in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2.code):
@@ -805,7 +806,7 @@ class ZipNN:
                 num_buf = 2
                 if self.input_format == EnumFormat.TORCH.value:
                     data = data.view(torch.uint16)
-            elif dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code):
+            elif dtype_enum in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code, ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2):
                 bit_reorder = 0
                 byte_reorder = 10  # 8b01_010
                 dtype_size = 16
@@ -840,6 +841,8 @@ class ZipNN:
         start_time = time.time()
 
         if self.input_format == EnumFormat.TORCH.value:
+            if dtype_enum in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2):
+                data = data.view(torch.uint8)
             ba = memoryview(data.contiguous().view(-1).numpy()).cast("B")
         elif self.input_format == EnumFormat.NUMPY.value:
             ba = data.tobytes()
@@ -850,7 +853,7 @@ class ZipNN:
 
         if is_print:
             print("torch_func", time.time() - start_time)
-
+   
         return self.compress_bin(
             ba=ba,
             byte_reorder=byte_reorder,
@@ -1110,6 +1113,9 @@ class ZipNN:
             elif self.dtype in (ZipNNDtypeEnum.FLOAT16.code, ZipNNDtypeEnum.HALF.code):
                 groups = 2
                 float16 = 1
+            elif self.dtype in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2.code):
+                groups = 2
+                float8 = 1
             elif self.dtype == ZipNNDtypeEnum.UINT32.code:
                 groups = 1
                 uint32 = 1
@@ -1128,7 +1134,7 @@ class ZipNN:
                 num_buf = 4
                 if uint32:
                     raise ValueError("Unsupported uinit32 in this version yet! please try version 0.1.1")
-                elif bfloat16 or float16:
+                elif bfloat16 or float16 or float8:
                     num_buf = 2
                 elif float8:
                     # NEW: FP8 handeling
@@ -1173,7 +1179,6 @@ class ZipNN:
                         tensor = tensor.view(torch.float8_e5m2)
                     else:
                         tensor = tensor.view(torch.float8_e4m3fn)
-                    tensor = tensor.view(torch.float8_e4m3fn) # OR THE OTHER FLOAT8!
                 return tensor
 
             if self.input_format == EnumFormat.NUMPY.value:

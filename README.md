@@ -10,8 +10,14 @@
 
 [![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/zipnn.svg)](https://pypi.org/pypi/zipnn/)
 
-## PyPI Version 0.5.2 is Here with Multithreading Support on the CPU!!!
-supports VLLM, safetensors and huggingface - model is always compressed on the filesystem!
+##  PyPI Version 0.5.2 – Multithreading on CPU | Up to 80GB/s Decompression!
+🔹 Features: 
+* supports **VLLM**, **safetensors** and **huggingface** - model is always compressed on the filesystem! <bf>
+
+* **Performance Benchmark**:
+With 16 workers and multithreading across two NUMA nodes, **decompression speeds** reach up to **80GB/s** and **compression speed** reach up to **13GB/s**
+(Tested on Intel Xeon Platinum 8480+ with 224 cores and two NUMA nodes.)
+
 
 ## Contents
 
