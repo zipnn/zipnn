@@ -7,6 +7,8 @@ static void reorder_all_floats_dtype16(uint8_t *src, size_t len);
 int split_bytearray_dtype16(uint8_t *src, size_t len, uint8_t **chunk_buffs,
                             size_t *unCompChunksSizeCurChunk, int bits_mode,
                             int bytes_mode, int is_review);
+int split_bytearray_dtype8(uint8_t *src, size_t len, uint8_t **chunk_buff,
+                             size_t *unCompChunksSizeCurChunk, int bytes_mode);
 
 static uint32_t revert_float_bits_dtype16(float number);
 static void revert_all_floats_dtype16(uint8_t *src, size_t len);

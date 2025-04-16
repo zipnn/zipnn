@@ -79,7 +79,6 @@ def decompress_safetensors_file(filename, delete=False,force=False,hf_cache=Fals
                 method=COMPRESSION_METHOD,
                 threads=threads)
         for name in f.keys():
-            
             time_start=time.time()
             tensor = f.get_tensor(name)
             load_time_sum+=time.time()-time_start
@@ -99,7 +98,8 @@ def decompress_safetensors_file(filename, delete=False,force=False,hf_cache=Fals
             tensors[name] = decompressed_buf
 
         metadata = f.metadata()
-        metadata.pop("znn_compressed_vectors", None)
+        if metadata:
+            metadata.pop("znn_compressed_vectors", None)
 
     time_start=time.time()
     save_file(tensors, decompressed_path, metadata)
