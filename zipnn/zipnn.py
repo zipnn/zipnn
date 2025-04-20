@@ -1134,7 +1134,7 @@ class ZipNN:
                 num_buf = 4
                 if uint32:
                     raise ValueError("Unsupported uinit32 in this version yet! please try version 0.1.1")
-                elif bfloat16 or float16 or float8:
+                elif bfloat16 or float16:
                     num_buf = 2
                 elif float8:
                     # NEW: FP8 handeling

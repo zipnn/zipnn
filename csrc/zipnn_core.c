@@ -982,10 +982,14 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
   for (size_t c = 0; c < numChunks; c++) {
     for (uint32_t b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 0) { // no compression is needed
+
+      if (compChunksType[b][c] == 0) {
+        // No compression is needed
       } else {
-        if (compChunksType[b][c] == 1) { // open with Huffman compression
+        if (compChunksType[b][c] == 1) {
+          // Open with Huffman compression
         } else {
+          //printf("Unexpected compress type: compChunksType[%u][%zu] = %d\n", b, c, compChunksType[b][c]);
           PyErr_SetString(
               PyExc_MemoryError,
               "Compress Type is not correct in Decompression function");
