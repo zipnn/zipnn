@@ -28,6 +28,38 @@ static void reorder_all_floats_dtype16(uint8_t *src, size_t len) {
   }
 }
 
+//
+
+int split_bytearray_dtype8(uint8_t *src, size_t len, uint8_t **chunk_buff,
+                            size_t *unCompChunksSizeCurChunk, int bytes_mode) {
+    // FP8 handling: there is an extra copy; can be simplified.
+    chunk_buff[0] = malloc(len);
+    if (*chunk_buff == NULL) {
+        PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory for buffer");
+        return -1;
+    }
+
+    uint8_t *dst = *chunk_buff;
+    unCompChunksSizeCurChunk[0] = len;
+
+    switch (bytes_mode) {
+    case 10: // Extra Copy (no modification)
+        for (size_t i = 0; i < len; i++) {
+            dst[i] = src[i];
+        }
+        break;
+
+    default:
+        free(chunk_buff[0]);
+        return -1; // Unsupported mode
+    }
+
+    return 0;
+}
+
+
+//
+
 // Helper function to split a bytearray into groups
 int split_bytearray_dtype16(uint8_t *src, size_t len, uint8_t **chunk_buffs,
                             size_t *unCompChunksSizeCurChunk, int bits_mode,

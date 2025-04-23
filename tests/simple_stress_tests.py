@@ -3,9 +3,9 @@ import torch
 import os
 import copy
 import numpy as np
-
-
-
+import sys
+from safetensors.torch import save_file
+from safetensors.torch import safe_open
 
 
 def test_byte_torch_streaming():
@@ -201,10 +201,69 @@ def test_byte_torch_streaming():
         
         if not np.array_equal(np.frombuffer(copy_bytes, dtype=np.float32), decompressed_array):
             raise ValueError("Error - original and decompressed float32 arrays are NOT equal.")
+    
+    # Safetensors
+    # Add the scripts directory to the path
+    script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts")
+    sys.path.append(script_dir)
+
+    # Import the functions from the scripts
+    from zipnn_compress_safetensors import compress_safetensors_file
+    from zipnn_decompress_safetensors import decompress_safetensors_file
+
+    # Create a tensor with half repetitive and half random data
+    size = (100, 100)
+    half_size = size[0] // 2
+    repetitive_part = torch.full((half_size, size[1]), 42.0)  # Fill half with constant value
+    random_part = torch.randn((half_size, size[1]))  # Random values for the other half
+    tensor = torch.cat((repetitive_part, random_part), dim=0)
+
+    # Test different floating point types
+    for dtype in [torch.float16,torch.bfloat16,torch.float8_e4m3fn]:  # Removed unsupported types
+        tensor = tensor.to(dtype)  # Convert tensor to the specified dtype
+        
+        # Save tensor to a temporary .safetensors file
+        tensor_file = f"temp_tensor_{dtype}.safetensors"
+        tensor_name="tensor"
+        metadata = {
+            f"{tensor_name}_dtype": str(dtype),  # Store dtype as a string
+            f"{tensor_name}_shape": str(list(tensor.shape))  # Store shape as a string
+        }
+        save_file({tensor_name: tensor}, tensor_file, metadata=metadata)  # Save using safetensors
+        
+        # Define compressed and decompressed file paths
+        compressed_file = f"temp_tensor_{dtype}.znn.safetensors"
+        decompressed_file = f"temp_tensor_{dtype}.safetensors"
+        
+        try:
+            # Compress the .safetensors file
+            compress_safetensors_file(tensor_file, force=True)
+            
+            # Decompress the file
+            decompress_safetensors_file(compressed_file, force=True)
+            
+            # Load the decompressed tensor
+            with safe_open(decompressed_file, framework="pt", device="cpu") as f:
+                decompressed_tensor = f.get_tensor("tensor")  # Get tensor by its key
+            
+            # Check if decompressed tensor is close to original
+            if dtype in [torch.float8_e4m3fn, torch.float8_e5m2]:
+                tensor_uint8 = tensor.view(torch.uint8)
+                decompressed_uint8 = decompressed_tensor.view(torch.uint8)
+                assert torch.equal(tensor_uint8, decompressed_uint8), f"Decompressed tensor does not match original for dtype {dtype}!"
+            else:
+                assert torch.allclose(tensor, decompressed_tensor), f"Decompressed tensor does not match original for dtype {dtype}!"
+
+            print(f"Test passed for dtype {dtype}: zipnn_safetensors works correctly!")
+        
+        finally:
+            # Clean up files
+            for file in [tensor_file, compressed_file, decompressed_file]:
+                if os.path.exists(file):
+                    os.remove(file)
 
 
 
-
-
+    
     if os.path.exists(file_path):
         os.remove(file_path)

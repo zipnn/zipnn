@@ -294,7 +294,6 @@ typedef struct {
 static void *compression_worker(void *arg) {
   CompressionThreadData *thread_data = (CompressionThreadData *)arg;
   size_t current_chunk;
-
   while (1) {
     // Get next chunk to process
     pthread_mutex_lock(thread_data->next_chunk_mutex);
@@ -312,9 +311,17 @@ static void *compression_worker(void *arg) {
         (current_chunk == thread_data->numChunks - 1)
             ? (thread_data->data->len - offset) // Last chunk
             : thread_data->origChunkSize;       // Regular chunk
-
+    
     // Byte Grouping + Byte Ordering
-    if (thread_data->numBuf == 2) {
+
+    if (thread_data->numBuf == 1) {
+      // NEW: FP8 handeling
+      if(split_bytearray_dtype8(thread_data->data->buf + offset, curOrigChunkSize,thread_data->buffers[current_chunk],thread_data->unCompChunksSize[current_chunk],thread_data->bytes_mode)!=0){
+        pthread_exit((void *)-1);
+      }
+    } 
+
+    else if (thread_data->numBuf == 2) {
       // Handle 16-bit data type splitting
       if (split_bytearray_dtype16(
               thread_data->data->buf + offset, curOrigChunkSize,
@@ -347,7 +354,13 @@ static void *compression_worker(void *arg) {
 
       if (thread_data->buffers[current_chunk][b] != NULL) {
         // Always try to compress initially
-        size_t uncompSize = thread_data->unCompChunksSize[current_chunk][b];
+        size_t uncompSize;
+        if (thread_data->numBuf == 1){
+          uncompSize = thread_data->unCompChunksSize[current_chunk][b];
+        }
+        else {
+          uncompSize = thread_data->unCompChunksSize[current_chunk][b];
+        }
         // Attempt Huffman compression
         thread_data->compChunksSize[b][current_chunk] =
             HUF_compress(thread_data->compressedData[b][current_chunk],
@@ -509,7 +522,6 @@ PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
       goto cleanup_threads;
     }
   }
-
   free(thread_handles);
   free(thread_data);
   pthread_mutex_destroy(&next_chunk_mutex);
@@ -518,8 +530,9 @@ PyObject *py_zipnn_core(PyObject *self, PyObject *args) {
 cleanup_threads:
   if (thread_handles)
     free(thread_handles);
-  if (thread_data)
+  if (thread_data){
     free(thread_data);
+  }
   pthread_mutex_destroy(&next_chunk_mutex);
   goto compression_error;  
   return NULL;
@@ -597,30 +610,47 @@ continue_processing:
   for (size_t c = 0; c < numChunks; c++) {
     for (uint32_t b = 0; b < numBuf; b++) {
       if (buffers[c][b]) {
-        //		      free(buffers[c][b]);
+        //free(buffers[c][b]);
       }
     }
     if (buffers[c]) {
       free(buffers[c]);
     }
-    free(unCompChunksSize[c]);
+    if (unCompChunksSize[c]){
+      free(unCompChunksSize[c]);
+    }
   }
-  free(buffers);
-  free(unCompChunksSize);
-
+  if (buffers){
+    free(buffers);
+  }
+  if (unCompChunksSize){
+    free(unCompChunksSize);
+  }
   for (uint32_t b = 0; b < numBuf; b++) {
     if (compressedData[b]) {
       free(compressedData[b]);
     }
-    free(compChunksType[b]);
-    free(compChunksSize[b]);
+    if (compChunksType[b]) {
+      free(compChunksType[b]);
+    }
+    if (compChunksSize[b]) {
+      free(compChunksSize[b]);
+    }
   }
-  free(compressedData);
-  free(compChunksType);
-  free(compChunksSize);
+  if (compressedData){
+    free(compressedData);
+  }
+  if (compChunksType){
+    free(compChunksType);
+  }
+  if (compChunksSize){
+    free(compChunksSize);
+  }
+
   return py_result;
 
   // Handle Error
+  /**/
   compression_error:
     if (buffers) {
       for (size_t c = 0; c < numChunks; c++) {
@@ -738,7 +768,6 @@ typedef struct {
 static void *decompression_chunk_worker(void *arg) {
   ChunkThreadData *data = (ChunkThreadData *)arg;
   size_t current_chunk;
-
   while (1) {
     // Get next chunk to process
     pthread_mutex_lock(data->next_chunk_mutex);
@@ -751,7 +780,6 @@ static void *decompression_chunk_worker(void *arg) {
 
     // Track which buffers need cleanup
     int freeDeCompressedDataPtr[data->numBuf];
-
     // Process each buffer for current chunk
     for (uint32_t b = 0; b < data->numBuf; b++) {
       // Handle uncompressed data
@@ -791,9 +819,13 @@ static void *decompression_chunk_worker(void *arg) {
 
     // Combine decompressed buffers into final output
     uint8_t *combinePtr = data->resultBuf + data->origChunkSize * current_chunk;
-
+    // Handle 8-bit (1 buffer)
+    if (data->numBuf == 1) {
+      size_t *current_decompLen = &data->decompLen[current_chunk * data->numBuf];
+      memcpy(combinePtr, data->deCompressedDataPtr[0][current_chunk], current_decompLen[0]);
+    }
     // Handle 16-bit (2 buffer) or 32-bit (4 buffer) data types
-    if (data->numBuf == 2) {
+    else if (data->numBuf == 2) {
       // Get decompLen array for current chunk
       size_t *current_decompLen =
           &data->decompLen[current_chunk * data->numBuf];
@@ -848,7 +880,6 @@ static void *decompression_chunk_worker(void *arg) {
 
 PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
   Py_buffer data;
-
   // clock_t sTime, eTime;
   // sTime = clock();
   // Calculate chunk and buffer sizes
@@ -866,7 +897,10 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
   // Handle buffer ratio calculations based on data type (16-bit or 32-bit)
   if (1) { // TBD when support auto byte_reorder
-    if (numBuf == 2) {
+    if (numBuf == 1){
+      // Do nothing
+    }
+    else if (numBuf == 2) {
       if (buffer_ratio_dtype16(bytes_mode, oneBufRatio) == -1) {
         PyErr_SetString(PyExc_MemoryError, "Failed to calculate bufffer ratio");
         return NULL; //
@@ -948,12 +982,14 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
 
   for (size_t c = 0; c < numChunks; c++) {
     for (uint32_t b = 0; b < numBuf; b++) {
-      if (compChunksType[b][c] == 0) { // no compression is needed
+
+      if (compChunksType[b][c] == 0) {
+        // No compression is needed
       } else {
-        if (compChunksType[b][c] == 1) { // open with Huffman compression
+        if (compChunksType[b][c] == 1) {
+          // Open with Huffman compression
         } else {
-          printf("compChunksType[0][0] %u\n", compChunksType[0][0]);
-          printf("compChunksType[1][0] %u\n", compChunksType[1][0]);
+          //printf("Unexpected compress type: compChunksType[%u][%zu] = %d\n", b, c, compChunksType[b][c]);
           PyErr_SetString(
               PyExc_MemoryError,
               "Compress Type is not correct in Decompression function");
@@ -1054,7 +1090,6 @@ PyObject *py_combine_dtype(PyObject *self, PyObject *args) {
       goto cleanup_threads;
     }
   }
-
   free(thread_handles);
   free(thread_data);
   pthread_mutex_destroy(&next_chunk_mutex);
