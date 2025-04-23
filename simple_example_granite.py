@@ -83,8 +83,10 @@ is_torch_numpy_byte = 0 # torch 2 / numpy 1/ byte = 0
 #is_torch_numpy_byte = 2 # torch 2 / numpy 1/ byte = 0
 
 #dtype = torch.float32
-dtype = torch.bfloat16
+#dtype = torch.bfloat16
 #dtype = torch.float16
+#dtype = torch.float8_e4m3fn
+#dtype = torch.float8_e5m2
 
 if (dtype == torch.float32):
     bytearray_dtype = "float32"
@@ -92,6 +94,11 @@ elif (dtype == torch.bfloat16):
     bytearray_dtype = "bfloat16"
 elif (dtype == torch.float16):
     bytearray_dtype = "float16"
+elif (dtype == torch.float8_e4m3fn):
+    bytearray_dtype = "float8_e4m3fn"
+elif (dtype == torch.float8_e5m2):
+    bytearray_dtype = "float8_e5m2"
+    
 
 element_size = torch.tensor([], dtype=dtype).element_size()
 num_elements = 1024*1024*1024 // element_size 

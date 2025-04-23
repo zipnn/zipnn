@@ -66,7 +66,7 @@ def decompress_file(input_file, delete=False, force=False, hf_cache=False,thread
             print(f"decomp file written in {write_time}s")
         
         print(
-            f"{GREEN}Back to original size: {file_size_after/GB:.02f}GB size before decompression: {file_size_before/GB:.02f}GB{RESET}"
+            f"{GREEN}Back to original size: {file_size_after/GB:.02f}GB size before decompression: {file_size_before/GB:.02f}GB, decompress time {decomp_time:.02f}s{RESET}"
             )
 
 

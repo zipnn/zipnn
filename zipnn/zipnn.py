@@ -40,7 +40,7 @@ class ZipNN:
         delta_compressed_type: str = 0,
         lossy_compressed_type: str = 0,
         lossy_compressed_factor=27,
-        compression_chunk=128 * 1024,
+        compression_chunk=256 * 1024,
         is_streaming: bool = False,
         streaming_chunk: int = 1024 * 1024,
         input_file: str = None,
@@ -718,7 +718,7 @@ class ZipNN:
                 bit_reorder,
                 byte_reorder,
                 is_review,
-                self.compression_chunk if num_buf!=1 else min(128*1024,self.compression_chunk),
+                self.compression_chunk if num_buf!=1 else min(128*1024,self.compression_chunk), # Huffman compression is limited to a 128K buffer; therefore, we restrict it to 128K in the case of FP8.
                 self.compression_threshold,
                 self.check_th_after_percent,
                 self.threads,
@@ -788,7 +788,7 @@ class ZipNN:
         if is_float:
             bit_reorder = 1
             if dtype_enum in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2.code):
-                # NEW: FP8 handeling
+                # FP8 handeling
                 num_buf=1
                 dtype_size=8
                 byte_reorder = 10
@@ -1101,7 +1101,7 @@ class ZipNN:
             uint32 = 0
             float8 = 0
             if self.dtype in (ZipNNDtypeEnum.FLOAT8_E4M3FN.code, ZipNNDtypeEnum.FLOAT8_E5M2.code):
-                # NEW: FP8 handeling
+                # FP8 handeling
                 groups = 1
                 float8 = 1
             elif self.dtype in (ZipNNDtypeEnum.FLOAT32.code, ZipNNDtypeEnum.FLOAT.code):
@@ -1137,7 +1137,7 @@ class ZipNN:
                 elif bfloat16 or float16:
                     num_buf = 2
                 elif float8:
-                    # NEW: FP8 handeling
+                    # FP8 handeling
                     num_buf = 1
                 mv = memoryview(ba_compress)
                 ba_decom = zipnn_core.combine_dtype(
@@ -1170,7 +1170,7 @@ class ZipNN:
                     array = array.reshape(self.shape_bytes)
                     tensor = torch.from_numpy(array)
                 elif float8:
-                    # NEW: FP8 handeling
+                    # FP8 handeling
                     array = np.frombuffer(ba_decom, dtype=np.uint8) 
                     new_shape = tuple(dim for dim in self.shape_bytes)
                     array = array.reshape(new_shape)

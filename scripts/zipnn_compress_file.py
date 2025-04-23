@@ -106,7 +106,7 @@ def compress_file(
             file_size_before += len(chunk)
             start_time = time.time()
             compressed_chunk = zpn.compress(chunk)
-            end_time = time.time() - start_time
+            compress_time = time.time() - start_time
             if compressed_chunk:
                 file_size_after += len(compressed_chunk)
                 start_time=time.time()
@@ -143,7 +143,7 @@ def compress_file(
     print(f"sum of load times: {load_time}s")
     print(f"comp file written in {write_time}s")
     print(
-        f"{GREEN}Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, time: {end_time:.02f}{RESET}"
+        f"{GREEN}Original size:  {file_size_before/GB:.02f}GB size after compression: {file_size_after/GB:.02f}GB, Remaining size is {file_size_after/file_size_before*100:.02f}% of original, compress time: {compress_time:.02f}s{RESET}"
     )
 
     if delete and not hf_cache:
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dtype",
         type=str,
-        choices=["bfloat16", "float16", "float32"],
+        choices=["bfloat16", "float16", "float32", "float8_e4m3fn", "float8_e5m2"],
         default="bfloat16",
         help="Specify the data type. Default is bfloat16.",
     )

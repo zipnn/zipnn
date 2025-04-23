@@ -32,7 +32,7 @@ static void reorder_all_floats_dtype16(uint8_t *src, size_t len) {
 
 int split_bytearray_dtype8(uint8_t *src, size_t len, uint8_t **chunk_buff,
                             size_t *unCompChunksSizeCurChunk, int bytes_mode) {
-    // NEW: FP8 handeling, this can be simplified but should work regardless
+    // FP8 handling: there is an extra copy; can be simplified.
     chunk_buff[0] = malloc(len);
     if (*chunk_buff == NULL) {
         PyErr_SetString(PyExc_MemoryError, "Failed to allocate memory for buffer");
@@ -43,21 +43,9 @@ int split_bytearray_dtype8(uint8_t *src, size_t len, uint8_t **chunk_buff,
     unCompChunksSizeCurChunk[0] = len;
 
     switch (bytes_mode) {
-    case 10: // Copy input as is (no modification)
+    case 10: // Extra Copy (no modification)
         for (size_t i = 0; i < len; i++) {
             dst[i] = src[i];
-        }
-        break;
-
-    case 8: // Zero out the most significant bit (MSB)
-        for (size_t i = 0; i < len; i++) {
-            dst[i] = src[i] & 0x7F; // 0111 1111 (Removes MSB)
-        }
-        break;
-
-    case 1: // Zero out the least significant bit (LSB)
-        for (size_t i = 0; i < len; i++) {
-            dst[i] = src[i] & 0xFE; // 1111 1110 (Removes LSB)
         }
         break;
 
