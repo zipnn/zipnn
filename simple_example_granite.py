@@ -83,7 +83,7 @@ is_torch_numpy_byte = 0 # torch 2 / numpy 1/ byte = 0
 #is_torch_numpy_byte = 2 # torch 2 / numpy 1/ byte = 0
 
 #dtype = torch.float32
-#dtype = torch.bfloat16
+dtype = torch.bfloat16
 #dtype = torch.float16
 #dtype = torch.float8_e4m3fn
 #dtype = torch.float8_e5m2
