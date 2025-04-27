@@ -1,4 +1,4 @@
-<img src="./images/ZipNN-logo.png" alt="ZipNN Logo" width="60" height="60" align="left" />
+<img src="./images/ZipNN-logo-v2.png" alt="ZipNN Logo" width="60" height="60" align="left" />
 
 # ZipNN: <br> A Lossless Compression Library for AI pipelines
 
