@@ -10,7 +10,7 @@
 
 [![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/zipnn.svg)](https://pypi.org/pypi/zipnn/)
 
-##  PyPI Version 0.5.2 – Multithreading on CPU | Up to 80GB/s Decompression!
+##  PyPI Version 0.5.3 – Multithreading on CPU | Up to 80GB/s Decompression + supports FP8
 🔹 Features: 
 * supports **VLLM**, **safetensors** and **huggingface** - model is always compressed on the filesystem! <bf>
 
@@ -305,6 +305,10 @@ If you use `zipnn` in your research or projects, please cite the repository:
 ```
 
 ## Change Log
+
+##### v0.5.3
+
+* Add support for FP8 models, including both float8_e4m3fn and float8_e5m2.
 
 ##### v0.5.2
 

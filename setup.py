@@ -35,7 +35,7 @@ zipnn_core_extension = Extension(
 
 setup(
     name="zipnn",
-    version="0.5.2",
+    version="0.5.3",
     author="ZipNN Contributors",
     description="A Lossless Compression Library for AI pipelines",
     long_description=open("README.md").read(),
