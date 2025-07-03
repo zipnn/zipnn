@@ -8,7 +8,7 @@
 
 **arXiv Paper**: ["ZipNN: Lossless Compression for AI Models"](https://arxiv.org/abs/2411.05239)
 
-[![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Downloads](https://static.pepy.tech/badge/zipnn/month)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/zipnn.svg)](https://pypi.org/pypi/zipnn/)
+[![Downloads](https://static.pepy.tech/badge/zipnn)](https://pepy.tech/project/zipnn) [![Pypi](https://img.shields.io/pypi/v/zipnn.svg)](https://pypi.org/pypi/zipnn/)
 
 ##  PyPI Version 0.5.3 – Multithreading on CPU | Up to 80GB/s Decompression + supports FP8
 🔹 Features: 
